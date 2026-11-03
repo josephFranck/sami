@@ -535,7 +535,10 @@ service cloud.firestore {
     match /app_config/paiement   { allow read: if connecte(); allow write: if estAdmin(); }
     // Clé de signature des reçus : idem. TODO à l'échelle : vérification via
     // Cloud Function pour ne plus exposer la clé en lecture.
-    match /app_config/recus      { allow read: if connecte(); allow write: if estAdmin(); }
+    // clé des reçus : lisible par l'app tant que les reçus sont signés côté
+    // app ; dès que la Cloud Function l'a prise en charge (`serveur: true`),
+    // plus personne ne la lit (un reçu ne peut plus être forgé)
+    match /app_config/recus      { allow read: if connecte() && resource.data.get('serveur', false) != true; allow write: if estAdmin(); }
     match /app_config/taxes     { allow read: if connecte(); allow write: if estAdmin(); }
     match /config_marketing/{id} { allow read: if connecte(); allow write: if estAdmin(); }
 

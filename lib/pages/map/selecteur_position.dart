@@ -177,7 +177,7 @@ class _SelecteurPositionPageState extends State<SelecteurPositionPage> {
                       : _calculEnCours
                           ? Tr.s.calculItineraire
                           : _distanceKm != null
-                              ? Tr.s.kmDepuisVotrePosition(_distanceKm!.toStringAsFixed(1), _dureeMin != null ? ' · ≈ $_dureeMin min' : ' (vol d\'oiseau)')
+                              ? Tr.s.kmDepuisVotrePosition(_distanceKm!.toStringAsFixed(1), _dureeMin != null ? Tr.s.min2(_dureeMin) : Tr.s.volOiseau)
                               : Tr.s.pointPoseValidezBas,
                   style: const TextStyle(fontSize: 12.5)),
             ),

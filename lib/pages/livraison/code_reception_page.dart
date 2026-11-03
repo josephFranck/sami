@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:sami/services/qr_crypto_service.dart';
+import 'package:sami/services/scan_serveur_service.dart';
 import 'package:sami/services/sms_service.dart';
 import 'package:sami/l10n/tr.dart';
 
@@ -35,6 +36,18 @@ class _CodeReceptionPageState extends State<CodeReceptionPage> {
   }
 
   Future<void> _charger() async {
+    // MODE SERVEUR (lot C) : token écrit par la Cloud Function dans
+    // qr_arrivee/{id} (lisible par le client seulement).
+    if (await ScanServeurService.actif()) {
+      try {
+        final d = await FirebaseFirestore.instance
+            .collection('qr_arrivee').doc(widget.livraisonId).get();
+        _qrArrivee = d.data()?['token'] as String?;
+        _codeCourt = d.data()?['codeCourt'] as String?;
+      } catch (_) {}
+      if (mounted) setState(() => _chargement = false);
+      return;
+    }
     await QRCryptoService.prechargerDepuisFirestore(
       livraisonId: widget.livraisonId,
       role: RoleLivraison.client,

@@ -11,6 +11,7 @@ import 'package:sami/models/utilisateur.dart';
 import 'package:sami/pages/legal/mentions_legales_page.dart';
 import 'package:sami/pages/accueil_pagneshop.dart';
 import 'package:sami/pages/auth/login_page.dart';
+import 'package:sami/pages/auth/completer_profil_page.dart';
 import 'package:sami/pages/auth/signup_page.dart';
 import 'package:sami/pages/auth/reset_password_page.dart';
 import 'package:sami/pages/categoriepage.dart';
@@ -160,9 +161,35 @@ class _AuthGate extends StatelessWidget {
           );
         }
         if (snapshot.hasData && snapshot.data != null) {
-          return const AccueilPagneShop();
+          // Connecté par téléphone / WhatsApp / réseau social (lot C), ou
+          // ancien compte : tant que la fiche n'a pas de consentement CGU
+          // (art. 26 loi 2010/021), on complète le profil d'abord.
+          return _PorteProfil(uid: snapshot.data!.uid);
         }
         return const LoginPage();
+      },
+    );
+  }
+}
+
+class _PorteProfil extends StatelessWidget {
+  final String uid;
+  const _PorteProfil({required this.uid});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: FirebaseFirestore.instance.collection('utilisateurs').doc(uid).get(),
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator(color: Color(0xFF6A1B9A))),
+          );
+        }
+        final d = snap.data?.data();
+        final complet = d != null && (d['cguVersion'] as String? ?? '').isNotEmpty;
+        if (snap.hasError || complet) return const AccueilPagneShop();
+        return CompleterProfilPage(existant: d);
       },
     );
   }

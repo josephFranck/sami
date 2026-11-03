@@ -253,7 +253,7 @@ Future<void> _proposerPromotion(BuildContext context, dynamic pagne) async {
                 : Tr.s.h(heures.round())),
           ]),
           Text(
-              Tr.s.nouveauPrix(PrixFCFA.formater(PrixFCFA.arrondirAu50(pagne.prixParBoutique * (1 - pct / 100))), pagne.prixPlancher != null ? '  (votre plancher : ${PrixFCFA.formater(pagne.prixPlancher)})' : '  (plancher auto : seuil de rentabilité)'),
+              Tr.s.nouveauPrix(PrixFCFA.formater(PrixFCFA.arrondirAu50(pagne.prixParBoutique * (1 - pct / 100))), pagne.prixPlancher != null ? Tr.s.votrePlancher(PrixFCFA.formater(pagne.prixPlancher)) : Tr.s.plancherAutoSeuilRentabilite),
               style: const TextStyle(fontSize: 12.5)),
         ]),
         actions: [

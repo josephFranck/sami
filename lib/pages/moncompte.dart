@@ -443,7 +443,7 @@ class _ProfilePageState extends State<ProfilePage> {
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade100)),
     child: Column(
       children: [
-        _actionTile(Icons.language, 'Langue / Language · ${LangueService.libelle(LangueService.instance.langue)}', Colors.blue, _choisirLangue),
+        _actionTile(Icons.language, Tr.s.langueLanguage(LangueService.libelle(LangueService.instance.langue)), Colors.blue, _choisirLangue),
         const Divider(height: 1, indent: 56),
         _actionTile(Icons.shopping_bag_outlined, Tr.s.monPanier, Colors.indigo, () => Navigator.push(context, MaterialPageRoute(builder: (_) => PanierPage(utilisateur: _u!)))),
         const Divider(height: 1, indent: 56),
@@ -474,7 +474,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final choix = await showDialog<String>(
       context: context,
       builder: (ctx) => SimpleDialog(
-        title: const Text('Langue / Language'),
+        title: Text(Tr.s.langueLanguage2),
         children: [
           for (final code in LangueService.disponibles)
             SimpleDialogOption(

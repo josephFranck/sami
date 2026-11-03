@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sami/services/scan_serveur_service.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // REÇUS AUTHENTIFIÉS — « pour servir ce que de droit »
@@ -45,6 +46,15 @@ class RecuService {
     required String detail,
     String? contrepartie,
   }) async {
+    // MODE SERVEUR (lot C) : la clé de signature ne quitte plus le serveur
+    if (await ScanServeurService.actif()) {
+      final r = await ScanServeurService.creerRecu(
+        type: type, refId: refId, beneficiaireId: beneficiaireId,
+        beneficiaireNom: beneficiaireNom, montant: montant, detail: detail,
+        contrepartie: contrepartie,
+      );
+      return r ?? <String, dynamic>{};
+    }
     // Idempotent : un reçu par (type, refId, beneficiaireId)
     final exist = await _db
         .collection('recus')
@@ -97,6 +107,7 @@ class RecuService {
 
   /// Vérifie un QR de reçu scanné. Retourne (authentique, contenu|null).
   static Future<(bool, Map<String, dynamic>?)> verifier(String qr) async {
+    if (await ScanServeurService.actif()) return ScanServeurService.verifierRecu(qr);
     try {
       final m = jsonDecode(utf8.decode(base64Decode(qr)))
           as Map<String, dynamic>;

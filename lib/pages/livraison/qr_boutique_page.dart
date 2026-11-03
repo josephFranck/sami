@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:sami/services/qr_crypto_service.dart';
+import 'package:sami/services/scan_serveur_service.dart';
 import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
@@ -35,6 +36,19 @@ class _QrBoutiquePageState extends State<QrBoutiquePage> {
   }
 
   Future<void> _charger() async {
+    // MODE SERVEUR (lot C) : le token à afficher est écrit par la Cloud
+    // Function dans qr_depart/{id} (lisible par le gérant seulement) ;
+    // la clé n'existe que sur le serveur.
+    if (await ScanServeurService.actif()) {
+      try {
+        final d = await FirebaseFirestore.instance
+            .collection('qr_depart').doc(widget.livraisonId).get();
+        _qrDepart = d.data()?['token'] as String?;
+        _codeCourt = d.data()?['codeCourt'] as String?;
+      } catch (_) {}
+      if (mounted) setState(() => _chargement = false);
+      return;
+    }
     // Précharge le token de départ côté boutique (pour affichage hors-ligne)
     await QRCryptoService.prechargerDepuisFirestore(
       livraisonId: widget.livraisonId,

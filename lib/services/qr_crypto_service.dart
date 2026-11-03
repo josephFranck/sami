@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sami/services/parametres_service.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SYSTÈME QR CRYPTOGRAPHIQUE OFFLINE-FIRST
@@ -321,6 +322,8 @@ class QRCryptoService {
     required RoleLivraison role,
   }) async {
     try {
+      // MODE SERVEUR (lot C) : aucune clé ne descend sur un téléphone.
+      if (await ParametresService.scansServeur()) return false;
       // Si déjà en local, rien à faire
       final dejaLa = await chargerLocal(livraisonId);
       if (dejaLa != null) return true;

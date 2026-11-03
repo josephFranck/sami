@@ -183,6 +183,20 @@ class ParametresService {
         bonusAbo: bonusAbo, nbLivrees: nb);
   }
 
+  // ── LOT C : CLOUD FUNCTIONS (interrupteurs, basculés depuis la console) ──
+  /// Scans vérifiés côté serveur (clé HMAC jamais sur un téléphone).
+  static Future<bool> scansServeur() async =>
+      (await _charger())['scansServeur'] as bool? ?? false;
+  /// Assignation des livreurs par le serveur (l'app n'appelle plus son agent).
+  static Future<bool> assignationServeur() async =>
+      (await _charger())['assignationServeur'] as bool? ?? false;
+  /// Connexion par SMS (console Firebase → Authentication → Téléphone activé).
+  static Future<bool> connexionSmsActive() async =>
+      (await _charger())['connexionSmsActive'] as bool? ?? false;
+  /// Connexion par WhatsApp (Cloud Functions + secrets Meta configurés).
+  static Future<bool> connexionWhatsappActive() async =>
+      (await _charger())['connexionWhatsappActive'] as bool? ?? false;
+
   // ── ABONNEMENTS (décision 03/11/2026 : souscription dans l'app,
   //    paiement MoMo déclaré, vérification staff) ──
   /// Durée d'un abonnement payé (jours).

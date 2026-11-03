@@ -244,7 +244,7 @@ class _PageSouscriptionState extends State<PageSouscription> {
         if (!p.gratuit) ...[
           const SizedBox(height: 8),
           Text(
-              Tr.s.k1Transferez2CollezReference(PrixFCFA.formater(p.prix), _numMtn.isNotEmpty ? '\n     MTN MoMo : $_numMtn' : '', _numOm.isNotEmpty ? '\n     Orange Money : $_numOm' : '', _titulaire.isNotEmpty ? '\n     (Titulaire : $_titulaire)' : ''),
+              Tr.s.k1Transferez2CollezReference(PrixFCFA.formater(p.prix), _numMtn.isNotEmpty ? Tr.s.mtnMomo(_numMtn) : '', _numOm.isNotEmpty ? Tr.s.orangeMoney(_numOm) : '', _titulaire.isNotEmpty ? Tr.s.titulaire(_titulaire) : ''),
               style: const TextStyle(fontSize: 12, height: 1.5)),
           const SizedBox(height: 8),
           TextField(

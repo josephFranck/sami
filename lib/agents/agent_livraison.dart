@@ -40,6 +40,9 @@ class AgentLivraison {
 
   /// Point d'entrée principal : l'agent traite une nouvelle livraison
   static Future<void> traiterNouvelleLivraison(String livraisonId) async {
+    // LOT C : si l'assignation est faite par la Cloud Function
+    // (onLivraisonCreee, privilèges serveur), cet agent local se tait.
+    if (await ParametresService.assignationServeur()) return;
     try {
       // 1. Récupérer la livraison
       final livraisonDoc = await FirebaseFirestore.instance

@@ -108,6 +108,15 @@
 | Notifications | écrites en FR **et** EN à l'envoi, lues dans la langue du destinataire |
 | Hors périmètre | administration/staff, pages légales (traduction juridique → avocat), écrans couture non routés |
 
+### Lot C — Serveur (Cloud Functions) — code prêt le 04/11/2026, déploiement à l'activation de Blaze
+| Élément | Détail |
+|---|---|
+| Fonctions | `onLivraisonCreee` (clé HMAC côté serveur, tokens dans `qr_depart`/`qr_arrivee`, assignation), `validerScan` (vérification + toute la propagation), `ajouterSignature`, `creerRecu`/`verifierRecu`, `authTelegram`, `authWhatsappEnvoyer`/`Verifier` — `functions/`, tests `npm test` |
+| App | `ScanServeurService` (cloud_functions) ; `LivraisonService`, `RecuService`, pages QR/scan basculent selon `scansServeur` ; agent local muet si `assignationServeur` ; connexion **SMS / WhatsApp** (`connexion_telephone_page.dart`) ; **Compléter mon profil** (`_AuthGate` : tout compte sans consentement CGU y passe) ; interrupteurs dans Paramètres |
+| Déploiement | sans CLI locale : GitHub Actions (`.github/workflows/firebase-deploy.yml`) avec un compte de service — règles, index et fonctions ; guide `DEPLOIEMENT_FUNCTIONS.md` |
+| Constats corrigés | fiches couturier/livreur créées avec id ≠ uid par la candidature → scan de départ, tableau de bord livreur et règles en échec (id = uid désormais) ; gérant ne pouvait pas lire la clé de départ (« QR indisponible ») ; agent : distance au carré |
+| Reste (exploitant) | Blaze ; compte de service + secret GitHub ; fournisseurs Téléphone/Facebook dans la console ; compte Meta (WhatsApp), bot Telegram (+ page du widget sur gousna.com, côté app à faire) ; Facebook côté app (`flutter_facebook_auth`) ; App Check |
+
 ### Reste à faire
 - **Lot C** (Blaze) : voir §3 — les limites restantes (statut de sous-commande modifiable par le livreur/gérant, devis calculé côté client) ne se ferment qu'avec des Cloud Functions.
 - **Exploitant** : publier `firestore.rules` (console → Règles → coller → Publier) et créer l'index `mouvements_credits` via le lien du log, ou le fichier `firestore.indexes.json`.

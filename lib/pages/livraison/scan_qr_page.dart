@@ -5,6 +5,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:sami/services/livraison_service.dart';
 import 'package:location/location.dart';
 import 'package:sami/services/qr_crypto_service.dart';
+import 'package:sami/services/scan_serveur_service.dart';
 import 'package:sami/services/resilience_service.dart';
 import 'package:sami/widgets/widgets_resilients.dart';
 import 'package:sami/l10n/tr.dart';
@@ -49,6 +50,7 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
   final _scannerCtrl = MobileScannerController();
 
   QRLocalData? _donneesLocales;
+  bool _serveur = false; // lot C : vérification par la Cloud Function
   bool _chargement = true;
   bool _traitementEnCours = false;
 
@@ -65,8 +67,10 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
   }
 
   Future<void> _chargerCleLocale() async {
-    final donnees = await QRCryptoService.chargerLocal(widget.livraisonId);
-    if (mounted) setState(() { _donneesLocales = donnees; _chargement = false; });
+    // MODE SERVEUR : aucune clé sur ce téléphone — le scan part au serveur.
+    final serveur = await ScanServeurService.actif();
+    final donnees = serveur ? null : await QRCryptoService.chargerLocal(widget.livraisonId);
+    if (mounted) setState(() { _serveur = serveur; _donneesLocales = donnees; _chargement = false; });
   }
 
   @override
@@ -107,7 +111,7 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
       ),
       body: _chargement
           ? const Center(child: CircularProgressIndicator(color: _kPrimary))
-          : _donneesLocales == null
+          : (_donneesLocales == null && !_serveur)
               ? _buildModeDegradeSansCle()
               : _buildScanner(),
     );
@@ -224,6 +228,41 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
     _codeScanne = code;
     setState(() => _traitementEnCours = true);
     await _scannerCtrl.stop();
+
+    // MODE SERVEUR : la Cloud Function vérifie ET propage (réseau requis —
+    // décision 03/11/2026). Le message d'erreur vient du serveur.
+    if (_serveur) {
+      double lat = 0, lng = 0;
+      try {
+        final pos = await Location().getLocation();
+        lat = pos.latitude ?? 0;
+        lng = pos.longitude ?? 0;
+      } catch (_) {}
+      final r = await ScanServeurService.validerScan(
+        livraisonId: widget.livraisonId,
+        type: widget.typeAttendu,
+        code: code,
+        lat: lat,
+        lng: lng,
+      );
+      if (!mounted) return;
+      if (r.ok) {
+        setState(() {
+          _valide = true;
+          _resultat = ResultatValidationQR(valide: true, message: r.message);
+          _traitementEnCours = false;
+        });
+        // (onSucces est appelé par le bouton « Continuer », comme en local)
+      } else {
+        setState(() {
+          _erreur = true;
+          _resultat = ResultatValidationQR(
+              valide: false, raison: RaisonEchec.signatureInvalide, message: r.message);
+          _traitementEnCours = false;
+        });
+      }
+      return;
+    }
 
     // Validation cryptographique LOCALE — pas de réseau nécessaire
     final resultat = QRCryptoService.validerOffline(

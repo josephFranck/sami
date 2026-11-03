@@ -275,8 +275,14 @@ def main():
                 chaines[cle] = {'fr': fr, 'en': '', 'params': [n for n, _ in params], 'sites': []}
             chaines[cle]['sites'].append(f'{rel}:{ligne}:{ctx[0]}')
             nb_sites += 1
-    # purge des clés sans site (texte disparu du code)
-    chaines = {k: v for k, v in chaines.items() if v['sites']}
+    # purge des clés sans site NI référence dans le code (Tr.s.cle / t.cle) :
+    # une clé déjà appliquée n'a plus de littéral FR, elle doit survivre.
+    refs = set()
+    for p, _ in fichiers:
+        refs |= set(re.findall(r'\b(?:Tr\.s|Tr\.fr|Tr\.en|t)\.([A-Za-z0-9]+)', open(p, encoding='utf-8').read()))
+    for p in [os.path.join(LIB, 'l10n', 'tr.dart')]:
+        pass  # (généré : ne compte pas comme référence)
+    chaines = {k: v for k, v in chaines.items() if v['sites'] or k in refs}
     json.dump(chaines, open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     sans_en = sum(1 for v in chaines.values() if not v['en'])
     print(f'{len(fichiers)} fichiers, {nb_sites} sites, {len(chaines)} chaînes uniques, {sans_en} sans traduction EN')

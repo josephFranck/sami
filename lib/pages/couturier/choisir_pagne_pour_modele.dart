@@ -50,7 +50,7 @@ class ChoisirPagnePourModelePage extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                Tr.s.choisissezPagneCoudre(modele.nom, modele.surDevis ? "prix sur devis" : PrixFCFA.formater(modele.prixBase)),
+                Tr.s.choisissezPagneCoudre(modele.nom, modele.surDevis ? Tr.s.prixSurDevis : PrixFCFA.formater(modele.prixBase)),
                 style: const TextStyle(fontSize: 12.5),
               ),
             ),

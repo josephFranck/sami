@@ -424,7 +424,7 @@ class _PanierPageState extends State<PanierPage> {
                     Text(
                         // montant du DEVIS (articles + livraison + supplément),
                         // pas le seul total des articles
-                        Tr.s.k1Transferez2CollezReference2(PrixFCFA.formater(_totalAPayer), _numMtn.isNotEmpty ? '\n     MTN MoMo : $_numMtn' : '', _numOm.isNotEmpty ? '\n     Orange Money : $_numOm' : '', _titulaire.isNotEmpty ? '\n     (Titulaire : $_titulaire)' : ''),
+                        Tr.s.k1Transferez2CollezReference2(PrixFCFA.formater(_totalAPayer), _numMtn.isNotEmpty ? Tr.s.mtnMomo(_numMtn) : '', _numOm.isNotEmpty ? Tr.s.orangeMoney(_numOm) : '', _titulaire.isNotEmpty ? Tr.s.titulaire(_titulaire) : ''),
                         style: const TextStyle(fontSize: 12, height: 1.5)),
                     const SizedBox(height: 8),
                     TextField(
@@ -666,7 +666,7 @@ class _PanierPageState extends State<PanierPage> {
         panier: _panier!,
         clientId: widget.utilisateur.id,
         adresseLivraison: _positionLivraison != null
-            ? Tr.s.gps(_adresseLivraison.trim().isEmpty ? "Position GPS" : _adresseLivraison, _positionLivraison!.latitude.toStringAsFixed(6), _positionLivraison!.longitude.toStringAsFixed(6))
+            ? Tr.s.gps(_adresseLivraison.trim().isEmpty ? Tr.s.positionGps : _adresseLivraison, _positionLivraison!.latitude.toStringAsFixed(6), _positionLivraison!.longitude.toStringAsFixed(6))
             : _adresseLivraison,
         refPaiement: _methodePaiement == 'momo_declare'
             ? _refDeclCtrl.text.trim()

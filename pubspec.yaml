@@ -17,6 +17,7 @@ dependencies:
   firebase_core: ^2.25.4
   firebase_auth: ^4.17.4
   cloud_firestore: ^4.15.4
+  cloud_functions: ^4.6.9        # lot C : scans vérifiés côté serveur, reçus, connexion Telegram/WhatsApp
   firebase_storage: ^11.6.5      # conservé — switch via StockageService
 
   # ── UI & images ───────────────────────────────────────────────────────────

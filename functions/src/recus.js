@@ -22,10 +22,15 @@ const REGION = 'europe-west1';
 async function cleRecus() {
   const ref = db().collection('app_config').doc('recus');
   const d = await ref.get();
-  let cle = (d.data() || {}).cle;
+  const data = d.data() || {};
+  let cle = data.cle;
   if (!cle) {
     cle = crypto.randomBytes(32).toString('base64');
     await ref.set({ cle, serveur: true }, { merge: true });
+  } else if (data.serveur !== true) {
+    // clé créée autrefois par l'app : on la garde (anciens reçus restent
+    // vérifiables) mais plus personne ne la lit côté client (règle)
+    await ref.set({ serveur: true }, { merge: true });
   }
   return cle;
 }

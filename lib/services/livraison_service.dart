@@ -4,6 +4,7 @@ import 'package:sami/services/parametres_service.dart';
 import 'package:sami/services/notification_service.dart';
 import 'package:sami/services/recu_service.dart';
 import 'package:sami/services/qr_crypto_service.dart';
+import 'package:sami/services/scan_serveur_service.dart';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sami/models/livraison_v2.dart';
@@ -47,13 +48,17 @@ class LivraisonService {
 
     // 2. Générer ID et QR codes
     final docRef = FirebaseFirestore.instance.collection('livraisons').doc();
-    // Générer le set QR cryptographique (offline-first)
-    final qrSet = QRCryptoService.genererSet(livraisonId: docRef.id);
+    // MODE SERVEUR (lot C) : la clé naît dans la Cloud Function
+    // onLivraisonCreee — aucun code sur le document, rien sur ce téléphone.
+    final serveur = await ScanServeurService.actif();
+    // Sinon : set QR cryptographique local (offline-first, clé partagée)
+    final qrSet = serveur ? null : QRCryptoService.genererSet(livraisonId: docRef.id);
     final qrCode = QrLivraison(
-      codeOrigine: qrSet.qrLivreurDepart,
-      codeDestination: qrSet.qrClientEncode,
-      dateExpiration: DateTime.fromMillisecondsSinceEpoch(
-          qrSet.tokenDepart.expirationUnix * 1000),
+      codeOrigine: qrSet?.qrLivreurDepart ?? '',
+      codeDestination: qrSet?.qrClientEncode ?? '',
+      dateExpiration: qrSet != null
+          ? DateTime.fromMillisecondsSinceEpoch(qrSet.tokenDepart.expirationUnix * 1000)
+          : DateTime.now().add(const Duration(hours: 48)),
     );
 
     // 3. Construire l'objet livraison
@@ -84,9 +89,11 @@ class LivraisonService {
 
     // 4b. Stocker le set QR + clé secrète séparément (jamais dans le QR lui-même)
     //     Distribué aux parties via leurs documents respectifs
-    await FirebaseFirestore.instance
-        .collection('qr_secrets').doc(docRef.id)
-        .set(qrSet.toFirestore());
+    if (qrSet != null) {
+      await FirebaseFirestore.instance
+          .collection('qr_secrets').doc(docRef.id)
+          .set(qrSet.toFirestore());
+    }
 
     // 5. Créer les transactions financières
     // (déclenchées après confirmation paiement)
@@ -121,6 +128,15 @@ class LivraisonService {
     required double livreurLng,
     String? photoUrl,
   }) async {
+    // MODE SERVEUR : vérification + propagation complète par la Cloud
+    // Function (le livreur ne détient aucune clé).
+    if (await ScanServeurService.actif()) {
+      final r = await ScanServeurService.validerScan(
+        livraisonId: livraisonId, type: TypeQR.depart, code: codeScanne,
+        lat: livreurLat, lng: livreurLng, photoUrl: photoUrl,
+      );
+      return r.ok;
+    }
     final doc = await FirebaseFirestore.instance
         .collection('livraisons')
         .doc(livraisonId)
@@ -210,6 +226,15 @@ class LivraisonService {
     // Si paiement cash : montant encaissé par livreur
     double? montantCashEncaisse,
   }) async {
+    // MODE SERVEUR : tout est fait par la Cloud Function validerScan
+    if (await ScanServeurService.actif()) {
+      final r = await ScanServeurService.validerScan(
+        livraisonId: livraisonId, type: TypeQR.arrivee, code: codeScanne,
+        lat: clientLat, lng: clientLng, photoUrl: photoUrl,
+        montantCash: montantCashEncaisse,
+      );
+      return ResultatValidation(succes: r.ok, message: r.message);
+    }
     final doc = await FirebaseFirestore.instance
         .collection('livraisons')
         .doc(livraisonId)
@@ -514,6 +539,12 @@ class LivraisonService {
     double? lat,
     double? lng,
   }) async {
+    if (await ScanServeurService.actif()) {
+      final r = await ScanServeurService.validerScan(
+        livraisonId: livraisonId, type: type, codeCourt: codeSaisi, lat: lat, lng: lng,
+      );
+      return r.ok;
+    }
     // Récupérer la clé locale préchargée
     final local = await QRCryptoService.chargerLocal(livraisonId);
     if (local == null) return false;
@@ -552,6 +583,11 @@ class LivraisonService {
     required String livraisonId,
     required String signatureBase64,
   }) async {
+    if (await ScanServeurService.actif()) {
+      final erreur = await ScanServeurService.ajouterSignature(
+          livraisonId: livraisonId, signatureBase64: signatureBase64);
+      return erreur == null;
+    }
     // ═══ RÈGLE DE SÉCURITÉ ═══ la signature est une PREUVE
     // COMPLÉMENTAIRE, jamais une clôture : seul le CODE DU CLIENT
     // (scan/code court) valide la remise. Un gribouillis ne peut pas

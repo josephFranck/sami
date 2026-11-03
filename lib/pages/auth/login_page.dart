@@ -7,6 +7,7 @@ import 'package:sami/pages/auth/reset_password_page.dart';
 import 'package:sami/pages/auth/signup_page.dart';
 import 'package:sami/utils/auth_i18n.dart';
 import 'package:sami/services/langue_service.dart';
+import 'package:sami/pages/auth/connexion_telephone_page.dart';
 import 'package:sami/l10n/tr.dart';
 
 class LoginPage extends StatefulWidget {
@@ -179,6 +180,52 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   : Text(_i18n.seConnecter,
                                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                             ),
+                          ),
+
+                          // Connexion par téléphone (SMS) / WhatsApp — lot C,
+                          // affichée quand l'exploitant a activé le canal
+                          FutureBuilder<List<CanalCode>>(
+                            future: ConnexionTelephonePage.canauxActifs(),
+                            builder: (_, snap) {
+                              final canaux = snap.data ?? const <CanalCode>[];
+                              if (canaux.isEmpty) return const SizedBox.shrink();
+                              return Column(children: [
+                                const SizedBox(height: 12),
+                                Row(children: [
+                                  Expanded(child: Divider(color: Colors.grey.shade300)),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    child: Text(_lang == AuthLang.en ? 'or' : 'ou',
+                                        style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                                  ),
+                                  Expanded(child: Divider(color: Colors.grey.shade300)),
+                                ]),
+                                const SizedBox(height: 8),
+                                for (final c in canaux)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: SizedBox(
+                                      height: 46,
+                                      child: OutlinedButton.icon(
+                                        onPressed: () => Navigator.push(context, MaterialPageRoute(
+                                            builder: (_) => ConnexionTelephonePage(canalInitial: c))),
+                                        icon: Icon(c == CanalCode.sms ? Icons.sms_outlined : Icons.chat,
+                                            color: c == CanalCode.sms ? const Color(0xFF6A1B9A) : const Color(0xFF25D366)),
+                                        label: Text(
+                                          c == CanalCode.sms
+                                              ? (_lang == AuthLang.en ? 'Continue with phone (SMS)' : Tr.s.continuerAvecTelephoneSms)
+                                              : (_lang == AuthLang.en ? 'Continue with WhatsApp' : Tr.s.continuerAvecWhatsapp),
+                                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.black87,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ]);
+                            },
                           ),
 
                           const SizedBox(height: 20),

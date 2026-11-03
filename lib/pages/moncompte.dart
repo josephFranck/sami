@@ -1,16 +1,15 @@
 import 'dart:io';
-import 'package:sami/utils/config_paiement.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sami/services/parametres_service.dart';
 import 'package:sami/services/parrainage_service.dart';
-import 'package:sami/services/paiement_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sami/pages/legal/mentions_legales_page.dart';
 import 'package:sami/widgets/image_universelle.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:sami/models/strategies_marketing.dart';
+import 'package:sami/services/config_marketing_service.dart';
+import 'package:sami/services/fidelite_service.dart';
 import 'package:sami/models/utilisateur.dart';
 import 'package:sami/pages/auth/login_page.dart';
 import 'package:sami/pages/commandes/mes_commandes_page.dart';
@@ -28,6 +27,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  ConfigMarketing? _cfg;
   Utilisateur? _u;
   bool _consentMarketing = false;
 
@@ -238,8 +238,12 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _charger() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) { setState(() => _chargement = false); return; }
+    // Points/parrainage des livraisons non encore comptées : le client
+    // les réclame ici (seul autorisé à écrire sur son doc), AVANT lecture.
+    await FideliteService.reclamerTout(user.uid);
+    final cfg = await FideliteService.config();
     final u = await Utilisateur.fromUid(user.uid);
-    if (mounted) setState(() { _u = u; _chargement = false; });
+    if (mounted) setState(() { _u = u; _cfg = cfg; _chargement = false; });
   }
 
   @override
@@ -247,8 +251,11 @@ class _ProfilePageState extends State<ProfilePage> {
     if (_chargement) return const Scaffold(body: Center(child: CircularProgressIndicator(color: _kPrimary)));
     if (_u == null) return Scaffold(body: Center(child: ElevatedButton(onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage())), child: const Text('Se connecter'))));
 
-    final niveau = NiveauFidelite.fromPoints(_u!.pointsFidelite);
-    final suivant = NiveauFidelite.paliers.length > niveau.niveau ? NiveauFidelite.paliers[niveau.niveau] : null;
+    // Paliers de la CONFIG ADMIN — les mêmes que le devis (réduction
+    // livraison) ; avant : constantes NiveauFidelite, différentes du devis.
+    final cfg = _cfg ?? ConfigMarketing.defaut();
+    final niveau = FideliteService.palierPour(cfg, _u!.pointsFidelite);
+    final suivant = FideliteService.palierSuivant(cfg, _u!.pointsFidelite);
     final pct = suivant != null ? ((_u!.pointsFidelite - niveau.pointsRequis) / (suivant.pointsRequis - niveau.pointsRequis)).clamp(0.0, 1.0) : 1.0;
 
     return Scaffold(
@@ -369,7 +376,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildCardFidelite(NiveauFidelite niveau, NiveauFidelite? suivant, double pct) => Container(
+  Widget _buildCardFidelite(PalierConfig niveau, PalierConfig? suivant, double pct) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(color: _kPrimary, borderRadius: BorderRadius.circular(16)),
     child: Column(
@@ -381,7 +388,7 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(niveau.nom, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-              Text('${_u!.pointsFidelite} points · ${niveau.tauxCashback}% cashback', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              Text('${_u!.pointsFidelite} points · -${niveau.reductionLivraison.round()}% livraison · ${niveau.cashback.toStringAsFixed(niveau.cashback % 1 == 0 ? 0 : 1)}% cashback', style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ])),
             if (_u!.creditBalance > 0)
               Container(
@@ -445,83 +452,21 @@ class _ProfilePageState extends State<ProfilePage> {
         const Divider(height: 1, indent: 56),
         _actionTile(Icons.favorite_border, 'Mes favoris', Colors.pink, () => Navigator.pushNamed(context, '/favoris')),
         const Divider(height: 1, indent: 56),
-        _actionTile(Icons.toll, 'Recharger mes crédits', Colors.amber.shade800, _recharger),
+        // Les crédits sont des AVOIRS (remboursements, parrainage) : pas de
+        // rechargement en argent (décision 03/11/2026).
+        _actionTile(Icons.account_balance_wallet_outlined, 'Mes avoirs', Colors.amber.shade800, () => Navigator.pushNamed(context, '/avoirs')),
         const Divider(height: 1, indent: 56),
-        _actionTile(Icons.card_giftcard, 'Mon code de parrainage', Colors.purple, _partagerCode),
+        _actionTile(Icons.card_giftcard, 'Mon code de parrainage', Colors.purple, _showCodeParrainage),
         const Divider(height: 1, indent: 56),
         _actionTile(Icons.lock_outline, 'Sécurité (email / mot de passe)', Colors.blueGrey, _securiteCompte),
         const Divider(height: 1, indent: 56),
         _actionTile(Icons.chat_bubble_outline, 'Mes messages', Colors.orange, () => Navigator.pushNamed(context, '/chatpage')),
-        if (_u!.role == 'couturier') ...[const Divider(height: 1, indent: 56), _actionTile(Icons.content_cut, 'Espace couturier', Colors.teal, () => Navigator.pushNamed(context, '/dashboard_couturier'))],
+        if (_u!.aRole('couturier')) ...[const Divider(height: 1, indent: 56), _actionTile(Icons.content_cut, 'Espace couturier', Colors.teal, () => Navigator.pushNamed(context, '/dashboard_couturier'))],
         const Divider(height: 1, indent: 56),
-        _actionTile(Icons.local_offer_outlined, 'Code parrainage', Colors.green, _showCodeParrainage),
-        const Divider(height: 1, indent: 56),
-        _actionTile(Icons.workspace_premium, 'Abonnements & crédits', Color(0xFFBA7517), () => Navigator.pushNamed(context, '/abonnements')),
+        _actionTile(Icons.workspace_premium, 'Abonnements', Color(0xFFBA7517), () => Navigator.pushNamed(context, '/abonnements')),
       ],
     ),
   );
-
-  /// RECHARGE : Mobile Money → le WEBHOOK crédite le solde à la
-  /// confirmation (seule écriture autorisée à l'augmenter — anti-fraude).
-  Future<void> _recharger() async {
-    final ctrl = TextEditingController(text: '1000');
-    final montant = await showDialog<double>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Recharger mes crédits'),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-              labelText: 'Montant (F CFA)', border: OutlineInputBorder()),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuler')),
-          ElevatedButton(
-              onPressed: () =>
-                  Navigator.pop(ctx, double.tryParse(ctrl.text.trim())),
-              child: const Text('Continuer')),
-        ],
-      ),
-    );
-    ctrl.dispose();
-    if (montant == null || montant < 100) return;
-    if (!await ConfigPaiement.actifs()) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text(
-                'La recharge sera disponible quand les paiements en ligne seront activés.')));
-      }
-      return;
-    }
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null || !mounted) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PagePaiementMoMo(
-          montant: montant,
-          description: 'Recharge crédits PagneShop',
-          clientId: uid,
-          type: 'recharge',
-          onSucces: (_) {
-            if (Navigator.canPop(context)) Navigator.pop(context);
-          },
-          onEchec: () {
-            if (Navigator.canPop(context)) Navigator.pop(context);
-          },
-        ),
-      ),
-    );
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-              'Paiement confirmé = solde crédité sous peu (webhook).'),
-          backgroundColor: Colors.green));
-    }
-  }
 
   /// Changer email/mot de passe exige de REprouver son identité
   /// (règle Firebase) : mot de passe actuel, puis les nouveautés.
@@ -694,16 +639,38 @@ class _ProfilePageState extends State<ProfilePage> {
     showDialog(context: context, builder: (_) => _DialogStockage(onChanged: () => setState(() {})));
   }
 
-  void _showCodeParrainage() {
-    final code = _u!.codeParrainage ?? 'SAMI-${_u!.nom.toUpperCase()}-${DateTime.now().millisecondsSinceEpoch % 100}';
-    showDialog(context: context, builder: (_) => AlertDialog(
-      title: const Text('Code parrainage'),
+  /// Code de parrainage RÉEL (généré/lu par ParrainageService) et montants
+  /// RÉELS des paramètres admin — plus de code inventé ni de 500/1 000 en dur.
+  Future<void> _showCodeParrainage() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final actif = await ParametresService.parrainageActif();
+    if (!mounted) return;
+    if (!actif) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Le programme de parrainage arrive bientôt 🎁')));
+      return;
+    }
+    final code = await ParrainageService.monCode(uid);
+    final gainParrain = await ParametresService.recompenseParrainF();
+    final gainFilleul = await ParametresService.recompenseFilleulF();
+    if (!mounted) return;
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('Mon code de parrainage'),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: _kPrimary.withOpacity(0.08), borderRadius: BorderRadius.circular(12)), child: Text(code, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _kPrimary, letterSpacing: 2))),
         const SizedBox(height: 10),
-        const Text('Votre filleul gagne 500 FCFA\nVous gagnez 1 000 FCFA !', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 13)),
+        Text('Votre filleul gagne ${PrixFCFA.formater(gainFilleul)} d\'avoir\nVous gagnez ${PrixFCFA.formater(gainParrain)} d\'avoir\nà sa première commande livrée.',
+            textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 13)),
       ]),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fermer'))],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fermer')),
+        ElevatedButton.icon(
+          icon: const Icon(Icons.share, size: 16),
+          label: const Text('Partager'),
+          onPressed: () { Navigator.pop(ctx); _partagerCode(); },
+        ),
+      ],
     ));
   }
 

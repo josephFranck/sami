@@ -14,6 +14,13 @@ class Utilisateur {
   final bool estActif; // Added estActif
   final String role; // Added role
   final List<String> permissions; // droits granulaires des agents (mini-admins)
+  /// MULTI-RÔLES (décision 03/11/2026) : un compte peut porter plusieurs
+  /// rôles (ex. boutiquier ET client). `role` reste le rôle PRINCIPAL
+  /// (compatibilité, règles Firestore) ; `roles` la liste complète.
+  /// Tout compte est client.
+  final List<String> roles;
+  bool aRole(String r) =>
+      r == 'client' || role == r || roles.contains(r);
   final List<String> historiqueCommandes; // Added historiqueCommandes
   final List<Map<String, dynamic>> panier; // Added panier
   List<String> favoris; // Added favoris
@@ -45,6 +52,7 @@ class Utilisateur {
     required this.estActif,
     required this.role,
     this.permissions = const [],
+    List<String>? roles,
     required this.historiqueCommandes,
     required this.panier,
     required this.favoris,
@@ -61,7 +69,7 @@ class Utilisateur {
     this.pointsFidelite = 0,
     this.creditBalance = 0.0,
     this.codeParrainage,
-  });
+  }) : roles = roles ?? {role, 'client'}.toList();
 
   static CollectionReference<Map<String, dynamic>> utilisateurCollection =
       FirebaseFirestore.instance.collection('utilisateurs');
@@ -80,6 +88,7 @@ class Utilisateur {
       estVerifie: data['estVerifie'] as bool,
       estActif: data['estActif'] as bool,
       role: data['role'] as String? ?? '',
+      roles: List<String>.from(data['roles'] as List? ?? const []),
       permissions: List<String>.from(data['permissions'] as List? ?? const []),
       historiqueCommandes: List<String>.from(data['historiqueCommandes'] ?? []),
       panier: List<Map<String, dynamic>>.from(data['panier'] ?? []),
@@ -112,6 +121,7 @@ class Utilisateur {
       estVerifie: map['estVerifie'] as bool? ?? false,
       estActif: map['estActif'] as bool? ?? true,
       role: map['role'] as String? ?? 'client',
+      roles: List<String>.from(map['roles'] as List? ?? const []),
       permissions: List<String>.from(map['permissions'] as List? ?? const []),
       historiqueCommandes: List<String>.from(map['historiqueCommandes'] ?? []),
       panier: List<Map<String, dynamic>>.from(map['panier'] ?? []),
@@ -149,6 +159,7 @@ class Utilisateur {
       estVerifie: data['estVerifie'] as bool? ?? false,
       estActif: data['estActif'] as bool? ?? true,
       role: data['role'] as String? ?? 'client',
+      roles: List<String>.from(data['roles'] as List? ?? const []),
       historiqueCommandes: List<String>.from(data['historiqueCommandes'] ?? []),
       panier: List<Map<String, dynamic>>.from(data['panier'] ?? []),
       favoris: List<String>.from(data['favoris'] ?? []),
@@ -182,6 +193,7 @@ class Utilisateur {
       'estVerifie': estVerifie,
       'estActif': estActif,
       'role': role,
+      'roles': roles,
       'historiqueCommandes': historiqueCommandes,
       'panier': panier,
       'favoris': favoris,

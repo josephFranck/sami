@@ -61,3 +61,32 @@
 17. Comptes Meta Business (WhatsApp) et Telegram ; plan Blaze.
 
 **Ordre recommandé :** A → B → C (C démarre dès que Blaze est activé ; A et B n'en dépendent pas).
+
+---
+
+## 4. Journal d'exécution
+
+### Lot A (1/4 → 3/4) — fait le 03/11/2026
+| # | Fait | Preuve |
+|---|---|---|
+| A4-A5 | Devis unique (`DevisCommandeService`) + forfait/supplément hors zone | commit `a4114b4` |
+| A6 | Couture → sous-commande boutique | commit `be92e37` |
+| A7 | Multi-rôles : `Utilisateur.roles` + `aRole()`, `Droits`, drawer, promotion `arrayUnion`, règle « roles inchangeables par soi-même » | `utilisateur.dart`, `droits.dart`, `accueil_pagneshop.dart`, `gestion_utilisateurs_page.dart`, `firestore.rules` |
+| A8 | Libellés de paiement : 4 valeurs → 4 libellés (`ConfigPaiement.libelleMethode`) ; Fulfulde retiré du sélecteur (enum `Langue.ff` conservé inerte) | `config_paiement.dart`, `mes_commandes_page.dart`, `saisie_mesures_page.dart` |
+| A9 | Crédits = avoirs : rechargement retiré (`moncompte`), page « Mes crédits » (achat d'offres) → « Mes avoirs » (solde, sources, avoirs en attente, historique), `OffreCredit`/`acheterCredits` supprimés, débit du panier tracé (`mouvements_credits`), avoirs sans frais Mobile Money, contrôle « solde suffisant » aligné sur le montant débité | `abonnements_page.dart`, `panierpage.dart`, `credit_service.dart`, `devis_commande_service.dart` |
+
+### Constats faits en exécutant A9 (corrigés dans le même lot)
+| Constat | Preuve | Correction |
+|---|---|---|
+| La fidélité n'avançait jamais : `_crediterFidelite` écrivait `points` (champ lu par personne — l'app lit `pointsFidelite`) depuis le téléphone du **livreur**, écriture sur le doc d'un tiers refusée par les règles ; deux tables de paliers (constantes `NiveauFidelite` ≠ config admin lue par le devis) ; l'accueil affichait `niveau × 500` points | `livraison_service.dart` (ancien), `strategies_marketing.dart`, `accueil_pagneshop.dart:799` | `FideliteService` : le **client** réclame ses points (`reclamerTout` à l'ouverture de l'accueil, de Mon compte et de Mes commandes) ; une seule table (config admin) ; règles : hausse de `pointsFidelite` bornée par la sous-commande citée (`scFidelite`), drapeau `fideliteCreditee` jamais remis à false, statut de sous-commande jamais changé par le client seul, création toujours `enAttente` |
+| Le parrainage n'était jamais validé : lecture de `parrainages` et création des primes depuis le téléphone du livreur → refusées (sauf livreur staff) | `parrainage_service.dart` (ancien `validerSiPremiereLivraison`) | `reclamerSiPremiereLivraison` côté filleul ; règles : passage `enAttente → valide` par le filleul avec `premiereLivraisonId` (sous-commande à son nom, livrée) ; primes à ids déterministes `PARRAINAGE_<lien>_parrain/_filleul` (montants relus sur le lien) |
+| Historique des crédits refusé au client : la règle testait `clientId`, le document porte `utilisateurId` | `firestore.rules` (ancien), `credit_service.dart:toMap` | règle corrigée + index `mouvements_credits (utilisateurId, date desc)` |
+| Le staff « reversements » ne pouvait pas créditer un avoir (règle `utilisateurs` : staff `utilisateurs` seulement) ; l'admin créditait sans mouvement (historique client muet) ; `_showCodeParrainage` inventait un code et affichait 500/1 000 F en dur | `remboursements_admin_page.dart`, `moncompte.dart` | règle : staff reversements → `creditBalance` seul ; crédit via `CreditService.crediterClient` (mouvement tracé) ; code réel + montants des paramètres |
+| `ComptabiliteService.confirmerReversementsApresLivraison` (seul appel vivant du service) créditait le livreur d'un forfait 600 × 70 % à chaque scan, depuis son téléphone (refusé : `creditBalance` protégé) et en doublon du reversement staff (`gainLivreur` du devis) ; `enregistrerVente` jamais appelé | `livraison_service.dart:340` (ancien), `comptabilite_service.dart` | appel retiré ; service supprimé ; `ReversementService` (staff) = seule source des parts |
+| `StrategiesMarketingService` (jamais appelé) augmentait `creditBalance` en direct et codait 500/1 000 F ; `OffreCredit`/`config_credits` (achat de crédits) sans écran | `strategies_marketing.dart`, `abonnements.dart` | supprimés |
+
+### Reste à faire
+- **Lot B** : souscription des abonnements (MoMo déclaré → vérification staff → `abonnementFinLe`).
+- **Lot C** (Blaze) : voir §3 — les limites restantes (statut de sous-commande modifiable par le livreur/gérant, devis calculé côté client) ne se ferment qu'avec des Cloud Functions.
+- **Exploitant** : publier `firestore.rules` (console → Règles → coller → Publier) et créer l'index `mouvements_credits` via le lien du log, ou le fichier `firestore.indexes.json`.
+

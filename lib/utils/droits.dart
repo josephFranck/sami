@@ -23,9 +23,9 @@ class Droits {
   // ── Vérifications de rôle de base ─────────────────────────────────────────
 
   static bool estAdmin(Utilisateur? u) => u?.role == 'admin';
-  static bool estBoutiquier(Utilisateur? u) => u?.role == 'boutiquier' || estAdmin(u);
-  static bool estCouturier(Utilisateur? u) => u?.role == 'couturier' || estAdmin(u);
-  static bool estLivreur(Utilisateur? u) => u?.role == 'livreur' || estAdmin(u);
+  static bool estBoutiquier(Utilisateur? u) => (u?.aRole('boutiquier') ?? false) || estAdmin(u);
+  static bool estCouturier(Utilisateur? u) => (u?.aRole('couturier') ?? false) || estAdmin(u);
+  static bool estLivreur(Utilisateur? u) => (u?.aRole('livreur') ?? false) || estAdmin(u);
 
   /// PERMISSIONS GRANULAIRES : l'admin a tout ; un « agent » (mini-admin)
   /// n'a que les droits cochés. Permissions : 'candidatures', 'litiges',
@@ -39,7 +39,8 @@ class Droits {
   /// A au moins un droit d'administration (affichage de la section du menu).
   static bool estStaff(Utilisateur? u) =>
       estAdmin(u) || (u?.role == 'agent' && (u?.permissions.isNotEmpty ?? false));
-  static bool estClient(Utilisateur? u) => u?.role == 'client' || estAdmin(u);
+  // TOUT compte connecté est client (décision 03/11/2026)
+  static bool estClient(Utilisateur? u) => u != null;
   static bool estConnecte(Utilisateur? u) => u != null;
 
   // ── Droits sur les PAGNES ──────────────────────────────────────────────────

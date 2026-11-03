@@ -27,6 +27,42 @@ service cloud.firestore {
         (('permissions' in monDoc()) && monDoc().permissions.hasAny([p]))
       );
     }
+    // Fidélité : la sous-commande citée comme preuve par le client
+    // (`scFidelite` sur son propre doc) et le barème FCFA → point.
+    function scFidelite() {
+      return get(/databases/$(database)/documents/sous_commandes/$(request.resource.data.get('scFidelite','-'))).data;
+    }
+    function fcfaParPoint() {
+      return exists(/databases/$(database)/documents/config_marketing/parametres)
+        ? get(/databases/$(database)/documents/config_marketing/parametres).data.get('fcfaParPoint', 100)
+        : 100;
+    }
+    // `sc` = données de la sous-commande citée (lue UNE fois par l'appelant)
+    function preuveFidelite(sc) {
+      return sc.get('clientId','') == moi()
+          && sc.get('statut','') == 'livree'
+          && sc.get('fideliteCreditee', false) == false
+          && (request.resource.data.get('pointsFidelite', 0)
+                - resource.data.get('pointsFidelite', 0)) * fcfaParPoint()
+               <= sc.get('totalClient', 0);
+    }
+    // Parrainage : le lien cité par une prime, et la sous-commande citée
+    // comme première livraison (lues UNE fois chacune)
+    function lienParrainage() {
+      return get(/databases/$(database)/documents/parrainages/$(request.resource.data.get('parrainageId','-'))).data;
+    }
+    function premiereLivraison() {
+      return get(/databases/$(database)/documents/sous_commandes/$(request.resource.data.get('premiereLivraisonId','-'))).data;
+    }
+    function primeParrainValide(lien) {
+      return lien.get('filleulId','') == moi()
+          && lien.get('statut','') == 'valide'
+          && request.resource.data.get('clientId','') == lien.get('parrainId','')
+          && request.resource.data.get('montant', 0) == lien.get('recompenseParrain', 0);
+    }
+    function livraisonDuFilleul(sc) {
+      return sc.get('clientId','') == moi() && sc.get('statut','') == 'livree';
+    }
 
     // ═══════════ UTILISATEURS ═══════════
     match /utilisateurs/{uid} {
@@ -45,15 +81,30 @@ service cloud.firestore {
                && !estSuper()))
         ||
         estStaff('utilisateurs') ||
+        // staff REVERSEMENTS (file des avoirs/remboursements) : ne touche
+        // QUE le solde d'avoirs du client
+        (estStaff('reversements')
+         && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['creditBalance'])) ||
         (moi() == uid
          && request.resource.data.role == resource.data.role
+         // ni la LISTE des rôles (multi-rôles) : seul le staff l'étend
+         && request.resource.data.get('roles', []) == resource.data.get('roles', [])
          // ANTI AUTO-CRÉDIT : on ne peut pas AUGMENTER son propre solde
          // (le débit — payer en crédits — reste permis ; les gains
          //  passent par les reversements, écrits par le staff)
          && request.resource.data.get('creditBalance', 0)
               <= resource.data.get('creditBalance', 0)
          && request.resource.data.get('permissions', [])
-            == resource.data.get('permissions', []))
+            == resource.data.get('permissions', [])
+         // POINTS DE FIDÉLITÉ : le client les réclame lui-même, avec
+         // PREUVE — `scFidelite` cite une sous-commande à son nom, livrée,
+         // pas encore comptée ; la hausse est bornée par son montant
+         // (totalClient / fcfaParPoint, sans division : delta × fpp ≤ total).
+         && (!touche(['pointsFidelite'])
+             || request.resource.data.get('pointsFidelite', 0)
+                  <= resource.data.get('pointsFidelite', 0)
+             || preuveFidelite(scFidelite())))
       );
     
       // PROFILS DE MESURES : sous-collection PERSONNELLE — le chemin
@@ -124,7 +175,12 @@ service cloud.firestore {
     }
     match /sous_commandes/{id} {
       allow read: if connecte();
-      allow create: if connecte() && request.resource.data.clientId == moi();
+      // CREATE : le client, toujours « enAttente », jamais déjà comptée
+      // en fidélité (sinon une fausse commande « livrée » rapporterait des
+      // points).
+      allow create: if connecte() && request.resource.data.clientId == moi()
+                    && request.resource.data.get('statut','') == 'enAttente'
+                    && request.resource.data.get('fideliteCreditee', false) == false;
       // UPDATE réservé aux PARTIES PRENANTES de cette commande :
       // staff, le client, le livreur assigné, ou un gérant de la
       // boutique — un inconnu décompilé ne marque plus rien « livré ».
@@ -138,6 +194,16 @@ service cloud.firestore {
           // les MONTANTS et le flag de reversement : staff seulement
           && !touche(['sousTotal','totalClient','fraisLivraison','netBoutique',
                       'boutiqueReversee','clientId','boutiqueId','articles'])
+          // le drapeau fidélité ne se lève qu'une fois (jamais remis à false)
+          && (!touche(['fideliteCreditee'])
+              || request.resource.data.get('fideliteCreditee', false) == true)
+          // le STATUT : livreur assigné, gérant ou staff — jamais le client
+          // seul (l'app client ne change aucun statut de sous-commande ;
+          // un client qui se marque « livré » ferait payer un reversement)
+          && (!touche(['statut'])
+              || resource.data.livreurId == moi()
+              || get(/databases/$(database)/documents/boutiques/$(resource.data.boutiqueId))
+                     .data.gerants.hasAny([moi()]))
         )
       );
 
@@ -277,7 +343,10 @@ service cloud.firestore {
       allow update: if estStaff('livraisons');
     }
     match /mouvements_credits/{id} {
-      allow read: if connecte() && resource.data.get('clientId','') == moi()
+      // le document porte `utilisateurId` (schéma MouvementCredit) — avant,
+      // la règle testait `clientId`, absent : l'historique du client était
+      // refusé.
+      allow read: if connecte() && resource.data.get('utilisateurId','') == moi()
                   || estStaff('reversements');
       allow create: if connecte();
       allow update, delete: if estStaff('reversements');
@@ -298,16 +367,40 @@ service cloud.firestore {
       allow create: if connecte()
                     && request.resource.data.get('filleulId','') == moi()
                     && request.resource.data.get('statut','') == 'enAttente';
-      allow update: if estStaff('reversements');
+      // VALIDATION par le FILLEUL lui-même (son téléphone), avec PREUVE :
+      // enAttente → valide en citant `premiereLivraisonId`, une sous-commande
+      // à SON nom au statut `livree`. Rien d'autre ne bouge (montants figés,
+      // identités). Avant : écrit depuis le téléphone du livreur → refusé.
+      allow update: if estStaff('reversements') || (
+        connecte()
+        && resource.data.get('filleulId','') == moi()
+        && resource.data.get('statut','') == 'enAttente'
+        && request.resource.data.get('statut','') == 'valide'
+        && !touche(['parrainId','filleulId','codeParrainage',
+                    'recompenseParrain','recompenseFilleul','dateCreation'])
+        && livraisonDuFilleul(premiereLivraison())
+      );
     }
 
     // REMBOURSEMENTS : créés par le client à l'annulation, traités par staff
     match /remboursements_a_faire/{id} {
       allow read: if estStaff('reversements')
                   || (connecte() && resource.data.get('clientId','') == moi());
+      // Création : par le client POUR LUI-MÊME (annulation, cashback,
+      // sa propre prime de filleul), ou par le FILLEUL pour son PARRAIN —
+      // montant et bénéficiaire relus sur le lien de parrainage VALIDE.
+      // Les ids PARRAINAGE_<lien>_parrain / _filleul / CASHBACK_<sc> sont
+      // déterministes : un second envoi est un update → staff seulement.
       allow create: if connecte()
-                    && request.resource.data.get('clientId','') == moi()
-                    && request.resource.data.get('statut','') == 'a_traiter';
+                    && request.resource.data.get('statut','') == 'a_traiter'
+                    && (
+                      request.resource.data.get('clientId','') == moi()
+                      || (
+                        request.resource.data.get('type','') == 'parrainage'
+                        && id == 'PARRAINAGE_' + request.resource.data.get('parrainageId','-') + '_parrain'
+                        && primeParrainValide(lienParrainage())
+                      )
+                    );
       allow update: if estStaff('reversements');
     }
     match /reversements/{id} {

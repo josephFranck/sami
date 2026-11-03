@@ -204,10 +204,13 @@ class DevisCommandeService {
 
       final commission =
           gratuit ? 0.0 : PrixFCFA.arrondirAu50(sousTotal * commissionPct / 100);
-      final fraisPaiement = methodePaiement == 'cash'
-          ? 0.0
-          : PrixFCFA.arrondirAu50(
-              (sousTotal + fraisLivraison) * fraisMoMoPct / 100);
+      // Frais de transaction Mobile Money : aucun en espèces, aucun en
+      // avoirs (`credits` = solde interne, aucune transaction MoMo).
+      final fraisPaiement =
+          (methodePaiement == 'cash' || methodePaiement == 'credits')
+              ? 0.0
+              : PrixFCFA.arrondirAu50(
+                  (sousTotal + fraisLivraison) * fraisMoMoPct / 100);
       final totalClient = PrixFCFA.arrondirSuperieur50(
           sousTotal + fraisLivraison + fraisPaiement);
       // Le livreur est payé sur le BRUT (la réduction fidélité est un

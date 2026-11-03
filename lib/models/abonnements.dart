@@ -291,84 +291,10 @@ class AbonnementLivreur {
   };
 }
 
-// ─── Offres de crédits pour les clients ──────────────────────────────────────
-
-class OffreCredit {
-  final String id;
-  final double montant;          // FCFA crédités sur le compte
-  final double prix;             // FCFA payés par le client
-  final double bonus;            // % de bonus (ex: 10% = 1100 FCFA pour 1000 payés)
-  final String label;
-  final bool estPopulaire;
-  final Color couleur;
-
-  const OffreCredit({
-    required this.id,
-    required this.montant,
-    required this.prix,
-    required this.bonus,
-    required this.label,
-    this.estPopulaire = false,
-    required this.couleur,
-  });
-
-  double get montantAvecBonus => PrixFCFA.arrondirAu50(montant * (1 + bonus / 100));
-  String get montantFmt => PrixFCFA.formater(montant);
-  String get prixFmt => PrixFCFA.formater(prix);
-  String get montantBonusFmt => PrixFCFA.formater(montantAvecBonus);
-
-  /// OFFRES CONFIGURABLES : l'admin peut créer/modifier les packs dans la
-  /// collection 'config_credits' (ex: 2500 crédités pour 2000 FCFA payés).
-  /// À défaut, on retombe sur le catalogue par défaut ci-dessous.
-  static Future<List<OffreCredit>> chargerOffres() async {
-    try {
-      final snap = await FirebaseFirestore.instance
-          .collection('config_credits')
-          .where('actif', isEqualTo: true)
-          .get();
-      if (snap.docs.isNotEmpty) {
-        final list = snap.docs.map((d) {
-          final m = d.data();
-          return OffreCredit(
-            id: d.id,
-            montant: (m['montant'] as num?)?.toDouble() ?? 0,
-            prix: (m['prix'] as num?)?.toDouble() ?? 0,
-            bonus: (m['bonus'] as num?)?.toDouble() ?? 0,
-            label: m['label'] as String? ?? '',
-            estPopulaire: m['estPopulaire'] as bool? ?? false,
-            couleur: const Color(0xFF6A1B9A),
-          );
-        }).toList()
-          ..sort((a, b) => a.prix.compareTo(b.prix));
-        return list;
-      }
-    } catch (_) {}
-    return catalogue; // fallback : offres par défaut
-  }
-
-  static const List<OffreCredit> catalogue = [
-    OffreCredit(
-      id: 'credit_1000', montant: 1000, prix: 1000, bonus: 0,
-      label: 'Découverte', couleur: Color(0xFF888780),
-    ),
-    OffreCredit(
-      id: 'credit_3000', montant: 3000, prix: 3000, bonus: 5,
-      label: 'Pratique', estPopulaire: true, couleur: Color(0xFF534AB7),
-    ),
-    OffreCredit(
-      id: 'credit_5000', montant: 5000, prix: 5000, bonus: 10,
-      label: 'Régulier', couleur: Color(0xFF1D9E75),
-    ),
-    OffreCredit(
-      id: 'credit_10000', montant: 10000, prix: 10000, bonus: 15,
-      label: 'Fidèle', couleur: Color(0xFFBA7517),
-    ),
-    OffreCredit(
-      id: 'credit_25000', montant: 25000, prix: 25000, bonus: 20,
-      label: 'VIP', couleur: Color(0xFF6A1B9A),
-    ),
-  ];
-}
+// ─── Offres de crédits (ACHAT) : SUPPRIMÉES ─────────────────────────────────
+// Décision 03/11/2026 : les crédits sont des AVOIRS (remboursements,
+// cashback, parrainage), jamais achetés. `OffreCredit`, son catalogue et la
+// collection `config_credits` n'ont plus d'écran.
 
 // ─── Profil abonnement boutique ───────────────────────────────────────────────
 

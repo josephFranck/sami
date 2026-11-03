@@ -10,7 +10,6 @@ import 'package:sami/models/commande_multi.dart';
 import 'package:sami/models/livraison_v2.dart';
 import 'package:sami/services/livraison_service.dart';
 import 'package:sami/services/stock_service.dart';
-import 'package:sami/models/strategies_marketing.dart';
 import 'package:sami/services/commission_boutique_service.dart';
 import 'package:sami/services/config_marketing_service.dart';
 import 'package:sami/agents/agent_livraison.dart';

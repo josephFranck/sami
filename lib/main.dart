@@ -34,7 +34,6 @@ import 'package:sami/pages/admin/dashboard_admin_page.dart';
 import 'package:sami/pages/admin/evenements_admin_page.dart';
 import 'package:sami/pages/boutiques_liste_page.dart';
 import 'package:sami/pages/notifications_page.dart';
-import 'package:sami/pages/conditions_page.dart';
 import 'package:sami/pages/recus_page.dart';
 import 'package:sami/pages/mes_boutiques_page.dart';
 import 'package:sami/pages/tous_les_pagnes_page.dart';
@@ -237,8 +236,8 @@ Route<dynamic>? _generateRoute(RouteSettings settings) {
       return _slide(const BoutiquesListePage());
     case '/notifications':
       return _slide(const NotificationsPage());
-    case '/conditions':
-      return _slide(const ConditionsPage());
+    case '/conditions': // ancienne route conservée → page légale sourcée
+      return _slide(const MentionsLegalesPage(ongletInitial: 1));
     case '/mes-recus':
       return _slide(const MesRecusPage());
     case '/mes-boutiques':
@@ -262,6 +261,10 @@ Route<dynamic>? _generateRoute(RouteSettings settings) {
     // ── Crédits & abonnements ──────────────────────────────────────────────
     case '/abonnements':
       return _slide(const _AbonnementGate());
+    case '/avoirs':
+      return _slide(const _CreditsGate());
+    case '/historique-avoirs':
+      return _slide(const _HistoriqueGate());
 
     case '/livreurs':
       return _slide(const LivreurListPage());
@@ -517,7 +520,7 @@ class _CreditsGateState extends State<_CreditsGate> {
   @override
   Widget build(BuildContext context) {
     if (_u == null) return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFF6A1B9A))));
-    return PageAchatCreditsClient(utilisateur: _u!);
+    return PageAvoirsClient(utilisateur: _u!);
   }
 }
 

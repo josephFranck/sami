@@ -1,83 +1,15 @@
 import 'package:sami/utils/prix_fcfa.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:sami/services/config_marketing_service.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // STRATÉGIES COMMERCIALES — SAMI ECOSYSTEM
 // Deux cibles : Acheteurs (clients) et Boutiquiers
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ─── 1. FIDÉLITÉ ACHETEUR (Gamification) ────────────────────────────────────
-// Basé sur le champ `niveau` existant dans Utilisateur
-
-class NiveauFidelite {
-  final int niveau;
-  final String nom;
-  final String emoji;
-  final int pointsRequis;
-  final double tauxReductionLivraison; // % de réduction sur livraison
-  final bool accesVentesFlash;         // accès anticipé aux ventes flash
-  final double tauxCashback;           // % cashback en crédits
-
-  const NiveauFidelite({
-    required this.niveau,
-    required this.nom,
-    required this.emoji,
-    required this.pointsRequis,
-    required this.tauxReductionLivraison,
-    required this.accesVentesFlash,
-    required this.tauxCashback,
-  });
-
-  // Paliers adaptés au marché de Garoua
-  static const List<NiveauFidelite> paliers = [
-    NiveauFidelite(
-      niveau: 1, nom: 'Découvreur', emoji: '🌱',
-      pointsRequis: 0,
-      tauxReductionLivraison: 0,
-      accesVentesFlash: false,
-      tauxCashback: 0,
-    ),
-    NiveauFidelite(
-      niveau: 2, nom: 'Habitué', emoji: '⭐',
-      pointsRequis: 500,
-      tauxReductionLivraison: 10,
-      accesVentesFlash: false,
-      tauxCashback: 1,
-    ),
-    NiveauFidelite(
-      niveau: 3, nom: 'Connaisseur', emoji: '🏆',
-      pointsRequis: 2000,
-      tauxReductionLivraison: 25,
-      accesVentesFlash: true,
-      tauxCashback: 2,
-    ),
-    NiveauFidelite(
-      niveau: 4, nom: 'Expert', emoji: '💎',
-      pointsRequis: 5000,
-      tauxReductionLivraison: 50,
-      accesVentesFlash: true,
-      tauxCashback: 3,
-    ),
-    NiveauFidelite(
-      niveau: 5, nom: 'Ambassadeur', emoji: '👑',
-      pointsRequis: 15000,
-      tauxReductionLivraison: 100, // livraison gratuite
-      accesVentesFlash: true,
-      tauxCashback: 5,
-    ),
-  ];
-
-  static NiveauFidelite fromPoints(int points) {
-    return paliers.lastWhere((p) => points >= p.pointsRequis);
-  }
-
-  // Points gagnés par achat
-  static int pointsGagnes(double montantAchat) {
-    // 1 point par 100 FCFA dépensés
-    return (montantAchat / 100).floor();
-  }
-}
+// ─── 1. FIDÉLITÉ ACHETEUR ───────────────────────────────────────────────────
+// Déplacée : `FideliteService` (paliers de la CONFIG ADMIN, champ
+// `pointsFidelite`). L'ancienne table constante `NiveauFidelite` divergeait
+// des paliers utilisés par le devis.
 
 // ─── 2. PARRAINAGE (Referral) ────────────────────────────────────────────────
 
@@ -653,131 +585,7 @@ enum TypeAjustement {
 
 // ─── SERVICE ORCHESTRATEUR DES STRATÉGIES ───────────────────────────────────
 
-class StrategiesMarketingService {
-
-  /// Calcule et enregistre les points + cashback gagnés après un achat.
-  /// Lit les taux depuis la CONFIG ADMIN (collection config_marketing),
-  /// avec fallback sur les valeurs par défaut.
-  static Future<void> crediterPointsFidelite({
-    required String utilisateurId,
-    required double montantAchat,
-  }) async {
-    // Charger la config admin (taux points + paliers/cashback)
-    final config = await ConfigMarketingService.charger();
-    final fcfaParPoint = config.fcfaParPoint > 0 ? config.fcfaParPoint : 100;
-    final points = (montantAchat / fcfaParPoint).floor();
-
-    final ref = FirebaseFirestore.instance
-        .collection('utilisateurs')
-        .doc(utilisateurId);
-
-    await FirebaseFirestore.instance.runTransaction((tx) async {
-      final doc = await tx.get(ref);
-      final pointsActuels = doc['pointsFidelite'] as int? ?? 0;
-      final nouveauxPoints = pointsActuels + points;
-
-      // Déterminer le palier atteint selon la config admin
-      PalierConfig palierAtteint = config.paliers.first;
-      for (final p in config.paliers) {
-        if (nouveauxPoints >= p.pointsRequis) palierAtteint = p;
-      }
-      final niveauIndex = config.paliers.indexOf(palierAtteint) + 1;
-
-      // Cashback : % du montant d'achat crédité selon le palier
-      final cashback = montantAchat * palierAtteint.cashback / 100;
-      final creditActuel = (doc['creditBalance'] as num?)?.toDouble() ?? 0;
-
-      tx.update(ref, {
-        'pointsFidelite': nouveauxPoints,
-        'niveau': niveauIndex,
-        'creditBalance': creditActuel + cashback,
-      });
-    });
-  }
-
-  /// Valide et applique un code de parrainage
-  static Future<bool> appliquerCodeParrainage({
-    required String filleulId,
-    required String codeParrainage,
-  }) async {
-    final snap = await FirebaseFirestore.instance
-        .collection('parrainages')
-        .where('codeParrainage', isEqualTo: codeParrainage)
-        .where('statut', isEqualTo: StatutParrainage.enAttente.name)
-        .limit(1)
-        .get();
-
-    if (snap.docs.isEmpty) return false;
-    final doc = snap.docs.first;
-    final parrainId = doc['parrainId'] as String? ?? '';
-
-    final batch = FirebaseFirestore.instance.batch();
-
-    // Activer le parrainage
-    batch.update(doc.reference, {
-      'filleulId': filleulId,
-      'statut': StatutParrainage.recompense.name,
-      'dateActivation': DateTime.now(),
-    });
-
-    // Créditer le parrain
-    batch.update(
-      FirebaseFirestore.instance.collection('utilisateurs').doc(parrainId),
-      {'creditBalance': FieldValue.increment(1000)},
-    );
-
-    // Créditer le filleul
-    batch.update(
-      FirebaseFirestore.instance.collection('utilisateurs').doc(filleulId),
-      {'creditBalance': FieldValue.increment(500)},
-    );
-
-    await batch.commit();
-    return true;
-  }
-
-  /// Alerte saisonnière envoyée par l'agent aux boutiquiers
-  static Future<void> envoyerAlertesSaisonnieres() async {
-    final prochain = EventSaisonnier.evenementProchain(DateTime.now().year);
-    if (prochain == null) return;
-
-    final jours = prochain.dateDebut.difference(DateTime.now()).inDays;
-    if (jours > 21 || jours < 0) return;
-
-    final boutiques = await FirebaseFirestore.instance
-        .collection('boutiques')
-        .where('estActif', isEqualTo: true)
-        .get();
-
-    final batch = FirebaseFirestore.instance.batch();
-    for (final b in boutiques.docs) {
-      final notifRef = FirebaseFirestore.instance.collection('notifications').doc();
-      batch.set(notifRef, {
-        'destinataireId': b.id,
-        'type': 'alerte_saisonniere',
-        'titre': '${prochain.emoji} ${prochain.nom} dans $jours jours !',
-        'message': prochain.messageMarketing,
-        'reductionSuggeree': prochain.reductionSuggeree,
-        'actionSuggere': 'Créer une promotion',
-        'lu': false,
-        'dateCreation': DateTime.now(),
-      });
-    }
-    await batch.commit();
-  }
-
-  /// Calcule le palier boutiquier selon ses ventes du mois
-  static Future<PalierBoutiquier> calculerPalierBoutiquier(
-      String boutiqueId) async {
-    final debut = DateTime.now().subtract(const Duration(days: 30));
-    final snap = await FirebaseFirestore.instance
-        .collection('sous_commandes')
-        .where('boutiqueId', isEqualTo: boutiqueId)
-        .where('dateCreation', isGreaterThan: debut)
-        .where('statut', isEqualTo: 'livree')
-        .get();
-
-    final ventesMois = snap.docs.length;
-    return PalierBoutiquier.fromVentes(ventesMois);
-  }
-}
+// `StrategiesMarketingService` supprimé (jamais appelé) : il augmentait
+// `creditBalance` en direct (refusé par les règles) et codait 500/1 000 F
+// de parrainage en dur. Fidélité → FideliteService ; parrainage →
+// ParrainageService (file staff, montants des paramètres admin).

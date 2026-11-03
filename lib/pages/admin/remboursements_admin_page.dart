@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:sami/services/credit_service.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 
-/// TRAITEMENT DES REMBOURSEMENTS : la file créée par les annulations.
-/// Crédits → un bouton re-crédite le client (écriture staff, permise).
-/// Mobile Money → le staff fait le geste MoMo puis marque « traité ».
+/// FILE DES AVOIRS ET REMBOURSEMENTS (`remboursements_a_faire`) : annulations,
+/// retours, cashback fidélité, primes de parrainage, avoirs à restituer.
+/// Avoir → « Créditer » : CreditService.crediterClient (solde + mouvement).
+/// Mobile Money → le staff fait le geste MoMo puis marque « Fait ».
 class RemboursementsAdminPage extends StatelessWidget {
   const RemboursementsAdminPage({super.key});
 
@@ -47,7 +49,17 @@ class RemboursementsAdminPage extends StatelessWidget {
               final r = d.data();
               final montant = (r['montant'] as num?)?.toDouble() ?? 0;
               final type = r['type'] as String? ?? 'mobile_money';
-              final estCredits = type == 'credits' || type == 'parrainage';
+              // tout ce qui n'est pas un remboursement MoMo manuel devient
+              // un AVOIR sur le compte du client
+              final estCredits = type != 'mobile_money';
+              final libelle = switch (type) {
+                'parrainage' => 'Prime de parrainage',
+                'cashback' => 'Cashback fidélité',
+                'credits' => r['motif'] == 'commande_echouee_apres_debit'
+                    ? 'Avoir à restituer (commande échouée)'
+                    : 'Remboursement en avoir',
+                _ => 'Remboursement Mobile Money',
+              };
               return Card(
                 margin: const EdgeInsets.only(bottom: 10),
                 child: ListTile(
@@ -58,8 +70,7 @@ class RemboursementsAdminPage extends StatelessWidget {
                       style:
                           const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(
-                      '${estCredits ? 'Crédits' : 'Mobile Money'} · '
-                      'réf ${r['refPaiement'] ?? '?'}\n'
+                      '$libelle · réf ${r['refPaiement'] ?? '?'}\n'
                       'client ${r['clientId'] ?? '?'}',
                       style: const TextStyle(fontSize: 11)),
                   isThreeLine: true,
@@ -70,13 +81,29 @@ class RemboursementsAdminPage extends StatelessWidget {
                         foregroundColor: Colors.white),
                     onPressed: () async {
                       if (estCredits) {
-                        // re-crédite le client (écriture STAFF : permise)
-                        await FirebaseFirestore.instance
-                            .collection('utilisateurs')
-                            .doc(r['clientId'] as String? ?? '')
-                            .update({
-                          'creditBalance': FieldValue.increment(montant)
-                        });
+                        // crédite l'AVOIR (écriture STAFF) ET trace le
+                        // mouvement — visible dans l'historique du client.
+                        // Avant : incrément nu, absent de l'historique.
+                        try {
+                          await CreditService.crediterClient(
+                            clientId: r['clientId'] as String? ?? '',
+                            montant: montant,
+                            type: switch (type) {
+                              'parrainage' => TypeMouvementCredit.parrainage,
+                              'cashback' => TypeMouvementCredit.cashback,
+                              _ => TypeMouvementCredit.remboursement,
+                            },
+                            description: libelle,
+                            referenceTransaction: r['refPaiement'] as String?,
+                          );
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                content: Text('Échec du crédit : $e'),
+                                backgroundColor: Colors.red));
+                          }
+                          return;
+                        }
                       }
                       // MoMo : le staff a fait le transfert à la main
                       await d.reference.update({
@@ -86,12 +113,12 @@ class RemboursementsAdminPage extends StatelessWidget {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text(estCredits
-                                ? 'Crédits rendus au client ✅'
+                                ? 'Avoir crédité au client ✅'
                                 : 'Marqué remboursé (MoMo manuel) ✅'),
                             backgroundColor: Colors.green));
                       }
                     },
-                    child: Text(estCredits ? 'Rendre' : 'Fait ✓',
+                    child: Text(estCredits ? 'Créditer' : 'Fait ✓',
                         style: const TextStyle(fontSize: 12)),
                   ),
                 ),

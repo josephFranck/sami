@@ -269,6 +269,8 @@ class _GestionUtilisateursPageState extends State<GestionUtilisateursPage>
     await FirebaseFirestore.instance.collection('utilisateurs')
         .doc(userId).update({
       'role': nouveauRole,
+      // MULTI-RÔLES : le nouveau rôle S'AJOUTE (un pro reste client)
+      'roles': FieldValue.arrayUnion([nouveauRole, 'client']),
       if (['livreur', 'boutiquier', 'couturier'].contains(nouveauRole)) ...{
         'origineRole': 'admin',
         'origineRoleLe': FieldValue.serverTimestamp(),

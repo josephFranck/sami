@@ -14,6 +14,7 @@ import 'package:sami/models/pagne.dart';
 import 'package:sami/models/panier.dart';
 import 'package:sami/models/utilisateur.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/services/credit_service.dart';
 import 'package:sami/services/paiement_service.dart';
 import 'package:sami/widgets/connectivity_widgets.dart';
 import 'package:sami/models/commande_multi.dart';
@@ -81,6 +82,11 @@ class _PanierPageState extends State<PanierPage> {
 
   /// Le montant à payer : le devis s'il est prêt, sinon le total local.
   double get _totalAPayer => _devis?.totalPaye ?? _panier!.total;
+  /// Ce que coûterait la commande payée en avoirs : articles + livraison,
+  /// sans frais Mobile Money (le devis n'en compte aucun pour `credits`).
+  double get _totalSiAvoirs => _devis == null
+      ? _panier!.total
+      : _devis!.totalArticles + _devis!.totalLivraisons;
   String _adresseLivraison = '';
   final _adresseCtrl = TextEditingController();
   final _numeroPaiementCtrl = TextEditingController();
@@ -179,7 +185,7 @@ class _PanierPageState extends State<PanierPage> {
         // basculement AUTO : crédits sélectionnés mais insuffisants →
         // Mobile Money (jamais un mode mort présélectionné)
         if (_methodePaiement == 'credits' &&
-            _soldeCredits < (_panier?.total ?? 0)) {
+            _soldeCredits < (_panier == null ? 0 : _totalSiAvoirs)) {
           _methodePaiement = 'mobile_money';
         }
         if (_methodePaiement == 'cash' && !cashOk) {
@@ -436,19 +442,19 @@ class _PanierPageState extends State<PanierPage> {
               ),
           ],
           Builder(builder: (_) {
-            final suffisant = _soldeCredits >= (_panier?.total ?? 0);
+            final suffisant = _soldeCredits >= (_panier == null ? 0 : _totalSiAvoirs);
             return RadioListTile<String>(
               dense: true,
               value: 'credits',
               groupValue: _methodePaiement,
-              title: Text('🪙 Crédits plateforme',
+              title: Text('🪙 Mes avoirs (crédits)',
                   style: TextStyle(
                       fontSize: 13.5,
                       color: suffisant ? null : Colors.grey)),
               subtitle: Text(
                   suffisant
-                      ? 'Solde : ${PrixFCFA.formater(_soldeCredits)}'
-                      : 'Solde insuffisant (${PrixFCFA.formater(_soldeCredits)}) — payez Mobile Money',
+                      ? 'Avoir disponible : ${PrixFCFA.formater(_soldeCredits)} — sans frais Mobile Money'
+                      : 'Avoir insuffisant (${PrixFCFA.formater(_soldeCredits)}) — payez Mobile Money',
                   style: TextStyle(
                       fontSize: 11,
                       color: suffisant
@@ -597,21 +603,19 @@ class _PanierPageState extends State<PanierPage> {
       // décrémente — atomique). Avant : les crédits n'étaient JAMAIS
       // débités, payer « en crédits » était gratuit !
       if (_methodePaiement == 'credits') {
-        final uid = FirebaseAuth.instance.currentUser?.uid;
+        final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
         final total = _totalAPayer;
         try {
-          await FirebaseFirestore.instance.runTransaction((tx) async {
-            final ref = FirebaseFirestore.instance
-                .collection('utilisateurs').doc(uid);
-            final doc = await tx.get(ref);
-            final solde =
-                (doc.data()?['creditBalance'] as num?)?.toDouble() ?? 0;
-            if (solde < total) {
-              throw Exception(
-                  'Solde crédits insuffisant (${PrixFCFA.formater(solde)})');
-            }
-            tx.update(ref, {'creditBalance': FieldValue.increment(-total)});
-          });
+          // Débit transactionnel + mouvement dans `mouvements_credits`
+          // (visible dans « Historique » du client). Avant : décrément nu,
+          // invisible dans l'historique.
+          final erreur = await CreditService.debiterClient(
+            clientId: uid,
+            montant: total,
+            type: TypeMouvementCredit.achat,
+            description: 'Commande payée en avoirs',
+          );
+          if (erreur != null) throw Exception(erreur);
           creditsDebites = total;
           refPaiement = 'CREDITS';
         } catch (e) {

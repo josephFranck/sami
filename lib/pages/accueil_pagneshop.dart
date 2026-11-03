@@ -23,6 +23,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sami/models/pagne.dart';
 import 'package:sami/models/utilisateur.dart';
 import 'package:sami/models/strategies_marketing.dart';
+import 'package:sami/services/config_marketing_service.dart';
+import 'package:sami/services/fidelite_service.dart';
 import 'package:sami/pages/auth/login_page.dart';
 import 'package:sami/pages/pagnedetail.dart';
 import 'package:sami/utils/prix_fcfa.dart';
@@ -64,6 +66,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
   String _modeCarousel = 'mixte'; // préchargé (le listener est synchrone)
   List<Map<String, dynamic>> _tousLesPagnes = [];
   List<Map<String, dynamic>> _categories = [];
+  ConfigMarketing? _configMarketing;
   EventSaisonnier? _eventActuel;
   List<EventSaisonnier> _events = [];
   bool _chargement = true;
@@ -99,6 +102,10 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        // points/parrainage des livraisons non comptées : réclamés ICI
+        // (seul le client peut écrire sur son doc), puis lecture à jour
+        await FideliteService.reclamerTout(user.uid);
+        _configMarketing = await FideliteService.config();
         _utilisateur = await Utilisateur.fromUid(user.uid);
       }
     } catch (e) {
@@ -238,6 +245,9 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
   // ── Drawer (menu latéral) ────────────────────────────────────────────────
   Widget _buildDrawer() {
     final role = _utilisateur?.role ?? 'client';
+    // un compte porte une LISTE de rôles (role = rôle principal, conservé)
+    final roles = <String>{role, ...(_utilisateur?.roles ?? const <String>[])};
+    bool _a(String r) => roles.contains(r);
     final perms = _utilisateur?.permissions ?? const <String>[];
     // Un AGENT voit les portes de SES fonctionnalités (même logique que
     // les règles serveur estStaff) — l'admin voit tout.
@@ -280,26 +290,31 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
           _drawerItem(Icons.gavel_outlined, 'Informations légales', () => Navigator.pushNamed(context, '/mentions-legales')),
           _drawerItem(Icons.content_cut, 'Mes coutures', () => _navProtege('/mes-coutures')),
           _drawerItem(Icons.receipt_long_outlined, 'Mes reçus', () => _navProtege('/mes-recus')),
-          if (role == 'client')
+          // Tout le monde est client (décision 03/11/2026) : un pro peut
+          // aussi devenir partenaire d'un AUTRE métier.
+          if (!_a('admin') && !_a('superadmin') && !_a('agent'))
             _drawerItem(Icons.handshake_outlined, 'Devenir partenaire', () => _navProtege('/devenir-partenaire')),
           _drawerItem(Icons.chat_bubble_outline, 'Messages', () => _navProtege('/chatpage')),
-          _drawerItem(Icons.gavel_outlined, 'Conditions & confidentialité', () => Navigator.pushNamed(context, '/conditions')),
 
           const Divider(),
 
           // Navigation selon le rôle
-          if (role == 'couturier')
+          // MULTI-RÔLES : chaque section s'affiche si le compte PORTE le rôle
+          // (liste `roles`), un compte pouvant en porter plusieurs.
+          // (bug corrigé : des `if` sans accolades laissaient « Commandes
+          //  reçues » et « Mes livraisons » visibles par TOUT LE MONDE)
+          if (_a('couturier'))
             _drawerItem(Icons.content_cut, 'Espace couturier', () => _navProtege('/dashboard_couturier')),
-          if (role == 'boutiquier' || role == 'admin')
+          if (_a('boutiquier') || _a('admin')) ...[
             _drawerItem(Icons.dashboard_outlined, 'Tableau de bord', () => _navProtege('/dashboard_boutiquier')),
             _drawerItem(Icons.inbox_outlined, 'Commandes reçues 📦', () => _navProtege('/dashboard_boutiquier')),
-          if (role == 'boutiquier' || role == 'admin') ...[
             _drawerItem(Icons.storefront_outlined, 'Gérer mes boutiques', () => _navProtege('/mes-boutiques')),
             _drawerItem(Icons.add_business_outlined, 'Gérer mes pagnes', () => _navProtege('/pagnepage')),
           ],
-          if (role == 'livreur')
+          if (_a('livreur')) ...[
             _drawerItem(Icons.insights, 'Mes gains 💰', () => _navProtege('/dashboard-livreur')),
             _drawerItem(Icons.delivery_dining, 'Mes livraisons', () => _navProtege('/mes-livraisons')),
+          ],
           if (peut('livraisons'))
             _drawerItem(Icons.support_agent, 'Supervision Agent IA',
                 () => _navProtege('/supervision')),
@@ -648,7 +663,9 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
                     // Bandeau fidélité
                     const SizedBox(height: 18),
                     if (_utilisateur != null)
-                      _BandeauFidelite(utilisateur: _utilisateur!),
+                      _BandeauFidelite(
+                          utilisateur: _utilisateur!,
+                          config: _configMarketing ?? ConfigMarketing.defaut()),
 
                     // Catalogue complet
                     const SizedBox(height: 18), // ── espacement de section
@@ -788,8 +805,10 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
   // ── SliverAppBar ─────────────────────────────────────────────────────────
 
   SliverAppBar _buildSliverAppBar(bool innerBoxScrolled) {
-    final niveauFid = NiveauFidelite.fromPoints(
-      _utilisateur != null ? (_utilisateur!.niveau * 500) : 0,
+    // palier RÉEL (pointsFidelite + paliers admin) — avant : niveau × 500
+    final niveauFid = FideliteService.palierPour(
+      _configMarketing ?? ConfigMarketing.defaut(),
+      _utilisateur?.pointsFidelite ?? 0,
     );
     return SliverAppBar(
       expandedHeight: 120,
@@ -1790,14 +1809,15 @@ class _CartePagneGrilleState extends State<_CartePagneGrille> {
 
 class _BandeauFidelite extends StatelessWidget {
   final Utilisateur utilisateur;
-  const _BandeauFidelite({required this.utilisateur});
+  final ConfigMarketing config;
+  const _BandeauFidelite({required this.utilisateur, required this.config});
 
   @override
   Widget build(BuildContext context) {
     // VERSION COMPACTE : le header (à côté du logo) porte déjà le niveau ;
     // ici, un simple rappel discret — le détail complet vit dans Mon compte.
-    final points = utilisateur.niveau * 500;
-    final niveau = NiveauFidelite.fromPoints(points);
+    final points = utilisateur.pointsFidelite;
+    final niveau = FideliteService.palierPour(config, points);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
       child: Row(children: [

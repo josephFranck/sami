@@ -75,7 +75,8 @@ class _SaisieMesuresPageState extends State<SaisieMesuresPage> with AutoSaveMixi
             itemBuilder: (_) => [
               _menuItemLangue(Langue.fr, '🇫🇷', 'Français'),
               _menuItemLangue(Langue.en, '🇬🇧', 'English'),
-              _menuItemLangue(Langue.ff, '🟡', 'Fulfulde'),
+              // Fulfulde (Langue.ff) : lancement FR/EN uniquement (décision
+              // 03/11/2026) — l'enum et ses textes restent, non proposés.
             ],
           ),
         ],

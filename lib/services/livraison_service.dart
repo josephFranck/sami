@@ -1,7 +1,5 @@
 import 'package:sami/models/livreur.dart';
 import 'package:sami/models/commande_multi.dart';
-import 'package:sami/services/parrainage_service.dart';
-import 'package:sami/models/strategies_marketing.dart';
 import 'package:sami/services/parametres_service.dart';
 import 'package:sami/services/notification_service.dart';
 import 'package:sami/services/recu_service.dart';
@@ -10,7 +8,6 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sami/models/livraison_v2.dart';
 import 'package:sami/models/transaction_financiere.dart';
-import 'package:sami/services/comptabilite_service.dart';
 
 /// Service gérant tout le cycle de vie d'une livraison
 /// Coordonne QR Code, paiement, validation, comptabilité
@@ -335,14 +332,10 @@ class LivraisonService {
       detail: 'Achat livré - ${livraison.destinationAdresse}',
     ).catchError((_) => <String, dynamic>{});
 
-    // Déclencher comptabilité
-    if (livraison.livreurId != null) {
-      await ComptabiliteService.confirmerReversementsApresLivraison(
-        livraisonId: livraisonId,
-        boutiqueId: livraison.origineId,
-        livreurId: livraison.livreurId!,
-      );
-    }
+    // Parts (netBoutique, gainLivreur du devis) : reversées par le STAFF via
+    // ReversementService (page Répartition des paiements). Avant : un crédit
+    // forfaitaire 600 × 70 % du livreur ici, écrit depuis son téléphone —
+    // refusé par les règles (creditBalance protégé) et doublon du reversement.
 
     // Si paiement cash → créer la transaction maintenant
     if (livraison.methodePaiementChoisi == 'cash' && montantCashEncaisse != null) {
@@ -400,33 +393,15 @@ class LivraisonService {
   /// RETOUR D'ÉTAT : la validation du livreur met à jour la COMMANDE
   /// d'origine — sinon le client et la boutique gardent un statut périmé
   /// et les reversements couture ne se déclenchent jamais.
-  /// FIDÉLITÉ : chaque livraison RÉUSSIE crédite le client
-  /// (≈1 pt / 1000 F) et recalcule son niveau — sans quoi la règle
-  /// « espèces réservées aux fidèles » bloquerait à vie.
-  static Future<void> _crediterFidelite(
-      String clientId, double montant) async {
-    try {
-      await FirebaseFirestore.instance.runTransaction((tx) async {
-        final ref = FirebaseFirestore.instance
-            .collection('utilisateurs')
-            .doc(clientId);
-        final doc = await tx.get(ref);
-        final points = ((doc.data()?['points'] as num?)?.toInt() ?? 0) +
-            (montant / 1000).floor();
-        tx.update(ref, {
-          'points': points,
-          'niveau': NiveauFidelite.fromPoints(points).niveau,
-        });
-      });
-    } catch (_) {}
-  }
-
+  /// FIDÉLITÉ / PARRAINAGE : plus ici (voir FideliteService — réclamés par
+  /// le client lui-même, seul autorisé à écrire sur son doc).
   static Future<void> _synchroniserCommande(Livraison l) async {
     try {
       final db = FirebaseFirestore.instance;
-      // ── VERROU IDEMPOTENT ── une livraison ne crédite la fidélité
-      // (et ne déclenche le parrainage) qu'UNE fois, même si
-      // l'événement 'livree' est rejoué (réseau, double tap).
+      // ── VERROU IDEMPOTENT ── la synchronisation (statut de la
+      // sous-commande, notifications, libération du livreur) ne se fait
+      // qu'UNE fois, même si l'événement 'livree' est rejoué (réseau,
+      // double tap). Le nom du drapeau est historique.
       String? commandeCouturierId;
       final dejaFait = await db.runTransaction<bool>((tx) async {
         final ref = db.collection('livraisons').doc(l.id);
@@ -456,10 +431,9 @@ class LivraisonService {
         }
       } else if (sc.exists) {
         await sc.reference.update({'statut': 'livree'});
-        // fidélité : la livraison réussie crédite points + niveau
-        await _crediterFidelite(
-            l.clientId, l.decompositionFinanciere.prixClient);
-        await ParrainageService.validerSiPremiereLivraison(l.clientId);
+        // Fidélité et parrainage : RÉCLAMÉS PAR LE CLIENT à sa prochaine
+        // ouverture (FideliteService.reclamerTout) — depuis ce téléphone
+        // (le livreur), écrire sur le doc du client est refusé par les règles.
         // Le client APPREND que c'est livré — et l'avis est invité :
         // c'est maintenant que l'expérience est chaude.
         await NotificationService.envoyer(
@@ -493,8 +467,7 @@ class LivraisonService {
           'statut': 'livree',
           'dateLivraisonReelle': FieldValue.serverTimestamp(),
         });
-        await _crediterFidelite(
-            l.clientId, l.decompositionFinanciere.prixClient);
+        // (fidélité : réclamée par le client — FideliteService)
         await NotificationService.envoyer(
           destinataireId: d['clientId'] as String? ?? '',
           titre: 'Vêtement livré 🎉',

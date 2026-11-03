@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:sami/services/commission_boutique_service.dart';
 import 'package:sami/models/abonnements.dart';
-import 'package:sami/models/abonnements.dart';
 import 'package:sami/models/couture_options.dart';
 import 'package:sami/models/utilisateur.dart';
 import 'package:sami/services/credit_service.dart';
@@ -15,7 +14,7 @@ const _kAccent  = Color(0xFFFF8F00);
 // PAGES D'ABONNEMENTS ET CRÉDITS
 // ─────────────────────────────────────────────────────────────────────────
 // PageAbonnements          → routeur selon le rôle de l'utilisateur
-// PageAchatCreditsClient   → client achète des crédits plateforme
+// PageAvoirsClient         → client : solde d'avoirs, historique, avoirs en attente
 // PageAbonnementBoutique   → boutiquier choisit son abonnement
 // PageAbonnementCouturier  → couturier choisit son abonnement
 // PageInscriptionLivreur   → livreur choisit son type de véhicule
@@ -55,55 +54,32 @@ class _PageAbonnementsState extends State<PageAbonnements>
       'boutiquier' => PageAbonnementBoutique(utilisateur: u),
       'couturier'  => PageAbonnementCouturier(utilisateur: u),
       'livreur'    => PageInscriptionLivreur(utilisateur: u),
-      _            => PageAchatCreditsClient(utilisateur: u),
+      _            => PageAvoirsClient(utilisateur: u),
     };
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CLIENT — Achat de crédits
+// CLIENT — Mes avoirs (décision 03/11/2026 : les crédits sont des AVOIRS,
+// issus des remboursements, du cashback et du parrainage ; jamais achetés)
 // ═══════════════════════════════════════════════════════════════════════════
 
-class PageAchatCreditsClient extends StatefulWidget {
+class PageAvoirsClient extends StatelessWidget {
   final Utilisateur utilisateur;
-  const PageAchatCreditsClient({super.key, required this.utilisateur});
-  @override
-  State<PageAchatCreditsClient> createState() => _PageAchatCreditsClientState();
-}
-
-class _PageAchatCreditsClientState extends State<PageAchatCreditsClient> {
-  List<OffreCredit> _offres = OffreCredit.catalogue;
-  OffreCredit? _offreSelectionnee;
-  String _methode = 'orange';
-  final _telCtrl = TextEditingController();
-  bool _enCours = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Pré-remplir le téléphone depuis le profil
-    _telCtrl.text = widget.utilisateur.telephone.replaceFirst('+237', '');
-    // Offres de crédits configurables (Firestore, repli sur le catalogue)
-    OffreCredit.chargerOffres().then((o) {
-      if (mounted) setState(() => _offres = o);
-    });
-  }
-
-  @override
-  void dispose() { _telCtrl.dispose(); super.dispose(); }
+  const PageAvoirsClient({super.key, required this.utilisateur});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Mes crédits'),
+        title: const Text('Mes avoirs'),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         actions: [
           TextButton.icon(
             onPressed: () => Navigator.push(context, MaterialPageRoute(
-                builder: (_) => PageHistoriqueCredits(utilisateurId: widget.utilisateur.id))),
+                builder: (_) => PageHistoriqueCredits(utilisateurId: utilisateur.id))),
             icon: const Icon(Icons.history, color: Colors.white70, size: 18),
             label: const Text('Historique', style: TextStyle(color: Colors.white70, fontSize: 12)),
           ),
@@ -112,78 +88,77 @@ class _PageAchatCreditsClientState extends State<PageAchatCreditsClient> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Solde actuel
-          _CardSoldeClient(utilisateur: widget.utilisateur),
+          _CardSoldeClient(utilisateur: utilisateur),
           const SizedBox(height: 20),
-
-          // Avantages des crédits
-          _SectionTitre('Pourquoi utiliser des crédits ?', Icons.info_outline, Colors.teal),
+          _SectionTitre('D\'où viennent mes avoirs ?', Icons.info_outline, Colors.teal),
           const SizedBox(height: 10),
           const _CardAvantagesCredits(),
           const SizedBox(height: 20),
-
-          // Offres
-          _SectionTitre('Choisir une offre', Icons.shopping_bag_outlined, _kPrimary),
+          _SectionTitre('Avoirs en cours de validation', Icons.hourglass_top, _kAccent),
           const SizedBox(height: 10),
-          ..._offres.map((o) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _CarteOffre(
-              offre: o,
-              selectionnee: _offreSelectionnee?.id == o.id,
-              onTap: () => setState(() => _offreSelectionnee = o),
-            ),
-          )),
-
-          if (_offreSelectionnee != null) ...[
-            const SizedBox(height: 20),
-            _SectionTitre('Mode de paiement', Icons.payment, _kPrimary),
-            const SizedBox(height: 10),
-            _SelecteurMoMo(
-              methode: _methode,
-              telephone: _telCtrl,
-              onChange: (m) => setState(() => _methode = m),
-            ),
-            const SizedBox(height: 20),
-            _BoutonPayer(
-              label: 'Acheter ${_offreSelectionnee!.montantBonusFmt} crédits\npour ${_offreSelectionnee!.prixFmt}',
-              enCours: _enCours,
-              onTap: _acheter,
-            ),
-          ],
+          _AvoirsEnAttente(utilisateurId: utilisateur.id),
           const SizedBox(height: 32),
         ],
       ),
     );
   }
+}
 
-  Future<void> _acheter() async {
-    if (_offreSelectionnee == null) return;
-    if (_telCtrl.text.length < 9) {
-      _snack('Entrez un numéro valide', Colors.red);
-      return;
-    }
-    setState(() => _enCours = true);
-    try {
-      final r = await CreditService.acheterCredits(
-        clientId: widget.utilisateur.id,
-        offre: _offreSelectionnee!,
-        methodePaiement: _methode,
-        numeroTelephone: '+237${_telCtrl.text}',
+/// Entrées de `remboursements_a_faire` du client encore « a_traiter »
+/// (remboursement, cashback, parrainage) — validées par le staff.
+class _AvoirsEnAttente extends StatelessWidget {
+  final String utilisateurId;
+  const _AvoirsEnAttente({required this.utilisateurId});
+
+  static String _libelle(String? type, String? motif) => switch (type) {
+        'parrainage' => 'Prime de parrainage',
+        'cashback' => 'Cashback fidélité',
+        'credits' => motif == 'commande_echouee_apres_debit'
+            ? 'Commande échouée — avoir restitué'
+            : 'Remboursement en avoir',
+        'mobile_money' => 'Remboursement Mobile Money',
+        _ => 'Avoir',
+      };
+
+  @override
+  Widget build(BuildContext context) =>
+      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
+            .collection('remboursements_a_faire')
+            .where('clientId', isEqualTo: utilisateurId)
+            .where('statut', isEqualTo: 'a_traiter')
+            .snapshots(),
+        builder: (_, snap) {
+          final docs = snap.data?.docs ?? const [];
+          if (docs.isEmpty) {
+            return Text('Aucun avoir en attente.',
+                style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600));
+          }
+          return Column(
+            children: docs.map((d) {
+              final r = d.data();
+              final montant = (r['montant'] as num?)?.toDouble() ?? 0;
+              return Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.grey.shade200)),
+                child: ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.hourglass_top, color: _kAccent),
+                  title: Text(_libelle(r['type'] as String?, r['motif'] as String?),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                  subtitle: const Text('En attente de validation par PagneShop',
+                      style: TextStyle(fontSize: 11)),
+                  trailing: Text('+${PrixFCFA.formater(montant)}',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: _kAccent)),
+                ),
+              );
+            }).toList(),
+          );
+        },
       );
-      if (!mounted) return;
-      if (r.succes) {
-        _snack('✅ +${PrixFCFA.formater(r.montantCredite)} crédits ajoutés !', Colors.green);
-        setState(() => _offreSelectionnee = null);
-      } else {
-        _snack('❌ ${r.erreur}', Colors.red);
-      }
-    } finally {
-      if (mounted) setState(() => _enCours = false);
-    }
-  }
-
-  void _snack(String msg, Color c) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(msg), backgroundColor: c, behavior: SnackBarBehavior.floating));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -689,7 +664,7 @@ class _CardSoldeClient extends StatelessWidget {
         ),
         child: Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Solde disponible', style: TextStyle(color: Colors.white70, fontSize: 12)),
+            const Text('Avoirs disponibles', style: TextStyle(color: Colors.white70, fontSize: 12)),
             const SizedBox(height: 4),
             Text(PrixFCFA.formater(solde),
                 style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
@@ -734,55 +709,6 @@ class _CardAbonnementActuel extends StatelessWidget {
         child: const Text('Actif', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
       ),
     ]),
-  );
-}
-
-class _CarteOffre extends StatelessWidget {
-  final OffreCredit offre;
-  final bool selectionnee;
-  final VoidCallback onTap;
-  const _CarteOffre({required this.offre, required this.selectionnee, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: selectionnee ? offre.couleur.withOpacity(0.08) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: selectionnee ? offre.couleur : Colors.grey.shade200,
-            width: selectionnee ? 2 : 1),
-      ),
-      child: Row(children: [
-        Container(width: 44, height: 44,
-          decoration: BoxDecoration(color: offre.couleur.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-          child: Icon(Icons.account_balance_wallet_outlined, color: offre.couleur, size: 22)),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(offre.label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-          if (offre.bonus > 0)
-            Text('${offre.montantBonusFmt} crédits (+${offre.bonus.round()}% bonus)',
-                style: TextStyle(fontSize: 12, color: Colors.green.shade700, fontWeight: FontWeight.w500))
-          else
-            Text('${offre.montantFmt} crédits', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        ])),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(offre.prixFmt,
-              style: TextStyle(fontWeight: FontWeight.bold, color: offre.couleur, fontSize: 16)),
-          if (offre.estPopulaire) Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(color: _kAccent, borderRadius: BorderRadius.circular(4)),
-            child: const Text('Populaire', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-          ),
-        ]),
-        if (selectionnee) ...[
-          const SizedBox(width: 8),
-          Icon(Icons.check_circle, color: offre.couleur, size: 22),
-        ],
-      ]),
-    ),
   );
 }
 
@@ -1006,10 +932,11 @@ class _CardAvantagesCredits extends StatelessWidget {
       border: Border.all(color: Colors.teal.shade200),
     ),
     child: Column(children: [
-      _Avantage(Icons.shopping_bag_outlined, 'Payer vos commandes directement', Colors.teal),
-      _Avantage(Icons.flash_on, 'Accès prioritaire aux ventes flash', Colors.teal),
-      _Avantage(Icons.card_giftcard, 'Crédits reçus par cashback et parrainage', Colors.teal),
-      _Avantage(Icons.replay, 'Remboursements automatiques sur votre solde', Colors.teal),
+      _Avantage(Icons.replay, 'Remboursement d\'une commande annulée ou d\'un retour accepté', Colors.teal),
+      _Avantage(Icons.card_giftcard, 'Prime de parrainage (à la première livraison du filleul)', Colors.teal),
+      _Avantage(Icons.stars, 'Cashback selon votre palier de fidélité', Colors.teal),
+      _Avantage(Icons.shopping_bag_outlined, 'Se dépensent au panier, sans frais Mobile Money', Colors.teal),
+      _Avantage(Icons.block, 'Ni rechargeables en argent, ni retirables', Colors.teal),
     ]),
   );
 }

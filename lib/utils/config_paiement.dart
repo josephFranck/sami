@@ -117,4 +117,16 @@ class ConfigPaiement {
       paiementsActifs &&
       monetbilServiceKey != 'A_RENSEIGNER' &&
       !monetbilWebhookUrl.contains('A-RENSEIGNER');
+
+  // ── Les 4 valeurs de `methodePaiement` écrites dans `sessions_commande`
+  //    (panierpage.dart) et leur libellé client. 'interne' = écritures
+  //    comptables (remboursements, commissions), jamais choisi par un client.
+  static String libelleMethode(String? methode) => switch (methode) {
+        'cash' => 'Espèces à la livraison',
+        'mobile_money' => 'Mobile Money',
+        'momo_declare' => 'Transfert MoMo/OM déclaré',
+        'credits' => 'Avoirs (crédits)',
+        'interne' => 'Écriture interne',
+        _ => methode ?? '—',
+      };
 }

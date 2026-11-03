@@ -24,7 +24,9 @@ import 'package:sami/utils/prix_fcfa.dart';
 // ═══════════════════════════════════════════════════════════════════════════
 
 enum TypeMouvementCredit {
-  recharge,           // achat de crédits
+  recharge,           // (historique) achat de crédits — flux RETIRÉ : les
+                      // crédits sont des AVOIRS, jamais rechargés en argent
+  achat,              // paiement d'une commande en avoirs (débit)
   abonnement,         // paiement abonnement
   commissionDebit,    // commission prélevée
   reversement,        // reversement après vente
@@ -169,44 +171,6 @@ class CreditService {
     });
 
     return erreur;
-  }
-
-  /// Acheter des crédits via MoMo
-  static Future<ResultatAchat> acheterCredits({
-    required String clientId,
-    required OffreCredit offre,
-    required String methodePaiement,
-    required String numeroTelephone,
-  }) async {
-    try {
-      // 1. Initier le paiement MoMo (placeholder CinetPay)
-      final transactionId = await _initierPaiementMoMo(
-        montant: offre.prix,
-        telephone: numeroTelephone,
-        description: 'Achat crédits PagneShop — ${offre.label}',
-        methode: methodePaiement,
-      );
-
-      // 2. En attente de confirmation webhook
-      // En production : le webhook CinetPay appellera crediterClient()
-      // Pour la démo : on crédite directement
-      await crediterClient(
-        clientId: clientId,
-        montant: offre.montant,
-        type: TypeMouvementCredit.recharge,
-        description: 'Achat crédits — ${offre.label}',
-        referenceTransaction: transactionId,
-        bonusPct: offre.bonus,
-      );
-
-      return ResultatAchat(
-        succes: true,
-        montantCredite: offre.montantAvecBonus,
-        transactionId: transactionId,
-      );
-    } catch (e) {
-      return ResultatAchat(succes: false, erreur: e.toString());
-    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════

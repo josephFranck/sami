@@ -293,6 +293,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "mouvements_credits",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "utilisateurId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

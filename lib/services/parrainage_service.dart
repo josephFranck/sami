@@ -52,9 +52,22 @@ class ParrainageService {
     });
   }
 
-  /// À chaque livraison réussie : si c'est la PREMIÈRE du filleul,
-  /// valider le lien et mettre les deux récompenses dans la file staff.
-  static Future<void> validerSiPremiereLivraison(String clientId) async {
+  /// Le FILLEUL réclame lui-même (depuis SON téléphone) la validation de
+  /// son parrainage dès qu'il a une sous-commande livrée.
+  ///
+  /// Pourquoi côté client : l'ancienne version tournait sur le téléphone du
+  /// LIVREUR au scan d'arrivée — lecture de `parrainages` et création dans
+  /// `remboursements_a_faire` au nom d'un tiers, refusées par les règles
+  /// (sauf livreur staff) : les récompenses n'étaient jamais mises en file.
+  ///
+  /// Preuve vérifiée par les RÈGLES (pas par ce code) :
+  ///  - `parrainages` : le filleul passe enAttente → valide en citant
+  ///    `premiereLivraisonId`, une sous-commande à SON nom au statut `livree` ;
+  ///  - `remboursements_a_faire/PARRAINAGE_<id>_parrain|_filleul` : ids
+  ///    DÉTERMINISTES (create seulement → aucun doublon possible), montants
+  ///    = ceux figés sur le lien, bénéficiaires = parrainId / filleulId.
+  /// Idempotent : rien à faire si le lien n'est plus `enAttente`.
+  static Future<void> reclamerSiPremiereLivraison(String clientId) async {
     try {
       if (!await ParametresService.parrainageActif()) return;
       final q = await _db
@@ -64,30 +77,54 @@ class ParrainageService {
           .limit(1)
           .get();
       if (q.docs.isEmpty) return;
+      final livree = await _db
+          .collection('sous_commandes')
+          .where('clientId', isEqualTo: clientId)
+          .where('statut', isEqualTo: 'livree')
+          .limit(1)
+          .get();
+      if (livree.docs.isEmpty) return;
       final d = q.docs.first;
       final p = d.data();
-      await d.reference.update(
-          {'statut': 'valide', 'valideLe': FieldValue.serverTimestamp()});
-      for (final (qui, montant, titre) in [
-        (p['parrainId'] as String? ?? '',
-            (p['recompenseParrain'] as num? ?? 0).toDouble(),
-            'Parrainage réussi 🎉'),
-        (clientId, (p['recompenseFilleul'] as num? ?? 0).toDouble(),
-            'Bienvenue récompensée 🎁'),
+      final parrainId = p['parrainId'] as String? ?? '';
+      final gainParrain = (p['recompenseParrain'] as num? ?? 0).toDouble();
+      final gainFilleul = (p['recompenseFilleul'] as num? ?? 0).toDouble();
+
+      // 1) le lien passe « valide » (règle : filleul + preuve de livraison)
+      await d.reference.update({
+        'statut': 'valide',
+        'valideLe': FieldValue.serverTimestamp(),
+        'premiereLivraisonId': livree.docs.first.id,
+      });
+
+      // 2) les deux récompenses, ids déterministes (règle : lien valide,
+      //    montants et bénéficiaires relus sur le lien)
+      for (final (suffixe, qui, montant, titre) in [
+        ('parrain', parrainId, gainParrain, 'Parrainage réussi 🎉'),
+        ('filleul', clientId, gainFilleul, 'Bienvenue récompensée 🎁'),
       ]) {
-        await _db.collection('remboursements_a_faire').add({
-          'clientId': qui,
-          'montant': montant,
-          'type': 'parrainage',
-          'refPaiement': 'PARRAINAGE_${d.id}',
-          'statut': 'a_traiter',
-          'dateCreation': FieldValue.serverTimestamp(),
-        });
+        if (qui.isEmpty || montant <= 0) continue;
+        try {
+          await _db
+              .collection('remboursements_a_faire')
+              .doc('PARRAINAGE_${d.id}_$suffixe')
+              .set({
+            'clientId': qui,
+            'montant': montant,
+            'type': 'parrainage',
+            'parrainageId': d.id,
+            'refPaiement': 'PARRAINAGE_${d.id}',
+            'statut': 'a_traiter',
+            'dateCreation': FieldValue.serverTimestamp(),
+          });
+        } catch (_) {
+          continue; // déjà créé (replay) : on n'avertit pas deux fois
+        }
         await NotificationService.envoyer(
           destinataireId: qui,
           titre: titre,
           message:
-              '$montant F de crédits arrivent sur votre compte (validation en cours).',
+              '${montant.round()} F d\'avoir arrivent sur votre compte (validation en cours).',
           route: '/moncompte',
         );
       }

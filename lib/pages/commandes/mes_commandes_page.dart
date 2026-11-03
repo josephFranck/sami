@@ -16,6 +16,8 @@ import 'package:sami/models/utilisateur.dart';
 import 'package:sami/services/commande_multi_service.dart';
 import 'package:sami/utils/droits.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/utils/config_paiement.dart';
+import 'package:sami/services/fidelite_service.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kAccent  = Color(0xFFFF8F00);
@@ -30,7 +32,14 @@ class MesCommandesPage extends StatefulWidget {
 
 class _MesCommandesPageState extends State<MesCommandesPage> with PageProtegee {
   @override
-  void initState() { super.initState(); chargerUtilisateur(); }
+  void initState() {
+    super.initState();
+    chargerUtilisateur();
+    // points de fidélité / parrainage des livraisons non comptées :
+    // réclamés par le client (seul autorisé à écrire sur son doc)
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) FideliteService.reclamerTout(uid);
+  }
 
   @override
   Widget build(BuildContext context) => buildAvecDroits(
@@ -136,7 +145,7 @@ class _CarteSession extends StatelessWidget {
             const SizedBox(height: 8),
             Row(children: [
               Expanded(child: Text(
-                '${session.methodePaiement == "cash" ? "Espèces" : "Mobile Money"}',
+                ConfigPaiement.libelleMethode(session.methodePaiement),
                 style: const TextStyle(fontSize: 12, color: Colors.grey))),
               Text(session.totalFmt,
                   style: const TextStyle(fontWeight: FontWeight.bold, color: _kPrimary, fontSize: 15)),

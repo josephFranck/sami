@@ -184,9 +184,9 @@ class LivraisonService {
     if (livraison.clientId.isNotEmpty) {
       await NotificationService.envoyer(
         destinataireId: livraison.clientId,
-        titre: (t) => t.colisPrisCharge,
+        titre: (Tr t) => t.colisPrisCharge,
         message:
-            (t) => t.livreurRecupereVotreCommandeElle,
+            (Tr t) => t.livreurRecupereVotreCommandeElle,
         route: '/commandes',
         refId: livraison.commandeId,
       );
@@ -439,9 +439,9 @@ class LivraisonService {
         // c'est maintenant que l'expérience est chaude.
         await NotificationService.envoyer(
           destinataireId: l.clientId,
-          titre: (t) => t.commandeLivree,
+          titre: (Tr t) => t.commandeLivree,
           message:
-              (t) => t.votreColisEstArriveDonnez,
+              (Tr t) => t.votreColisEstArriveDonnez,
           route: '/commandes',
           refId: l.commandeId,
         );
@@ -471,8 +471,8 @@ class LivraisonService {
         // (fidélité : réclamée par le client — FideliteService)
         await NotificationService.envoyer(
           destinataireId: d['clientId'] as String? ?? '',
-          titre: (t) => t.vetementLivre,
-          message: (t) => t.votreConfectionEstArriveeVotre,
+          titre: (Tr t) => t.vetementLivre,
+          message: (Tr t) => t.votreConfectionEstArriveeVotre,
           route: '/mes-recus',
           refId: l.commandeId,
         );
@@ -480,9 +480,9 @@ class LivraisonService {
         await cc.reference.update({'statut': 'enConfection'});
         await NotificationService.envoyer(
           destinataireId: d['couturierId'] as String? ?? '',
-          titre: (t) => t.tissuRecu,
+          titre: (Tr t) => t.tissuRecu,
           route: '/dashboard_couturier',
-          message: (t) => t.pagneEstArriveVotreAtelier,
+          message: (Tr t) => t.pagneEstArriveVotreAtelier,
           refId: l.commandeId,
         );
       }

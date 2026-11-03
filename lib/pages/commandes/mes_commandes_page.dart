@@ -746,8 +746,8 @@ Future<void> _modifierAdresseSc(BuildContext context, SousCommande sc) async {
     if (livreurId != null && livreurId.isNotEmpty) {
       await NotificationService.envoyer(
         destinataireId: livreurId,
-        titre: (t) => t.adresseModifiee,
-        message: (t) => t.nouvelleDestination + adresse,
+        titre: (Tr t) => t.adresseModifiee,
+        message: (Tr t) => t.nouvelleDestination + adresse,
         route: '/mes-livraisons',
       );
     }

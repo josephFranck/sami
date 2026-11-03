@@ -450,7 +450,7 @@ class AbonnementService {
     });
     await NotificationService.envoyer(
       destinataireId: d.utilisateurId,
-      titre: (t) => t.abonnementActive,
+      titre: (Tr t) => t.abonnementActive,
       message: d.prix > 0
           ? Tr.s.votreAbonnementEstActifPour(d.planNom, d.dureeJours)
           : Tr.s.votrePlanEstActif(d.planNom),
@@ -470,7 +470,7 @@ class AbonnementService {
         details: {'demandeId': d.id, 'motif': motif});
     await NotificationService.envoyer(
       destinataireId: d.utilisateurId,
-      titre: (t) => t.abonnementNonValide,
+      titre: (Tr t) => t.abonnementNonValide,
       message: motif.trim().isEmpty
           ? Tr.s.transfertDeclareNPasPu
           : motif.trim(),

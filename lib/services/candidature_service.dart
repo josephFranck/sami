@@ -56,8 +56,8 @@ class CandidatureService {
       for (final a in admins.docs) {
         await NotificationService.envoyer(
           destinataireId: a.id,
-          titre: (t) => t.nouvelleCandidature,
-          message: (t) => t.candidatAttendVotreValidation(type),
+          titre: (Tr t) => t.nouvelleCandidature,
+          message: (Tr t) => t.candidatAttendVotreValidation(type),
           route: '/candidatures',
           refId: user.uid,
         );
@@ -174,8 +174,8 @@ class CandidatureService {
     await _purgerCNI(c); // conformité loi 2024/017 : la pièce n'a plus d'utilité
     await NotificationService.envoyer(
       destinataireId: c.utilisateurId,
-      titre: (t) => t.candidatureValidee,
-      message: (t) => t.votreCompteEstActiveBienvenue(c.type),
+      titre: (Tr t) => t.candidatureValidee,
+      message: (Tr t) => t.votreCompteEstActiveBienvenue(c.type),
     );
   }
 
@@ -189,7 +189,7 @@ class CandidatureService {
     await _purgerCNI(c);
     await NotificationService.envoyer(
       destinataireId: c.utilisateurId,
-      titre: (t) => t.candidatureRefusee,
+      titre: (Tr t) => t.candidatureRefusee,
       message: motif?.isNotEmpty == true
           ? Tr.s.motif2(motif)
           : Tr.s.votreCandidatureEteRefusee(c.type),

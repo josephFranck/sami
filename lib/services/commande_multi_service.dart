@@ -349,8 +349,8 @@ class CommandeMultiService {
           for (final g in gs) {
             await NotificationService.envoyer(
               destinataireId: g,
-              titre: (t) => t.nouvelleCommandePreparer,
-              message: (t) => t.articleSPreparezColisPuis(sc.articles.length),
+              titre: (Tr t) => t.nouvelleCommandePreparer,
+              message: (Tr t) => t.articleSPreparezColisPuis(sc.articles.length),
               route: '/dashboard_boutiquier',
               refId: sc.id,
             );

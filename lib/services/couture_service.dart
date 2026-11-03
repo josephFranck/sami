@@ -398,8 +398,8 @@ class CoutureService {
       if (gerants.isNotEmpty) {
         await NotificationService.envoyer(
           destinataireId: gerants.first,
-          titre: (t) => t.pagnePreparer,
-          message: (t) => t.livreurViendraChercherTissuPour,
+          titre: (Tr t) => t.pagnePreparer,
+          message: (Tr t) => t.livreurViendraChercherTissuPour,
           route: '/dashboard_boutiquier',
           refId: commandeId,
         );
@@ -555,8 +555,8 @@ class CoutureService {
     final doc = await CommandeCouturier.collection.doc(commandeId).get();
     await NotificationService.envoyer(
       destinataireId: doc.data()?['clientId'] as String? ?? '',
-      titre: (t) => t.devisRecu,
-      message: (t) => t.couturierProposeAcceptezOuRefusez(PrixFCFA.formater(prixPropose)),
+      titre: (Tr t) => t.devisRecu,
+      message: (Tr t) => t.couturierProposeAcceptezOuRefusez(PrixFCFA.formater(prixPropose)),
       route: '/mes-coutures', refId: commandeId,
     );
   }
@@ -585,8 +585,8 @@ class CoutureService {
     }
     await NotificationService.envoyer(
       destinataireId: doc.data()?['couturierId'] as String? ?? '',
-      titre: (t) => t.devisAccepte,
-      message: (t) => t.clientAccepteVotreDevisConfection,
+      titre: (Tr t) => t.devisAccepte,
+      message: (Tr t) => t.clientAccepteVotreDevisConfection,
       refId: commandeId,
     );
   }

@@ -373,9 +373,9 @@ class _CarteCommandeCouturier extends StatelessWidget {
                 onPressed: () async {
                   await NotificationService.envoyer(
                     destinataireId: commande.clientId,
-                    titre: (t) => t.mesuresVerifier,
+                    titre: (Tr t) => t.mesuresVerifier,
                     message:
-                        (t) => t.votreCouturierVousDemandeVerifier,
+                        (Tr t) => t.votreCouturierVousDemandeVerifier,
                     route: '/mes-coutures',
                     refId: commande.id,
                   );

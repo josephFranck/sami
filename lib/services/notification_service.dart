@@ -51,8 +51,12 @@ class NotificationService {
     } catch (_) {}
   }
 
-  static String _dans(Object v, Tr t) =>
-      v is String Function(Tr) ? v(t) : v.toString();
+  static String _dans(Object v, Tr t) {
+    if (v is String) return v;
+    if (v is String Function(Tr)) return v(t);
+    if (v is Function) return Function.apply(v, [t]).toString();
+    return v.toString();
+  }
 
   /// Texte d'une notification dans la langue courante (`titre` ou `message`).
   static String texte(Map<String, dynamic> d, String champ) {

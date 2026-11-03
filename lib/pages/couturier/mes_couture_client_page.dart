@@ -240,9 +240,9 @@ class MesCoutureClientPage extends StatelessWidget {
                       // Le couturier doit le SAVOIR, pas le découvrir
                       await NotificationService.envoyer(
                         destinataireId: cmd.couturierId,
-                        titre: (t) => t.contrePropositionRecue,
+                        titre: (Tr t) => t.contrePropositionRecue,
                         message:
-                            (t) => t.clientProposeVousPouvezAccepter(PrixFCFA.formater(montant)),
+                            (Tr t) => t.clientProposeVousPouvezAccepter(PrixFCFA.formater(montant)),
                         route: '/dashboard_couturier',
                         refId: cmd.id,
                       );

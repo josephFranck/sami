@@ -98,9 +98,9 @@ class PromotionsService {
     for (final a in admins.docs) {
       await NotificationService.envoyer(
         destinataireId: a.id,
-        titre: (t) => t.promotionValider,
+        titre: (Tr t) => t.promotionValider,
         message:
-            (t) => t.surPagneSExaminer(reductionPct.toStringAsFixed(0), cibles.length),
+            (Tr t) => t.surPagneSExaminer(reductionPct.toStringAsFixed(0), cibles.length),
         route: '/admin-promotions',
       );
     }
@@ -134,8 +134,8 @@ class PromotionsService {
     await batch.commit();
     await NotificationService.envoyer(
       destinataireId: data['proposePar'] as String? ?? '',
-      titre: (t) => t.promotionValidee,
-      message: (t) => t.votrePromotionEstLigne(pct.toStringAsFixed(0)),
+      titre: (Tr t) => t.promotionValidee,
+      message: (Tr t) => t.votrePromotionEstLigne(pct.toStringAsFixed(0)),
       route: '/dashboard_boutiquier',
     );
   }
@@ -145,7 +145,7 @@ class PromotionsService {
     await collection.doc(promoId).update({'statut': 'refusee', 'motifRefus': motif});
     await NotificationService.envoyer(
       destinataireId: d.data()!['proposePar'] as String? ?? '',
-      titre: (t) => t.promotionRefusee,
+      titre: (Tr t) => t.promotionRefusee,
       message: motif,
       route: '/dashboard_boutiquier',
     );

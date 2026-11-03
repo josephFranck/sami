@@ -108,7 +108,8 @@ def expression_tr(cle, params_exprs, notif):
     args = ', '.join(e for _, e in params_exprs)
     appel = f'Tr.s.{cle}' + (f'({args})' if params_exprs else '')
     if notif:
-        return f'(t) => t.{cle}' + (f'({args})' if params_exprs else '')
+        # typée (Tr t) : NotificationService._dans teste `is String Function(Tr)`
+        return f'(Tr t) => t.{cle}' + (f'({args})' if params_exprs else '')
     return appel
 
 

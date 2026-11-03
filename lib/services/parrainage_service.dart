@@ -125,7 +125,7 @@ class ParrainageService {
           destinataireId: qui,
           titre: titre,
           message:
-              (t) => t.fAvoirArriventSurVotre(montant.round()),
+              (Tr t) => t.fAvoirArriventSurVotre(montant.round()),
           route: '/moncompte',
         );
       }

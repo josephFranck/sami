@@ -1,0 +1,58 @@
+# Déploiement Firebase SANS CLI locale (la CLI ne fonctionne pas sur le poste
+# de l'exploitant) : règles Firestore, index et Cloud Functions, depuis GitHub.
+#
+# Pré-requis (une fois, dans Google Cloud Console → IAM → Comptes de service) :
+#   1. Créer un compte de service « deploy-github » avec les rôles :
+#      Firebase Admin, Cloud Functions Admin, Service Account User,
+#      Cloud Build Editor, Artifact Registry Admin, Secret Manager Secret Accessor
+#   2. Créer une clé JSON pour ce compte → GitHub → Settings → Secrets and
+#      variables → Actions → New secret : FIREBASE_SERVICE_ACCOUNT = contenu du JSON
+#   3. Le plan Blaze doit être actif (Cloud Functions).
+# Ensuite : chaque push sur main touchant functions/, firestore.rules ou
+# firestore.indexes.json déploie ; ou bouton « Run workflow ».
+name: Firebase — règles, index, fonctions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'functions/**'
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+      - 'firebase.json'
+      - '.github/workflows/firebase-deploy.yml'
+  workflow_dispatch:
+    inputs:
+      cible:
+        description: 'Quoi déployer'
+        type: choice
+        default: tout
+        options: [tout, regles, fonctions]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PROJET: sami-c564c
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Dépendances + tests des fonctions
+        working-directory: functions
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
+      - name: Identifiants du compte de service
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+      - name: Firebase CLI
+        run: npm install -g firebase-tools@13
+      - name: Déployer les règles et index Firestore
+        if: ${{ github.event_name == 'push' || inputs.cible == 'tout' || inputs.cible == 'regles' }}
+        run: firebase deploy --only firestore:rules,firestore:indexes --project "$PROJET" --non-interactive --force
+      - name: Déployer les Cloud Functions
+        if: ${{ github.event_name == 'push' || inputs.cible == 'tout' || inputs.cible == 'fonctions' }}
+        run: firebase deploy --only functions --project "$PROJET" --non-interactive --force

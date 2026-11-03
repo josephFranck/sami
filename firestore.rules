@@ -276,16 +276,25 @@ service cloud.firestore {
       // lisible que par SES participants — un compte quelconque (même
       // avec l'app décompilée et l'algo en main) ne peut pas forger
       // les QR des livraisons d'autrui.
-      allow read: if connecte() && (
+      // Mode SERVEUR (Cloud Functions, `serveur: true`) : la clé ne quitte
+      // jamais le serveur — personne ne lit (tokens à afficher dans
+      // qr_depart / qr_arrivee).
+      allow read: if connecte() && resource.data.get('serveur', false) != true && (
         estStaff('livraisons') ||
         get(/databases/$(database)/documents/livraisons/$(id))
             .data.clientId == moi() ||
         get(/databases/$(database)/documents/livraisons/$(id))
-            .data.livreurId == moi()
+            .data.livreurId == moi() ||
+        // le GÉRANT de la boutique d'origine affiche le QR de départ
+        // (avant : refusé — « QR indisponible » pour tout boutiquier non staff)
+        get(/databases/$(database)/documents/boutiques/$(get(/databases/$(database)/documents/livraisons/$(id)).data.origineId))
+            .data.get('gerants', []).hasAny([moi()])
       );
       // CREATE : posé à la création de la livraison (même batch) — un doc
       // existant ne peut pas être « re-créé », donc pas d'écrasement.
-      allow create: if connecte();
+      // (jamais `serveur: true` depuis l'app : seule la fonction le pose)
+      allow create: if connecte()
+                    && request.resource.data.get('serveur', false) != true;
       // UPDATE (régénération des tokens) : participants ou staff SEULEMENT
       allow update: if connecte() && (
         estStaff('livraisons') ||
@@ -471,6 +480,22 @@ service cloud.firestore {
       allow read: if estStaff('reversements')
                   || (connecte() && resource.data.get('beneficiaireId','') == moi());
       allow write: if estStaff('reversements');
+    }
+    // TOKENS À AFFICHER (mode serveur) : écrits par la Cloud Function.
+    // qr_depart : le gérant de la boutique d'origine (et staff) ;
+    // qr_arrivee : le client (et staff). Le livreur ne lit ni l'un ni l'autre.
+    match /qr_depart/{id} {
+      allow read: if connecte() && (
+        estStaff('livraisons') ||
+        get(/databases/$(database)/documents/boutiques/$(get(/databases/$(database)/documents/livraisons/$(id)).data.origineId))
+            .data.get('gerants', []).hasAny([moi()]));
+      allow write: if false;
+    }
+    match /qr_arrivee/{id} {
+      allow read: if connecte() && (
+        estStaff('livraisons') ||
+        get(/databases/$(database)/documents/livraisons/$(id)).data.clientId == moi());
+      allow write: if false;
     }
     match /recus/{id} {
       allow read: if connecte()

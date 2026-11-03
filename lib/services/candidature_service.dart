@@ -110,7 +110,10 @@ class CandidatureService {
         break;
 
       case 'couturier':
-        final cRef = _db.collection('couturiers').doc();
+        // id de fiche = uid : une seule lignée (comme la promotion admin,
+        // gestion_utilisateurs_page) — les règles et les requêtes
+        // `where('…Id', isEqualTo: uid)` supposent cette égalité.
+        final cRef = _db.collection('couturiers').doc(c.utilisateurId);
         batch.set(cRef, {
           'utilisateurId': c.utilisateurId,
           'nom': infos['nom'] ?? '',
@@ -130,11 +133,16 @@ class CandidatureService {
           'typeAbonnement': 'gratuit',
           'creditBalance': 0.0,
           'dateInscription': FieldValue.serverTimestamp(),
-        });
+        }, SetOptions(merge: true));
         break;
 
       case 'livreur':
-        final lRef = _db.collection('livreurs').doc();
+        // id de fiche = uid : `livraisons.livreurId` (fiche) == moi() dans
+        // les règles, le scan de départ (livraison.livreurId != uid) et le
+        // tableau de bord livreur (where livreurId == uid). Avant : id auto
+        // → ces trois contrôles échouaient pour tout livreur issu d'une
+        // candidature (seuls les livreurs promus par l'admin marchaient).
+        final lRef = _db.collection('livreurs').doc(c.utilisateurId);
         // (fiche marquée candidature plus bas via origine)
         batch.set(lRef, {
           'utilisateurId': c.utilisateurId,
@@ -150,7 +158,7 @@ class CandidatureService {
           'creditBalance': 0.0,
           'gainTotal': 0.0,
           'dateInscription': FieldValue.serverTimestamp(),
-        });
+        }, SetOptions(merge: true));
         break;
 
       default:

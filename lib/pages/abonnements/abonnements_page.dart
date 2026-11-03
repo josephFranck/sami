@@ -1,62 +1,449 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:sami/services/commission_boutique_service.dart';
-import 'package:sami/models/abonnements.dart';
-import 'package:sami/models/couture_options.dart';
 import 'package:sami/models/utilisateur.dart';
+import 'package:sami/services/abonnement_service.dart';
 import 'package:sami/services/credit_service.dart';
+import 'package:sami/services/parametres_service.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kAccent  = Color(0xFFFF8F00);
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PAGES D'ABONNEMENTS ET CRÉDITS
+// PAGES D'ABONNEMENTS ET AVOIRS
 // ─────────────────────────────────────────────────────────────────────────
-// PageAbonnements          → routeur selon le rôle de l'utilisateur
-// PageAvoirsClient         → client : solde d'avoirs, historique, avoirs en attente
-// PageAbonnementBoutique   → boutiquier choisit son abonnement
-// PageAbonnementCouturier  → couturier choisit son abonnement
-// PageInscriptionLivreur   → livreur choisit son type de véhicule
-// PageHistoriqueCredits    → historique commun à tous les rôles
+// PageAbonnements      → un onglet par profil de l'utilisateur (multi-rôles)
+// PageSouscription     → plans d'UN profil, demande par transfert MoMo déclaré
+// PageAvoirsClient     → client : solde d'avoirs, historique, avoirs en attente
+// PageHistoriqueCredits → historique commun à tous les rôles
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ─── Routeur principal ────────────────────────────────────────────────────────
 
-class PageAbonnements extends StatefulWidget {
+class PageAbonnements extends StatelessWidget {
   final Utilisateur utilisateur;
   const PageAbonnements({super.key, required this.utilisateur});
 
   @override
-  State<PageAbonnements> createState() => _PageAbonnementsState();
+  Widget build(BuildContext context) {
+    final u = utilisateur;
+    // Tout pro est aussi client (décision 03/11/2026) : un onglet par profil.
+    final profils = <ProfilAbonnement>[
+      if (u.aRole('boutiquier') || u.aRole('admin') || u.aRole('superadmin'))
+        ProfilAbonnement.boutique,
+      if (u.aRole('couturier')) ProfilAbonnement.couturier,
+      if (u.aRole('livreur')) ProfilAbonnement.livreur,
+      ProfilAbonnement.client,
+    ];
+    if (profils.length == 1) {
+      return PageSouscription(utilisateur: u, profil: profils.first);
+    }
+    return DefaultTabController(
+      length: profils.length,
+      child: Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        appBar: AppBar(
+          title: const Text('Abonnements'),
+          backgroundColor: _kPrimary,
+          foregroundColor: Colors.white,
+          bottom: TabBar(
+            indicatorColor: _kAccent,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            tabs: [for (final p in profils) Tab(text: p.libelle)],
+          ),
+        ),
+        body: TabBarView(children: [
+          for (final p in profils)
+            PageSouscription(utilisateur: u, profil: p, integree: true),
+        ]),
+      ),
+    );
+  }
 }
 
-class _PageAbonnementsState extends State<PageAbonnements>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabs;
+// ═══════════════════════════════════════════════════════════════════════════
+// SOUSCRIPTION — un profil : plan actuel, plans, demande MoMo déclaré,
+// demandes en cours. Aucune écriture du plan ici : le staff active après
+// vérification (AbonnementService.valider).
+// ═══════════════════════════════════════════════════════════════════════════
+
+class PageSouscription extends StatefulWidget {
+  final Utilisateur utilisateur;
+  final ProfilAbonnement profil;
+  final bool integree; // dans un TabBarView : pas d'AppBar
+  const PageSouscription(
+      {super.key, required this.utilisateur, required this.profil, this.integree = false});
+  @override
+  State<PageSouscription> createState() => _PageSouscriptionState();
+}
+
+class _PageSouscriptionState extends State<PageSouscription> {
+  List<PlanAbonnement> _plans = const [];
+  List<(String, String)> _fiches = const [];
+  String? _ficheId;
+  AbonnementActuel _actuel = const AbonnementActuel(planId: 'aucun');
+  PlanAbonnement? _choisi;
+  final _refCtrl = TextEditingController();
+  final _numCtrl = TextEditingController();
+  bool _charge = false, _envoi = false, _momoOk = false;
+  String _numMtn = '', _numOm = '', _titulaire = '';
 
   @override
   void initState() {
     super.initState();
-    // Nombre d'onglets selon le rôle
-    _tabs = TabController(length: 2, vsync: this);
+    _numCtrl.text = widget.utilisateur.telephone.replaceFirst('+237', '');
+    _charger();
   }
 
   @override
-  void dispose() { _tabs.dispose(); super.dispose(); }
+  void dispose() { _refCtrl.dispose(); _numCtrl.dispose(); super.dispose(); }
+
+  Future<void> _charger() async {
+    final plans = await AbonnementService.plans(widget.profil);
+    final fiches = await AbonnementService.fiches(widget.profil, widget.utilisateur.id);
+    final declActif = await ParametresService.momoDeclareActif();
+    final nMtn = await ParametresService.numeroMoMoMTN();
+    final nOm = await ParametresService.numeroOM();
+    final tit = await ParametresService.titulaireMoMo();
+    if (!mounted) return;
+    setState(() {
+      _plans = plans;
+      _fiches = fiches;
+      _ficheId = fiches.isNotEmpty ? fiches.first.$1 : null;
+      _momoOk = declActif && (nMtn.isNotEmpty || nOm.isNotEmpty);
+      _numMtn = nMtn; _numOm = nOm; _titulaire = tit;
+      _charge = true;
+    });
+    await _chargerActuel();
+  }
+
+  Future<void> _chargerActuel() async {
+    final id = _ficheId;
+    if (id == null) return;
+    final a = await AbonnementService.actuel(widget.profil, id);
+    if (mounted) setState(() => _actuel = a);
+  }
+
+  String get _ficheNom =>
+      _fiches.where((f) => f.$1 == _ficheId).map((f) => f.$2).firstOrNull ?? '';
 
   @override
   Widget build(BuildContext context) {
-    final u = widget.utilisateur;
-
-    // Choisir la vue principale selon le rôle
-    return switch (u.role) {
-      'boutiquier' => PageAbonnementBoutique(utilisateur: u),
-      'couturier'  => PageAbonnementCouturier(utilisateur: u),
-      'livreur'    => PageInscriptionLivreur(utilisateur: u),
-      _            => PageAvoirsClient(utilisateur: u),
-    };
+    final corps = !_charge
+        ? const Center(child: CircularProgressIndicator(color: _kPrimary))
+        : ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              if (_fiches.isEmpty)
+                _Info(
+                  couleur: Colors.orange,
+                  icone: Icons.info_outline,
+                  texte: switch (widget.profil) {
+                    ProfilAbonnement.boutique =>
+                      'Aucune boutique dont vous êtes gérant. Déposez une candidature (menu « Devenir partenaire »).',
+                    ProfilAbonnement.couturier =>
+                      'Aucune fiche couturier validée. Déposez une candidature (menu « Devenir partenaire »).',
+                    ProfilAbonnement.livreur =>
+                      'Aucune fiche livreur validée. Déposez une candidature (menu « Devenir partenaire »).',
+                    ProfilAbonnement.client => 'Compte introuvable.',
+                  },
+                )
+              else ...[
+                if (_fiches.length > 1) ...[
+                  DropdownButtonFormField<String>(
+                    value: _ficheId,
+                    decoration: const InputDecoration(
+                        labelText: 'Boutique', isDense: true, border: OutlineInputBorder()),
+                    items: [
+                      for (final f in _fiches)
+                        DropdownMenuItem(value: f.$1, child: Text(f.$2, style: const TextStyle(fontSize: 13))),
+                    ],
+                    onChanged: (v) { setState(() { _ficheId = v; _choisi = null; }); _chargerActuel(); },
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                _CardPlanActuel(profil: widget.profil, actuel: _actuel, plans: _plans),
+                const SizedBox(height: 18),
+                if (_plans.isEmpty)
+                  _Info(
+                    couleur: Colors.grey,
+                    icone: Icons.hourglass_empty,
+                    texte: 'Aucune offre d\'abonnement ${widget.profil.libelle.toLowerCase()} pour le moment.',
+                  )
+                else ...[
+                  _SectionTitre('Choisir un plan', Icons.workspace_premium, _kPrimary),
+                  const SizedBox(height: 10),
+                  for (final p in _plans)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _CarteAbonnement(
+                        nom: p.nom,
+                        prix: p.prixFmt,
+                        commission: p.gratuit ? 'Sans engagement' : '${p.dureeJours} jours',
+                        avantages: p.avantages,
+                        couleur: p.couleur,
+                        icone: p.icone,
+                        estActuel: _actuel.actif
+                            ? _actuel.planId == p.id
+                            : (p.gratuit && !_actuel.actif),
+                        selectionne: _choisi?.id == p.id,
+                        // le plan actif reste sélectionnable : renouvellement
+                        onTap: () => setState(() => _choisi = p),
+                      ),
+                    ),
+                  if (_choisi != null) _buildDemande(_choisi!),
+                ],
+                const SizedBox(height: 18),
+                _SectionTitre('Mes demandes', Icons.receipt_long, _kAccent),
+                const SizedBox(height: 8),
+                _MesDemandes(utilisateurId: widget.utilisateur.id, profil: widget.profil),
+              ],
+              const SizedBox(height: 32),
+            ],
+          );
+    if (widget.integree) return corps;
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        title: Text('Abonnement ${widget.profil.libelle.toLowerCase()}'),
+        backgroundColor: _kPrimary,
+        foregroundColor: Colors.white,
+      ),
+      body: corps,
+    );
   }
+
+  /// Bloc « transférez puis déclarez » — même mécanique que le panier
+  /// (momo_declare) : numéros de la plateforme, référence du SMS.
+  Widget _buildDemande(PlanAbonnement p) {
+    final renouvellement = _actuel.actif && _actuel.planId == p.id;
+    if (!p.gratuit && !_momoOk) {
+      return const _Info(
+        couleur: Colors.orange,
+        icone: Icons.info_outline,
+        texte: 'Le paiement par transfert déclaré n\'est pas encore activé par PagneShop. Réessayez plus tard.',
+      );
+    }
+    return Container(
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.green.shade200)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(
+          p.gratuit
+              ? 'Plan ${p.nom} : la demande est validée par notre équipe (aucun paiement).'
+              : '${renouvellement ? "Renouvellement" : "Souscription"} ${p.nom} — ${p.prixFmt}'
+                  '${renouvellement ? "\nLa nouvelle période s\'ajoute à la fin de l\'actuelle (${_actuel.finFmt})." : ""}',
+          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+        ),
+        if (!p.gratuit) ...[
+          const SizedBox(height: 8),
+          Text(
+              '1️⃣ Transférez ${PrixFCFA.formater(p.prix)} à :'
+              '${_numMtn.isNotEmpty ? '\n     MTN MoMo : $_numMtn' : ''}'
+              '${_numOm.isNotEmpty ? '\n     Orange Money : $_numOm' : ''}'
+              '${_titulaire.isNotEmpty ? '\n     (Titulaire : $_titulaire)' : ''}'
+              '\n2️⃣ Collez la RÉFÉRENCE du SMS et le numéro utilisé :',
+              style: const TextStyle(fontSize: 12, height: 1.5)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _refCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Référence de la transaction *',
+              hintText: 'Ex : 8123456789',
+              isDense: true, border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _numCtrl,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Numéro MoMo/OM utilisé *',
+              prefixText: '+237 ',
+              isDense: true, border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text('Notre équipe vérifie le SMS reçu, puis active votre abonnement.',
+              style: TextStyle(fontSize: 11, color: Colors.grey)),
+        ],
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
+            onPressed: _envoi ? null : () => _envoyer(p),
+            icon: _envoi
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.send, size: 16),
+            label: Text(p.gratuit ? 'Demander ce plan' : 'J\'ai transféré — envoyer ma demande'),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Future<void> _envoyer(PlanAbonnement p) async {
+    final id = _ficheId;
+    if (id == null) return;
+    if (!p.gratuit) {
+      if (_refCtrl.text.trim().length < 4) { _snack('Entrez la référence du SMS de transfert', Colors.red); return; }
+      if (_numCtrl.text.trim().length < 9) { _snack('Entrez le numéro utilisé pour le transfert', Colors.red); return; }
+    }
+    setState(() => _envoi = true);
+    try {
+      await AbonnementService.demander(
+        plan: p,
+        entiteId: id,
+        entiteNom: _ficheNom,
+        utilisateurId: widget.utilisateur.id,
+        refPaiement: _refCtrl.text,
+        numeroPaiement: '+237${_numCtrl.text.trim()}',
+      );
+      if (!mounted) return;
+      _refCtrl.clear();
+      setState(() => _choisi = null);
+      _snack('✅ Demande envoyée — activation après vérification du transfert.', Colors.green);
+    } catch (e) {
+      if (mounted) _snack('❌ Envoi impossible : $e', Colors.red);
+    } finally {
+      if (mounted) setState(() => _envoi = false);
+    }
+  }
+
+  void _snack(String msg, Color c) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(msg), backgroundColor: c, behavior: SnackBarBehavior.floating));
+}
+
+class _CardPlanActuel extends StatelessWidget {
+  final ProfilAbonnement profil;
+  final AbonnementActuel actuel;
+  final List<PlanAbonnement> plans;
+  const _CardPlanActuel({required this.profil, required this.actuel, required this.plans});
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = plans.where((p) => p.id == actuel.planId).firstOrNull;
+    final nom = actuel.actif
+        ? (plan?.nom ?? actuel.planId)
+        : (profil == ProfilAbonnement.client || profil == ProfilAbonnement.livreur
+            ? 'Aucun abonnement'
+            : (plans.where((p) => p.gratuit).firstOrNull?.nom ?? 'Gratuit'));
+    final couleur = actuel.actif ? (plan?.couleur ?? _kPrimary) : Colors.grey.shade700;
+    final expire = actuel.planId != 'gratuit' && actuel.planId != 'aucun' &&
+        actuel.finLe != null && !actuel.actif;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: couleur.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: couleur.withOpacity(0.3)),
+      ),
+      child: Row(children: [
+        Container(width: 42, height: 42,
+          decoration: BoxDecoration(color: couleur.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+          child: Icon(plan?.icone ?? Icons.workspace_premium_outlined, color: couleur, size: 22)),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Plan actuel — ${profil.libelle.toLowerCase()}', style: TextStyle(color: couleur.withOpacity(0.8), fontSize: 11)),
+          Text(nom, style: TextStyle(fontWeight: FontWeight.bold, color: couleur, fontSize: 16)),
+          if (actuel.actif && actuel.finLe != null)
+            Text('Jusqu\'au ${actuel.finFmt}', style: TextStyle(fontSize: 12, color: couleur.withOpacity(0.8))),
+          if (expire)
+            Text('Expiré le ${actuel.finFmt} — retour au plan de base', style: const TextStyle(fontSize: 12, color: Colors.red)),
+        ])),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(color: couleur, borderRadius: BorderRadius.circular(8)),
+          child: Text(actuel.actif ? 'Actif' : 'Base', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+        ),
+      ]),
+    );
+  }
+}
+
+class _MesDemandes extends StatelessWidget {
+  final String utilisateurId;
+  final ProfilAbonnement profil;
+  const _MesDemandes({required this.utilisateurId, required this.profil});
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<List<DemandeAbonnement>>(
+        stream: AbonnementService.mesDemandes(utilisateurId),
+        builder: (_, snap) {
+          final l = (snap.data ?? const <DemandeAbonnement>[])
+              .where((d) => d.profil == profil)
+              .take(10)
+              .toList();
+          if (l.isEmpty) {
+            return Text('Aucune demande.', style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600));
+          }
+          return Column(children: [
+            for (final d in l)
+              Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.grey.shade200)),
+                child: ListTile(
+                  dense: true,
+                  leading: Icon(
+                    switch (d.statut) {
+                      'validee' => Icons.check_circle,
+                      'refusee' => Icons.cancel,
+                      _ => Icons.hourglass_top,
+                    },
+                    color: switch (d.statut) {
+                      'validee' => Colors.green,
+                      'refusee' => Colors.red,
+                      _ => _kAccent,
+                    },
+                  ),
+                  title: Text('${d.planNom} — ${d.prix <= 0 ? "gratuit" : PrixFCFA.formater(d.prix)}',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                  subtitle: Text(
+                    switch (d.statut) {
+                      'validee' => 'Activé',
+                      'refusee' => 'Refusé${(d.motifRefus ?? '').isNotEmpty ? " : ${d.motifRefus}" : ""}',
+                      _ => 'En attente de vérification du transfert (réf. ${d.refPaiement})',
+                    },
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  trailing: d.dateCreation == null
+                      ? null
+                      : Text('${d.dateCreation!.day.toString().padLeft(2, '0')}/${d.dateCreation!.month.toString().padLeft(2, '0')}',
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                ),
+              ),
+          ]);
+        },
+      );
+}
+
+class _Info extends StatelessWidget {
+  final Color couleur;
+  final IconData icone;
+  final String texte;
+  const _Info({required this.couleur, required this.icone, required this.texte});
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+            color: couleur.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: couleur.withOpacity(0.3))),
+        child: Row(children: [
+          Icon(icone, color: couleur, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(texte, style: const TextStyle(fontSize: 12.5))),
+        ]),
+      );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -159,415 +546,6 @@ class _AvoirsEnAttente extends StatelessWidget {
           );
         },
       );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// BOUTIQUIER — Abonnement mensuel
-// ═══════════════════════════════════════════════════════════════════════════
-
-class PageAbonnementBoutique extends StatefulWidget {
-  final Utilisateur utilisateur;
-  const PageAbonnementBoutique({super.key, required this.utilisateur});
-  @override
-  State<PageAbonnementBoutique> createState() => _PageAbonnementBoutiqueState();
-}
-
-class _PageAbonnementBoutiqueState extends State<PageAbonnementBoutique> {
-  TypeAbonnementBoutique? _typeSelectionne;
-  String _methode = 'orange';
-  final _telCtrl = TextEditingController();
-  bool _enCours = false;
-  TypeAbonnementBoutique? _abonnementActuel;
-
-  @override
-  void initState() {
-    super.initState();
-    _telCtrl.text = widget.utilisateur.telephone.replaceFirst('+237', '');
-    _chargerAbonnementActuel();
-  }
-
-  @override
-  void dispose() { _telCtrl.dispose(); super.dispose(); }
-
-  Future<void> _chargerAbonnementActuel() async {
-    final doc = await ProfilAbonnementBoutique.collection.doc(widget.utilisateur.id).get();
-    if (doc.exists && mounted) {
-      setState(() => _abonnementActuel = TypeAbonnementBoutique.values.firstWhere((e) => e.name == (doc.data()!['typeAbonnement'] as String? ?? 'gratuit'), orElse: () => TypeAbonnementBoutique.values.first));
-    } else {
-      setState(() => _abonnementActuel = TypeAbonnementBoutique.gratuit);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text('Mon abonnement boutique'),
-        backgroundColor: _kPrimary,
-        foregroundColor: Colors.white,
-        actions: [
-          TextButton.icon(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(
-                builder: (_) => PageHistoriqueCredits(utilisateurId: widget.utilisateur.id))),
-            icon: const Icon(Icons.history, color: Colors.white70, size: 18),
-            label: const Text('Historique', style: TextStyle(color: Colors.white70, fontSize: 12)),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // ═══ CE QUE VOUS AVEZ : l'abonné doit VOIR sa différence ═══
-          FutureBuilder<List<(String, AbonnementBoutique)>>(
-            future: () async {
-              final q = await FirebaseFirestore.instance
-                  .collection('boutiques')
-                  .where('gerants', arrayContains: widget.utilisateur.id)
-                  .get();
-              final res = <(String, AbonnementBoutique)>[];
-              for (final d in q.docs) {
-                res.add((
-                  d.data()['nom'] as String? ?? 'Boutique',
-                  await CommissionBoutiqueService.abonnementDe(d.id),
-                ));
-              }
-              return res;
-            }(),
-            builder: (c2, s2) {
-              final liste = s2.data;
-              if (liste == null || liste.isEmpty) return const SizedBox.shrink();
-              return Column(children: [ for (final (nomB, ab) in liste) Card(
-                color: _kPrimary.withOpacity(0.06),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: _kPrimary.withOpacity(0.4))),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        const Icon(Icons.workspace_premium,
-                            color: _kPrimary, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text('$nomB — abonnement : ${ab.nom}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 13.5))),
-                      ]),
-                      const SizedBox(height: 8),
-                      Text(
-                          '• Commission : ${ab.tauxCommission}%\n'
-                          '• Pagnes publiables : ${ab.limitePagesPagnes}\n'
-                          '• Photos par pagne : ${ab.limitePhotosParPagne}',
-                          style: const TextStyle(fontSize: 12.5, height: 1.5)),
-                      if (ab.avantages.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        ...ab.avantages.map((v) => Text('✓ $v',
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.green))),
-                      ],
-                      const SizedBox(height: 6),
-                      const Text(
-                          'Les offres ci-dessous montrent ce que chaque niveau supérieur débloque.',
-                          style:
-                              TextStyle(fontSize: 11, color: Colors.grey)),
-                    ],
-                  ),
-                ),
-              )]);
-            },
-          ),
-          const SizedBox(height: 16),
-          // Abonnement actuel
-          if (_abonnementActuel != null)
-            _CardAbonnementActuel(
-              nom: AbonnementBoutique.catalogue[_abonnementActuel]!.nom,
-              couleur: AbonnementBoutique.catalogue[_abonnementActuel]!.couleur,
-              icone: AbonnementBoutique.catalogue[_abonnementActuel]!.icone,
-              commission: '${AbonnementBoutique.catalogue[_abonnementActuel]!.tauxCommission}% par vente',
-            ),
-          const SizedBox(height: 20),
-
-          _SectionTitre('Choisir un abonnement', Icons.workspace_premium, _kPrimary),
-          const SizedBox(height: 10),
-
-          ...AbonnementBoutique.catalogue.values.map((a) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _CarteAbonnement(
-              nom: a.nom,
-              prix: a.prixFmt,
-              commission: '${a.tauxCommission}% de commission',
-              avantages: a.avantages,
-              couleur: a.couleur,
-              icone: a.icone,
-              estActuel: _abonnementActuel == a.type,
-              selectionne: _typeSelectionne == a.type,
-              onTap: a.type == _abonnementActuel
-                  ? null
-                  : () => setState(() => _typeSelectionne = a.type),
-            ),
-          )),
-
-          if (_typeSelectionne != null && _typeSelectionne != _abonnementActuel) ...[
-            const SizedBox(height: 20),
-            _SelecteurMoMo(methode: _methode, telephone: _telCtrl,
-                onChange: (m) => setState(() => _methode = m)),
-            const SizedBox(height: 16),
-            _BoutonPayer(
-              label: AbonnementBoutique.catalogue[_typeSelectionne]!.prixMensuel == 0
-                  ? 'Activer gratuitement'
-                  : 'Souscrire — ${AbonnementBoutique.catalogue[_typeSelectionne]!.prixFmt}',
-              enCours: _enCours,
-              onTap: _souscrire,
-            ),
-          ],
-          const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _souscrire() async {
-    if (_typeSelectionne == null) return;
-    setState(() => _enCours = true);
-    try {
-      final r = await CreditService.souscrireAbonnementBoutique(
-        boutiqueId: widget.utilisateur.id,
-        type: _typeSelectionne!,
-        methodePaiement: _methode,
-        numeroTelephone: '+237${_telCtrl.text}',
-      );
-      if (!mounted) return;
-      if (r.succes) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('✅ ${r.message}'),
-          backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
-        setState(() { _abonnementActuel = _typeSelectionne; _typeSelectionne = null; });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('❌ ${r.erreur}'), backgroundColor: Colors.red));
-      }
-    } finally {
-      if (mounted) setState(() => _enCours = false);
-    }
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// COUTURIER — Abonnement mensuel
-// ═══════════════════════════════════════════════════════════════════════════
-
-class PageAbonnementCouturier extends StatefulWidget {
-  final Utilisateur utilisateur;
-  const PageAbonnementCouturier({super.key, required this.utilisateur});
-  @override
-  State<PageAbonnementCouturier> createState() => _PageAbonnementCouturierState();
-}
-
-class _PageAbonnementCouturierState extends State<PageAbonnementCouturier> {
-  TypeAbonnementCouturier? _selectionne;
-  TypeAbonnementCouturier _actuel = TypeAbonnementCouturier.gratuit;
-  String _methode = 'orange';
-  final _telCtrl = TextEditingController();
-  bool _enCours = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _telCtrl.text = widget.utilisateur.telephone.replaceFirst('+237', '');
-    _charger();
-  }
-
-  @override
-  void dispose() { _telCtrl.dispose(); super.dispose(); }
-
-  Future<void> _charger() async {
-    final doc = await FirebaseFirestore.instance
-        .collection('profils_couturier').doc(widget.utilisateur.id).get();
-    if (doc.exists && mounted) {
-      setState(() => _actuel = TypeAbonnementCouturier.values.firstWhere((e) => e.name == (doc.data()!['typeAbonnement'] as String? ?? 'gratuit'), orElse: () => TypeAbonnementCouturier.values.first));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text('Mon abonnement couturier'),
-        backgroundColor: _kPrimary,
-        foregroundColor: Colors.white,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _CardAbonnementActuel(
-            nom: AbonnementCouturier.catalogue[_actuel]!.nom,
-            couleur: Colors.teal,
-            icone: Icons.content_cut,
-            commission: '${AbonnementCouturier.catalogue[_actuel]!.tauxCommission}% de commission',
-          ),
-          const SizedBox(height: 20),
-          _SectionTitre('Choisir un abonnement', Icons.workspace_premium, _kPrimary),
-          const SizedBox(height: 10),
-          ...AbonnementCouturier.catalogue.values.map((a) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _CarteAbonnement(
-              nom: a.nom,
-              prix: a.prixMensuelFmt,
-              commission: '${a.tauxCommission}% de commission',
-              avantages: a.avantages,
-              couleur: Colors.teal,
-              icone: Icons.content_cut,
-              estActuel: _actuel == a.type,
-              selectionne: _selectionne == a.type,
-              onTap: a.type == _actuel ? null : () => setState(() => _selectionne = a.type),
-            ),
-          )),
-          if (_selectionne != null && _selectionne != _actuel) ...[
-            const SizedBox(height: 20),
-            _SelecteurMoMo(methode: _methode, telephone: _telCtrl,
-                onChange: (m) => setState(() => _methode = m)),
-            const SizedBox(height: 16),
-            _BoutonPayer(
-              label: AbonnementCouturier.catalogue[_selectionne]!.prixMensuel == 0
-                  ? 'Activer gratuitement'
-                  : 'Souscrire — ${AbonnementCouturier.catalogue[_selectionne]!.prixMensuelFmt}',
-              enCours: _enCours,
-              onTap: () async {
-                setState(() => _enCours = true);
-                final r = await CreditService.souscrireAbonnementCouturier(
-                  couturierId: widget.utilisateur.id,
-                  type: _selectionne!,
-                  methodePaiement: _methode,
-                  numeroTelephone: '+237${_telCtrl.text}',
-                );
-                if (!mounted) return;
-                if (r.succes) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('✅ ${r.message}'), backgroundColor: Colors.green));
-                  setState(() { _actuel = _selectionne!; _selectionne = null; });
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('❌ ${r.erreur}'), backgroundColor: Colors.red));
-                }
-                setState(() => _enCours = false);
-              },
-            ),
-          ],
-          const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// LIVREUR — Inscription et abonnement
-// ═══════════════════════════════════════════════════════════════════════════
-
-class PageInscriptionLivreur extends StatefulWidget {
-  final Utilisateur utilisateur;
-  const PageInscriptionLivreur({super.key, required this.utilisateur});
-  @override
-  State<PageInscriptionLivreur> createState() => _PageInscriptionLivreurState();
-}
-
-class _PageInscriptionLivreurState extends State<PageInscriptionLivreur> {
-  TypeAbonnementLivreur? _selectionne;
-  String _methode = 'orange';
-  final _telCtrl = TextEditingController();
-  bool _enCours = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _telCtrl.text = widget.utilisateur.telephone.replaceFirst('+237', '');
-  }
-
-  @override
-  void dispose() { _telCtrl.dispose(); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text('Devenir livreur'),
-        backgroundColor: _kPrimary,
-        foregroundColor: Colors.white,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Présentation
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: _kPrimary, borderRadius: BorderRadius.circular(14)),
-            child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Icon(Icons.delivery_dining, color: Colors.white, size: 28),
-                SizedBox(width: 10),
-                Expanded(child: Text('Rejoindre l\'équipe SAMI',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
-              ]),
-              SizedBox(height: 8),
-              Text('Livrez les pagnes de Garoua et gagnez à votre rythme.\nChoisissez votre type de véhicule ci-dessous.',
-                  style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5)),
-            ]),
-          ),
-          const SizedBox(height: 20),
-          _SectionTitre('Choisir votre véhicule', Icons.directions_bike, _kPrimary),
-          const SizedBox(height: 10),
-          ...AbonnementLivreur.catalogue.values.map((a) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _CarteLivreur(
-              abonnement: a,
-              selectionne: _selectionne == a.type,
-              onTap: () => setState(() => _selectionne = a.type),
-            ),
-          )),
-          if (_selectionne != null) ...[
-            const SizedBox(height: 20),
-            _SelecteurMoMo(methode: _methode, telephone: _telCtrl,
-                onChange: (m) => setState(() => _methode = m)),
-            const SizedBox(height: 16),
-            _BoutonPayer(
-              label: () {
-                final a = AbonnementLivreur.catalogue[_selectionne]!;
-                final total = a.fraisInscription + a.prixMensuel;
-                return total == 0
-                    ? 'S\'inscrire gratuitement'
-                    : 'S\'inscrire — ${PrixFCFA.formater(total)}';
-              }(),
-              enCours: _enCours,
-              onTap: () async {
-                setState(() => _enCours = true);
-                final r = await CreditService.inscrireLivreur(
-                  livreurId: widget.utilisateur.id,
-                  type: _selectionne!,
-                  methodePaiement: _methode,
-                  numeroTelephone: '+237${_telCtrl.text}',
-                );
-                if (!mounted) return;
-                if (r.succes) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('✅ ${r.message}'), backgroundColor: Colors.green));
-                  Navigator.pop(context);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('❌ ${r.erreur}'), backgroundColor: Colors.red));
-                }
-                setState(() => _enCours = false);
-              },
-            ),
-          ],
-          const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -677,41 +655,6 @@ class _CardSoldeClient extends StatelessWidget {
   );
 }
 
-class _CardAbonnementActuel extends StatelessWidget {
-  final String nom;
-  final Color couleur;
-  final IconData icone;
-  final String commission;
-  const _CardAbonnementActuel({required this.nom, required this.couleur,
-    required this.icone, required this.commission});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: couleur.withOpacity(0.08),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: couleur.withOpacity(0.3)),
-    ),
-    child: Row(children: [
-      Container(width: 42, height: 42,
-        decoration: BoxDecoration(color: couleur.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
-        child: Icon(icone, color: couleur, size: 22)),
-      const SizedBox(width: 12),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Abonnement actuel', style: TextStyle(color: couleur.withOpacity(0.7), fontSize: 11)),
-        Text(nom, style: TextStyle(fontWeight: FontWeight.bold, color: couleur, fontSize: 16)),
-        Text(commission, style: TextStyle(fontSize: 12, color: couleur.withOpacity(0.7))),
-      ])),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(color: couleur, borderRadius: BorderRadius.circular(8)),
-        child: const Text('Actif', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-      ),
-    ]),
-  );
-}
-
 class _CarteAbonnement extends StatelessWidget {
   final String nom;
   final String prix;
@@ -788,122 +731,6 @@ class _CarteAbonnement extends StatelessWidget {
       ),
     );
   }
-}
-
-class _CarteLivreur extends StatelessWidget {
-  final AbonnementLivreur abonnement;
-  final bool selectionne;
-  final VoidCallback onTap;
-  const _CarteLivreur({required this.abonnement, required this.selectionne, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final fraisTotal = abonnement.fraisInscription + abonnement.prixMensuel;
-    return _CarteAbonnement(
-      nom: abonnement.nom,
-      prix: fraisTotal == 0 ? 'Gratuit' : PrixFCFA.formater(fraisTotal),
-      commission: '${PrixFCFA.formater(abonnement.gainParLivraison)} / livraison',
-      avantages: abonnement.avantages,
-      couleur: abonnement.couleur,
-      icone: abonnement.icone,
-      estActuel: false,
-      selectionne: selectionne,
-      onTap: onTap,
-    );
-  }
-}
-
-class _SelecteurMoMo extends StatelessWidget {
-  final String methode;
-  final TextEditingController telephone;
-  final ValueChanged<String> onChange;
-  const _SelecteurMoMo({required this.methode, required this.telephone, required this.onChange});
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text('Mode de paiement', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-      const SizedBox(height: 10),
-      Row(children: [
-        Expanded(child: _BoutonOperateur('🟠 Orange Money', 'orange', methode, onChange)),
-        const SizedBox(width: 10),
-        Expanded(child: _BoutonOperateur('🟡 MTN MoMo', 'mtn', methode, onChange)),
-      ]),
-      const SizedBox(height: 12),
-      TextFormField(
-        controller: telephone,
-        keyboardType: TextInputType.phone,
-        decoration: InputDecoration(
-          labelText: 'Numéro de téléphone',
-          prefixText: '+237 ',
-          prefixIcon: const Icon(Icons.phone_outlined, size: 18),
-          filled: true, fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _kPrimary, width: 1.5)),
-        ),
-      ),
-    ],
-  );
-}
-
-class _BoutonOperateur extends StatelessWidget {
-  final String label;
-  final String valeur;
-  final String actuel;
-  final ValueChanged<String> onSelect;
-  const _BoutonOperateur(this.label, this.valeur, this.actuel, this.onSelect);
-
-  @override
-  Widget build(BuildContext context) {
-    final actif = actuel == valeur;
-    return GestureDetector(
-      onTap: () => onSelect(valeur),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: actif ? _kPrimary.withOpacity(0.08) : Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: actif ? _kPrimary : Colors.grey.shade300,
-              width: actif ? 2 : 1),
-        ),
-        child: Center(child: Text(label,
-            style: TextStyle(fontSize: 13, fontWeight: actif ? FontWeight.bold : FontWeight.normal,
-                color: actif ? _kPrimary : Colors.black87))),
-      ),
-    );
-  }
-}
-
-class _BoutonPayer extends StatelessWidget {
-  final String label;
-  final bool enCours;
-  final VoidCallback onTap;
-  const _BoutonPayer({required this.label, required this.enCours, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: double.infinity, height: 56,
-    child: ElevatedButton(
-      onPressed: enCours ? null : onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _kPrimary, foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        elevation: 2,
-      ),
-      child: enCours
-          ? const SizedBox(width: 22, height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-          : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Icon(Icons.lock_outline, size: 18),
-              const SizedBox(width: 10),
-              Flexible(child: Text(label, textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600))),
-            ]),
-    ),
-  );
 }
 
 class _SectionTitre extends StatelessWidget {

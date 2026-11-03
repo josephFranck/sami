@@ -14,6 +14,8 @@ import 'package:sami/models/couture.dart';
 import 'package:sami/models/couture_options.dart';
 import 'package:sami/pages/couturier/saisie_mesures_page.dart';
 import 'package:sami/pages/abonnements/abonnements_page.dart';
+import 'package:sami/services/abonnement_service.dart';
+import 'package:sami/models/utilisateur.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
@@ -680,9 +682,6 @@ class _OngletStats extends StatelessWidget {
         final nbMois = d['commandesMois'] as int? ?? 0;
         final nbTotal = d['commandesTotal'] as int? ?? 0;
         final netMois = gains - commissions;
-        final abonnement = AbonnementCouturier.catalogue[
-          TypeAbonnementCouturier.values.firstWhere((e) => e.name == (d['typeAbonnement'] as String? ?? 'gratuit'), orElse: () => TypeAbonnementCouturier.values.first)
-        ]!;
 
         return ListView(
           padding: const EdgeInsets.all(16),
@@ -707,26 +706,47 @@ class _OngletStats extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
-            // Abonnement actuel
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.teal.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.teal.shade200),
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Abonnement actuel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 8),
-                Row(children: [
-                  const Icon(Icons.workspace_premium, color: Colors.teal, size: 20),
-                  const SizedBox(width: 8),
-                  Text(abonnement.nom, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  const Spacer(),
-                  Text('${abonnement.tauxCommission}% commission',
-                      style: const TextStyle(color: Colors.teal, fontSize: 12)),
-                ]),
-              ]),
+            // Abonnement actuel — lu sur la fiche `couturiers` (la source que
+            // la commission et la limite de modèles utilisent), plus sur
+            // `profils_couturier` (stats seulement).
+            FutureBuilder<List<(String, String)>>(
+              future: AbonnementService.fiches(ProfilAbonnement.couturier, uid),
+              builder: (_, sf) {
+                final ficheId = sf.data?.firstOrNull?.$1;
+                if (ficheId == null) return const SizedBox.shrink();
+                return FutureBuilder<AbonnementActuel>(
+                  future: AbonnementService.actuel(ProfilAbonnement.couturier, ficheId),
+                  builder: (_, sa) {
+                    final a = sa.data;
+                    final plan = a == null
+                        ? null
+                        : AbonnementCouturier.catalogue[TypeAbonnementCouturier.values
+                            .firstWhere((e) => e.name == (a.actif ? a.planId : 'gratuit'),
+                                orElse: () => TypeAbonnementCouturier.gratuit)];
+                    return Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.teal.shade200),
+                      ),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        const Text('Abonnement actuel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          const Icon(Icons.workspace_premium, color: Colors.teal, size: 20),
+                          const SizedBox(width: 8),
+                          Text(plan?.nom ?? '…', style: const TextStyle(fontWeight: FontWeight.w600)),
+                          const Spacer(),
+                          if (a != null && a.actif && a.finLe != null)
+                            Text('jusqu\'au ${a.finFmt}',
+                                style: const TextStyle(color: Colors.teal, fontSize: 12)),
+                        ]),
+                      ]),
+                    );
+                  },
+                );
+              },
             ),
             const SizedBox(height: 12),
             // SERVICE : numérisation du catalogue (source de revenu plateforme)
@@ -868,192 +888,22 @@ class _OngletAbonnement extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Réutilise directement PageAbonnementCouturier
-    // mais nécessite un Utilisateur → on charge depuis Firestore
-    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      future: FirebaseFirestore.instance.collection('utilisateurs').doc(uid).get(),
+    // UN seul écran de souscription (PageSouscription) : flux MoMo déclaré
+    // → vérification staff → activation sur la fiche `couturiers`. L'ancien
+    // écran embarqué activait un plan payant en écrivant `profils_couturier`
+    // sans aucun paiement (et le reste de l'app ne le lisait pas).
+    return FutureBuilder<Utilisateur?>(
+      future: Utilisateur.fromUid(uid),
       builder: (context, snap) {
-        if (!snap.hasData) return const Center(child: CircularProgressIndicator(color: _kPrimary));
-
-        final d = snap.data!.data() ?? {};
-        // Créer un Utilisateur minimal pour PageAbonnementCouturier
-        // On passe directement les infos nécessaires
-        return _AbonnementCouturierEmbed(uid: uid, telephone: d['telephone'] as String? ?? '');
+        if (snap.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator(color: _kPrimary));
+        }
+        final u = snap.data;
+        if (u == null) return const Center(child: Text('Compte introuvable'));
+        return PageSouscription(
+            utilisateur: u, profil: ProfilAbonnement.couturier, integree: true);
       },
     );
   }
 }
 
-class _AbonnementCouturierEmbed extends StatefulWidget {
-  final String uid;
-  final String telephone;
-  const _AbonnementCouturierEmbed({required this.uid, required this.telephone});
-  @override
-  State<_AbonnementCouturierEmbed> createState() => _AbonnementCouturierEmbedState();
-}
-
-class _AbonnementCouturierEmbedState extends State<_AbonnementCouturierEmbed> {
-  TypeAbonnementCouturier _actuel = TypeAbonnementCouturier.gratuit;
-  TypeAbonnementCouturier? _selectionne;
-  String _methode = 'orange';
-  bool _enCours = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _charger();
-  }
-
-  Future<void> _charger() async {
-    final doc = await FirebaseFirestore.instance
-        .collection('profils_couturier').doc(widget.uid).get();
-    if (doc.exists && mounted) {
-      setState(() => _actuel = TypeAbonnementCouturier.values.firstWhere((e) => e.name == (doc.data()!['typeAbonnement'] as String? ?? 'gratuit'), orElse: () => TypeAbonnementCouturier.values.first));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final abonnement = AbonnementCouturier.catalogue[_actuel]!;
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Actuel
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: _kPrimary.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _kPrimary.withOpacity(0.3)),
-          ),
-          child: Row(children: [
-            const Icon(Icons.content_cut, color: _kPrimary, size: 22),
-            const SizedBox(width: 10),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Abonnement actuel : ${abonnement.nom}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: _kPrimary)),
-              Text('Commission : ${abonnement.tauxCommission}% · ${abonnement.limiteModeles == 999 ? "Modèles illimités" : "${abonnement.limiteModeles} modèles max"}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
-            ])),
-          ]),
-        ),
-        const SizedBox(height: 16),
-        // Choix
-        ...AbonnementCouturier.catalogue.values.map((a) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: GestureDetector(
-            onTap: a.type == _actuel ? null : () => setState(() => _selectionne = a.type),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                color: _selectionne == a.type ? Colors.teal.withOpacity(0.06) : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: a.type == _actuel ? _kPrimary
-                      : _selectionne == a.type ? Colors.teal : Colors.grey.shade200,
-                  width: (a.type == _actuel || _selectionne == a.type) ? 2 : 1,
-                ),
-              ),
-              padding: const EdgeInsets.all(14),
-              child: Row(children: [
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(a.nom, style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: a.type == _actuel ? _kPrimary : Colors.black87,
-                  )),
-                  Text('${a.tauxCommission}% commission · ${a.prixMensuelFmt}',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                ])),
-                if (a.type == _actuel)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: _kPrimary, borderRadius: BorderRadius.circular(6)),
-                    child: const Text('Actuel', style: TextStyle(color: Colors.white, fontSize: 10)),
-                  )
-                else if (_selectionne == a.type)
-                  const Icon(Icons.check_circle, color: Colors.teal, size: 20),
-              ]),
-            ),
-          ),
-        )),
-        if (_selectionne != null && _selectionne != _actuel) ...[
-          const SizedBox(height: 8),
-          // Sélecteur opérateur
-          Row(children: [
-            Expanded(child: _BtnOp('🟠 Orange', 'orange', _methode, (v) => setState(() => _methode = v))),
-            const SizedBox(width: 10),
-            Expanded(child: _BtnOp('🟡 MTN', 'mtn', _methode, (v) => setState(() => _methode = v))),
-          ]),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity, height: 50,
-            child: ElevatedButton(
-              onPressed: _enCours ? null : _souscrire,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kPrimary, foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: _enCours
-                  ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                  : Text(
-                      AbonnementCouturier.catalogue[_selectionne]!.prixMensuel == 0
-                          ? 'Activer gratuitement'
-                          : 'Souscrire · ${AbonnementCouturier.catalogue[_selectionne]!.prixMensuelFmt}',
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                    ),
-            ),
-          ),
-        ],
-        const SizedBox(height: 32),
-      ],
-    );
-  }
-
-  Future<void> _souscrire() async {
-    if (_selectionne == null) return;
-    setState(() => _enCours = true);
-    try {
-      await FirebaseFirestore.instance
-          .collection('profils_couturier').doc(widget.uid).set({
-        'typeAbonnement': _selectionne!.name,
-        'dateAbonnement': FieldValue.serverTimestamp(),
-        'expireAbonnement': Timestamp.fromDate(
-            DateTime.now().add(const Duration(days: 30))),
-        'abonnementActif': true,
-      }, SetOptions(merge: true));
-      if (mounted) {
-        setState(() { _actuel = _selectionne!; _selectionne = null; });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('✅ Abonnement ${AbonnementCouturier.catalogue[_actuel]!.nom} activé'),
-          backgroundColor: Colors.green));
-      }
-    } finally {
-      if (mounted) setState(() => _enCours = false);
-    }
-  }
-}
-
-class _BtnOp extends StatelessWidget {
-  final String label, valeur, actuel;
-  final ValueChanged<String> onTap;
-  const _BtnOp(this.label, this.valeur, this.actuel, this.onTap);
-  @override
-  Widget build(BuildContext context) {
-    final actif = actuel == valeur;
-    return GestureDetector(
-      onTap: () => onTap(valeur),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: actif ? _kPrimary.withOpacity(0.08) : Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: actif ? _kPrimary : Colors.grey.shade300, width: actif ? 2 : 1),
-        ),
-        child: Center(child: Text(label,
-            style: TextStyle(fontSize: 13, fontWeight: actif ? FontWeight.bold : FontWeight.normal,
-                color: actif ? _kPrimary : Colors.black87))),
-      ),
-    );
-  }
-}

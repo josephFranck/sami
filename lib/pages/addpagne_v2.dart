@@ -235,14 +235,14 @@ class _AddPagnePageState extends State<AddPagnePage> {
     }
   }
 
+  /// Photos HD : abonnement PAYANT et non expiré (même lecture que la
+  /// commission). Avant : `abonnement != null` — « gratuit » ou un plan
+  /// expiré donnaient le HD.
   Future<bool> _boutiqueEstAbonnee() async {
     final id = _boutiqueChoisie;
     if (id == null) return false;
-    final d = await FirebaseFirestore.instance
-        .collection('boutiques').doc(id).get();
-    final data = d.data();
-    return data?['abonnement'] != null ||
-        data?['billingModel'] == 'abonnement';
+    final abo = await CommissionBoutiqueService.abonnementDe(id);
+    return abo.prixMensuel > 0;
   }
 
   Future<List<String>> _uploadImages() async {

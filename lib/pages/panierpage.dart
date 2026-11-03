@@ -81,11 +81,11 @@ class _PanierPageState extends State<PanierPage> {
   }
 
   /// Le montant à payer : le devis s'il est prêt, sinon le total local.
-  double get _totalAPayer => _devis?.totalPaye ?? _panier!.total;
+  double get _totalAPayer => _devis?.totalPaye ?? _panier?.total ?? 0;
   /// Ce que coûterait la commande payée en avoirs : articles + livraison,
   /// sans frais Mobile Money (le devis n'en compte aucun pour `credits`).
   double get _totalSiAvoirs => _devis == null
-      ? _panier!.total
+      ? (_panier?.total ?? 0)
       : _devis!.totalArticles + _devis!.totalLivraisons;
   String _adresseLivraison = '';
   final _adresseCtrl = TextEditingController();
@@ -421,7 +421,9 @@ class _PanierPageState extends State<PanierPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                        '1️⃣ Transférez ${PrixFCFA.formater(_panier?.total ?? 0)} à :'
+                        // montant du DEVIS (articles + livraison + supplément),
+                        // pas le seul total des articles
+                        '1️⃣ Transférez ${PrixFCFA.formater(_totalAPayer)} à :'
                         '${_numMtn.isNotEmpty ? '\n     MTN MoMo : $_numMtn' : ''}'
                         '${_numOm.isNotEmpty ? '\n     Orange Money : $_numOm' : ''}'
                         '${_titulaire.isNotEmpty ? '\n     (Titulaire : $_titulaire)' : ''}'

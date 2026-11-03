@@ -85,8 +85,21 @@
 | `ComptabiliteService.confirmerReversementsApresLivraison` (seul appel vivant du service) créditait le livreur d'un forfait 600 × 70 % à chaque scan, depuis son téléphone (refusé : `creditBalance` protégé) et en doublon du reversement staff (`gainLivreur` du devis) ; `enregistrerVente` jamais appelé | `livraison_service.dart:340` (ancien), `comptabilite_service.dart` | appel retiré ; service supprimé ; `ReversementService` (staff) = seule source des parts |
 | `StrategiesMarketingService` (jamais appelé) augmentait `creditBalance` en direct et codait 500/1 000 F ; `OffreCredit`/`config_credits` (achat de crédits) sans écran | `strategies_marketing.dart`, `abonnements.dart` | supprimés |
 
+### Lot B — Abonnements — fait le 03/11/2026
+| Élément | Détail | Fichiers |
+|---|---|---|
+| Service | `AbonnementService` : `plans(profil)` (avantages = uniquement ce que le code applique), `fiches`, `actuel` (lu exactement comme le reste de l'app), `demander` → `abonnements_demandes` (statut `a_verifier`), `valider` (transaction : plan + `abonnementFinLe` sur la fiche — prolongation si même plan encore actif — `transactions` tracée, demande close, notification), `refuser` | `abonnement_service.dart` |
+| Écran abonné | `PageAbonnements` : un onglet par profil (multi-rôles) ; `PageSouscription` : plan actuel, plans, bloc « transférez puis déclarez la référence » (mêmes numéros plateforme que le panier), mes demandes | `abonnements_page.dart` |
+| Écran staff | Vérification des paiements → onglet **Abonnements** (Valider / Refuser avec motif) | `verification_paiements_page.dart` |
+| Paramètres | `abonnementDureeJours` (30), `abonnementClientPrix` (0 = non proposé), `abonnementLivreurPrix` (0 = non proposé) ; plans boutique/couturier dans le code | `parametres_service.dart`, `parametres_admin_page.dart` |
+| Règles | `abonnements_demandes` (création par l'abonné, traitement staff « paiements ») ; champs plan/échéance/commission/solde/facturation des 4 fiches réservés au staff ; `profils_couturier` ne porte plus le plan | `firestore.rules` |
+| Effets rendus réels | Commission du plan boutique appliquée par le devis (avant : défaut admin pour tous) ; net boutique = prix − commission dans tous les modes (avant : mode « prépayé » = commission jamais prélevée, code mort) ; photos HD = plan payant actif (avant : `abonnement != null`, même « gratuit ») | `devis_commande_service.dart`, `addpagne_v2.dart` |
+| Supprimé | `souscrireAbonnementBoutique/Couturier`, `inscrireLivreur`, `verifierExpirations`, `_initierPaiementMoMo` (paiement simulé puis plan écrit depuis le téléphone de l'abonné ; boutique ciblée par l'id utilisateur) ; écran couturier embarqué qui activait un plan payant sans paiement ; catalogue `AbonnementLivreur` (gains par course, assurance, priorité : jamais appliqués) ; `ProfilAbonnementBoutique` | `credit_service.dart`, `dashboard_couturier.dart`, `abonnements.dart` |
+| Notation | Constaté en chemin : l'auteur d'un avis recalcule la moyenne de la cible depuis son téléphone → refusé par les règles (boutiques/couturiers/livreurs/pagnes). Règle `majNotation()` : agrégats seuls, bornés 0–5 (limite connue : écriture par un tiers sans avis — Cloud Function, lot C) | `firestore.rules` |
+
+**À décider par l'exploitant** : les prix des abonnements client et livreur (0 = non proposés) ; les avantages non codés des plans boutique/couturier (badge, boosts, analytics, support) ne sont plus affichés — à réintroduire quand ils existeront.
+
 ### Reste à faire
-- **Lot B** : souscription des abonnements (MoMo déclaré → vérification staff → `abonnementFinLe`).
 - **Lot C** (Blaze) : voir §3 — les limites restantes (statut de sous-commande modifiable par le livreur/gérant, devis calculé côté client) ne se ferment qu'avec des Cloud Functions.
 - **Exploitant** : publier `firestore.rules` (console → Règles → coller → Publier) et créer l'index `mouvements_credits` via le lien du log, ou le fichier `firestore.indexes.json`.
 

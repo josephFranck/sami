@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 
@@ -161,200 +160,18 @@ class AbonnementBoutique {
       catalogue[TypeAbonnementBoutique.gratuit]!;
 }
 
-// ─── Abonnement Livreur ───────────────────────────────────────────────────────
-
-enum TypeAbonnementLivreur { moto, tricycle, voiture, vip }
-
-class AbonnementLivreur {
-  final TypeAbonnementLivreur type;
-  final String nom;
-  final double fraisInscription;     // unique à l'inscription
-  final double prixMensuel;
-  final int livraisonsMaxParJour;    // -1 = illimité
-  final double gainParLivraison;     // FCFA garanti
-  final double bonusPonctualite;     // bonus si <30min
-  final double rayon;                // km de rayon max
-  final bool assuranceMarchandise;
-  final bool prioriteAssignation;    // 1er servi
-  final List<String> avantages;
-  final Color couleur;
-  final IconData icone;
-
-  const AbonnementLivreur({
-    required this.type,
-    required this.nom,
-    required this.fraisInscription,
-    required this.prixMensuel,
-    required this.livraisonsMaxParJour,
-    required this.gainParLivraison,
-    required this.bonusPonctualite,
-    required this.rayon,
-    this.assuranceMarchandise = false,
-    this.prioriteAssignation = false,
-    required this.avantages,
-    required this.couleur,
-    required this.icone,
-  });
-
-  String get prixFmt =>
-      prixMensuel == 0 ? 'Gratuit' : '${PrixFCFA.formater(prixMensuel)}/mois';
-
-  static const Map<TypeAbonnementLivreur, AbonnementLivreur> catalogue = {
-    TypeAbonnementLivreur.moto: AbonnementLivreur(
-      type: TypeAbonnementLivreur.moto,
-      nom: 'Moto-taxi',
-      fraisInscription: 1000,
-      prixMensuel: 0,
-      livraisonsMaxParJour: 15,
-      gainParLivraison: 350,
-      bonusPonctualite: 100,
-      rayon: 10,
-      avantages: [
-        'Frais inscription : 1 000 FCFA (unique)',
-        '350 FCFA par livraison',
-        '+ 100 FCFA si livré en <30 min',
-        'Rayon 10 km autour de Garoua',
-        'Jusqu\'à 15 livraisons/jour',
-      ],
-      couleur: Color(0xFF378ADD),
-      icone: Icons.delivery_dining,
-    ),
-    TypeAbonnementLivreur.tricycle: AbonnementLivreur(
-      type: TypeAbonnementLivreur.tricycle,
-      nom: 'Tricycle (Kéké)',
-      fraisInscription: 1500,
-      prixMensuel: 0,
-      livraisonsMaxParJour: 20,
-      gainParLivraison: 400,
-      bonusPonctualite: 150,
-      rayon: 15,
-      assuranceMarchandise: true,
-      avantages: [
-        'Frais inscription : 1 500 FCFA (unique)',
-        '400 FCFA par livraison',
-        '+ 150 FCFA si livré en <45 min',
-        'Rayon 15 km, colis volumineux',
-        'Assurance marchandise incluse',
-        'Jusqu\'à 20 livraisons/jour',
-      ],
-      couleur: Color(0xFFFF8F00),
-      icone: Icons.electric_rickshaw,
-    ),
-    TypeAbonnementLivreur.voiture: AbonnementLivreur(
-      type: TypeAbonnementLivreur.voiture,
-      nom: 'Voiture',
-      fraisInscription: 2000,
-      prixMensuel: 2000,
-      livraisonsMaxParJour: -1,
-      gainParLivraison: 600,
-      bonusPonctualite: 200,
-      rayon: 50,
-      assuranceMarchandise: true,
-      prioriteAssignation: true,
-      avantages: [
-        'Frais inscription : 2 000 FCFA',
-        '2 000 FCFA/mois',
-        '600 FCFA par livraison',
-        '+ 200 FCFA bonus ponctualité',
-        'Rayon 50 km (hors ville)',
-        'Priorité d\'assignation',
-        'Livraisons illimitées',
-        'Assurance marchandise',
-      ],
-      couleur: Color(0xFF1D9E75),
-      icone: Icons.local_shipping_outlined,
-    ),
-    TypeAbonnementLivreur.vip: AbonnementLivreur(
-      type: TypeAbonnementLivreur.vip,
-      nom: 'Livreur VIP',
-      fraisInscription: 3000,
-      prixMensuel: 5000,
-      livraisonsMaxParJour: -1,
-      gainParLivraison: 800,
-      bonusPonctualite: 300,
-      rayon: 100,
-      assuranceMarchandise: true,
-      prioriteAssignation: true,
-      avantages: [
-        'Frais inscription : 3 000 FCFA',
-        '5 000 FCFA/mois',
-        '800 FCFA par livraison',
-        '+ 300 FCFA bonus',
-        'Rayon illimité',
-        '1er servi sur toutes les commandes',
-        'Badge "Livreur VIP" visible',
-        'Support dédié',
-      ],
-      couleur: Color(0xFFBA7517),
-      icone: Icons.verified_outlined,
-    ),
-  };
-}
+// ─── Abonnement Livreur : catalogue « véhicules » SUPPRIMÉ ──────────────────
+// Il promettait des gains par course (350/400/600/800 F), une assurance et
+// une priorité d'assignation qu'aucun code n'appliquait ; le type de
+// véhicule est déjà saisi à la candidature. Le plan livreur réel (bonus de
+// part `livreurBonusAbo`, prix `abonnementLivreurPrix`) vit dans
+// AbonnementService.
 
 // ─── Offres de crédits (ACHAT) : SUPPRIMÉES ─────────────────────────────────
 // Décision 03/11/2026 : les crédits sont des AVOIRS (remboursements,
 // cashback, parrainage), jamais achetés. `OffreCredit`, son catalogue et la
 // collection `config_credits` n'ont plus d'écran.
 
-// ─── Profil abonnement boutique ───────────────────────────────────────────────
-
-class ProfilAbonnementBoutique {
-  final String boutiqueId;
-  final TypeAbonnementBoutique typeAbonnement;
-  final DateTime? dateAbonnement;
-  final DateTime? expireAbonnement;
-  final bool abonnementActif;
-  final double creditBalance;
-  final int ventesTotal;
-  final double gainsTotal;
-  final double commissionsPayees;
-
-  ProfilAbonnementBoutique({
-    required this.boutiqueId,
-    required this.typeAbonnement,
-    this.dateAbonnement,
-    this.expireAbonnement,
-    required this.abonnementActif,
-    this.creditBalance = 0,
-    this.ventesTotal = 0,
-    this.gainsTotal = 0,
-    this.commissionsPayees = 0,
-  });
-
-  AbonnementBoutique get abonnement =>
-      AbonnementBoutique.catalogue[typeAbonnement] ?? AbonnementBoutique.defaut();
-
-  bool get estExpire =>
-      expireAbonnement != null && DateTime.now().isAfter(expireAbonnement!);
-
-  static CollectionReference<Map<String, dynamic>> get collection =>
-      FirebaseFirestore.instance.collection('profils_boutique');
-
-  factory ProfilAbonnementBoutique.fromDoc(
-      DocumentSnapshot<Map<String, dynamic>> doc) {
-    final d = doc.data()!;
-    return ProfilAbonnementBoutique(
-      boutiqueId: doc.id,
-      typeAbonnement: TypeAbonnementBoutique.values.firstWhere((e) => e.name == (d['typeAbonnement'] as String? ?? 'gratuit'), orElse: () => TypeAbonnementBoutique.values.first),
-      dateAbonnement: (d['dateAbonnement'] as Timestamp?)?.toDate(),
-      expireAbonnement: (d['expireAbonnement'] as Timestamp?)?.toDate(),
-      abonnementActif: d['abonnementActif'] as bool? ?? true,
-      creditBalance: (d['creditBalance'] as num?)?.toDouble() ?? 0,
-      ventesTotal: d['ventesTotal'] as int? ?? 0,
-      gainsTotal: (d['gainsTotal'] as num?)?.toDouble() ?? 0,
-      commissionsPayees: (d['commissionsPayees'] as num?)?.toDouble() ?? 0,
-    );
-  }
-
-  Map<String, dynamic> toMap() => {
-    'boutiqueId': boutiqueId,
-    'typeAbonnement': typeAbonnement.name,
-    'dateAbonnement': dateAbonnement,
-    'expireAbonnement': expireAbonnement,
-    'abonnementActif': abonnementActif,
-    'creditBalance': creditBalance,
-    'ventesTotal': ventesTotal,
-    'gainsTotal': gainsTotal,
-    'commissionsPayees': commissionsPayees,
-  };
-}
+// ─── Profil abonnement boutique (`profils_boutique`) : SUPPRIMÉ ─────────────
+// Doublon jamais lu par le reste de l'app : le plan actif d'une boutique est
+// `boutiques/{id}.abonnement` + `abonnementFinLe` (AbonnementService).

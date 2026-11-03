@@ -63,6 +63,18 @@ service cloud.firestore {
     function livraisonDuFilleul(sc) {
       return sc.get('clientId','') == moi() && sc.get('statut','') == 'livree';
     }
+    // NOTATION : l'auteur d'un avis recalcule la moyenne de la cible depuis
+    // SON téléphone (NotationService._recalculerMoyenne). Il ne peut toucher
+    // QUE les agrégats, bornés (0–5). Limite connue : un tiers pourrait
+    // écrire ces agrégats sans avis — à fermer par Cloud Function (lot C).
+    function majNotation() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['noteMoyenne','nombreAvis','moyennesSousNotes',
+                         'badge','eligibleBoost'])
+          && request.resource.data.get('noteMoyenne', 0) >= 0
+          && request.resource.data.get('noteMoyenne', 0) <= 5
+          && request.resource.data.get('nombreAvis', 0) >= 0;
+    }
 
     // ═══════════ UTILISATEURS ═══════════
     match /utilisateurs/{uid} {
@@ -86,8 +98,14 @@ service cloud.firestore {
         (estStaff('reversements')
          && request.resource.data.diff(resource.data).affectedKeys()
               .hasOnly(['creditBalance'])) ||
+        // staff PAIEMENTS : active l'abonnement client (demande vérifiée)
+        (estStaff('paiements')
+         && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['abonnementClient','abonnementFinLe'])) ||
         (moi() == uid
          && request.resource.data.role == resource.data.role
+         // l'ABONNEMENT (paiement en espèces à la livraison) : staff seulement
+         && !touche(['abonnementClient','abonnementFinLe'])
          // ni la LISTE des rôles (multi-rôles) : seul le staff l'étend
          && request.resource.data.get('roles', []) == resource.data.get('roles', [])
          // ANTI AUTO-CRÉDIT : on ne peut pas AUGMENTER son propre solde
@@ -132,6 +150,7 @@ service cloud.firestore {
             && get(/databases/$(database)/documents/boutiques/$(request.resource.data.boutiqueId))
                 .data.get('gerants', []).hasAny([moi()])
           )
+          || (resource != null && majNotation())
       );
       allow delete: if estStaff('boutiques');
 
@@ -143,8 +162,20 @@ service cloud.firestore {
     }
     match /boutiques/{id} {
       allow read: if true;
+      // Le gérant édite sa vitrine ; l'ARGENT et l'ABONNEMENT sont au staff
+      // (avant : un gérant pouvait s'écrire abonnement, commission, solde).
       allow update: if estStaff('boutiques')
-                    || (connecte() && moi() in resource.data.gerants);
+                    || (estStaff('paiements')
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['abonnement','abonnementFinLe','tauxCommission']))
+                    || (estStaff('reversements')
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['creditBalance']))
+                    || (connecte() && moi() in resource.data.gerants
+                        && !touche(['abonnement','abonnementFinLe','tauxCommission',
+                                    'billingModel','creditBalance',
+                                    'franchiseGratuiteJusqu','contactVisible']))
+                    || (connecte() && majNotation());
       allow create, delete: if estStaff('boutiques');
     }
     match /categories/{id} {
@@ -278,22 +309,44 @@ service cloud.firestore {
       // ni s'abonner, ni gonfler son compteur de courses.
       allow update: if connecte() && (
         estStaff('utilisateurs') ||
+        (estStaff('paiements')
+         && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['abonnementLivreur','abonnementFinLe'])) ||
+        (estStaff('reversements')
+         && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['creditBalance'])) ||
         !touche(['creditBalance','estVerifie','cniVerifiee','abonnementLivreur',
                  'abonnementFinLe','montantCaution','cautionDeposee',
-                 'nombreLivraisons','utilisateurId']));
+                 'nombreLivraisons','utilisateurId']) ||
+        majNotation());
       allow create, delete: if estStaff('candidatures');
     }
     match /couturiers/{id} {
       allow read: if true; // vitrine publique des ateliers
       allow update: if connecte() && (
         estStaff('utilisateurs') ||
+        (estStaff('paiements')
+         && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['typeAbonnement','abonnementFinLe'])) ||
+        (estStaff('reversements')
+         && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['creditBalance'])) ||
         !touche(['typeAbonnement','abonnementFinLe','estVerifie',
-                 'creditBalance','utilisateurId']));
+                 'creditBalance','utilisateurId']) ||
+        majNotation());
       allow create, delete: if estStaff('candidatures');
     }
+    // Statistiques du tableau de bord couturier. Le PLAN n'y vit plus
+    // (source : couturiers/{id}) — l'ancien écran s'y activait un plan
+    // payant sans paiement.
     match /profils_couturier/{id} {
       allow read: if connecte();
-      allow write: if connecte() && (moi() == id || estAdmin());
+      allow create: if connecte() && (moi() == id || estAdmin())
+                    && !('typeAbonnement' in request.resource.data);
+      allow update: if estAdmin()
+                    || (connecte() && moi() == id
+                        && !touche(['typeAbonnement','expireAbonnement','abonnementActif']));
+      allow delete: if estAdmin();
     }
     match /candidatures/{id} {
       allow create: if connecte() && request.resource.data.utilisateurId == moi();
@@ -403,6 +456,17 @@ service cloud.firestore {
                     );
       allow update: if estStaff('reversements');
     }
+    // ABONNEMENTS : l'abonné dépose sa demande (transfert MoMo déclaré) ;
+    // le staff « paiements » la vérifie et active le plan sur la fiche.
+    match /abonnements_demandes/{id} {
+      allow read: if estStaff('paiements')
+                  || (connecte() && resource.data.get('utilisateurId','') == moi());
+      allow create: if connecte()
+                    && request.resource.data.get('utilisateurId','') == moi()
+                    && request.resource.data.get('statut','') == 'a_verifier';
+      allow update: if estStaff('paiements');
+      allow delete: if estAdmin();
+    }
     match /reversements/{id} {
       allow read: if estStaff('reversements')
                   || (connecte() && resource.data.get('beneficiaireId','') == moi());
@@ -487,7 +551,9 @@ service cloud.firestore {
       allow update: if connecte() && (
         estStaff('utilisateurs') ||
         !touche(['cniVerifiee','montantCaution','cautionDeposee','estVerifie',
-                 'scoreConfiance','utilisateurId']));
+                 'scoreConfiance','utilisateurId']) ||
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['noteMoyenne','scoreNoteAgent','dateMiseAJourNote']));
       allow delete: if estAdmin();
     }
     match /scores_clients/{id} {                // score de fiabilité client

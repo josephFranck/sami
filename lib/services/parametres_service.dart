@@ -183,6 +183,22 @@ class ParametresService {
         bonusAbo: bonusAbo, nbLivrees: nb);
   }
 
+  // ── ABONNEMENTS (décision 03/11/2026 : souscription dans l'app,
+  //    paiement MoMo déclaré, vérification staff) ──
+  /// Durée d'un abonnement payé (jours).
+  static Future<int> abonnementDureeJours() async =>
+      ((await _charger())['abonnementDureeJours'] as num?)?.toInt() ?? 30;
+  /// Prix de l'abonnement CLIENT (avantage : paiement en espèces à la
+  /// livraison). 0 = non proposé.
+  static Future<double> abonnementClientPrix() async =>
+      ((await _charger())['abonnementClientPrix'] as num?)?.toDouble() ?? 0;
+  /// Prix de l'abonnement LIVREUR (avantage : bonus `livreurBonusAbo` sur la
+  /// part de chaque course). 0 = non proposé.
+  static Future<double> abonnementLivreurPrix() async =>
+      ((await _charger())['abonnementLivreurPrix'] as num?)?.toDouble() ?? 0;
+  static Future<double> livreurBonusAboPct() async =>
+      ((await _charger())['livreurBonusAbo'] as num?)?.toDouble() ?? 5;
+
   static Future<double> fraisLivraisonBase() async =>
       ((await _charger())['fraisLivraisonBase'] as num?)?.toDouble() ?? 600;
 

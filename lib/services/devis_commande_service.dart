@@ -202,8 +202,17 @@ class DevisCommandeService {
       final reductionF = PrixFCFA.arrondirAu50(fraisBrut * reductionPct / 100);
       final fraisLivraison = PrixFCFA.arrondirAu50(fraisBrut - reductionF);
 
+      // COMMISSION : celle du PLAN de la boutique (abonnement payant actif,
+      // CommissionBoutiqueService.abonnementDe), sinon le défaut admin.
+      // Avant : le défaut pour tout le monde — l'abonné payait son plan
+      // pour une « commission réduite » jamais appliquée.
+      double pctBoutique = commissionPct;
+      try {
+        final abo = await CommissionBoutiqueService.abonnementDe(boutiqueId);
+        if (abo.prixMensuel > 0) pctBoutique = abo.tauxCommission;
+      } catch (_) {}
       final commission =
-          gratuit ? 0.0 : PrixFCFA.arrondirAu50(sousTotal * commissionPct / 100);
+          gratuit ? 0.0 : PrixFCFA.arrondirAu50(sousTotal * pctBoutique / 100);
       // Frais de transaction Mobile Money : aucun en espèces, aucun en
       // avoirs (`credits` = solde interne, aucune transaction MoMo).
       final fraisPaiement =
@@ -218,9 +227,11 @@ class DevisCommandeService {
       final gainLivreur = nbTrajets == 0
           ? 0.0
           : PrixFCFA.arrondirInferieur50(fraisBrut * gainLivreurPct / 100);
-      final netBoutique = prepaye
-          ? PrixFCFA.arrondirInferieur50(sousTotal)
-          : PrixFCFA.arrondirInferieur50(sousTotal - commission);
+      // NET BOUTIQUE : prix − commission, quel que soit le mode de facturation.
+      // Avant : en mode « prépayé », net = prix entier et la commission devait
+      // être débitée du crédit à la livraison par un code jamais appelé
+      // (_declencherReversement) — la plateforme ne touchait rien.
+      final netBoutique = PrixFCFA.arrondirInferieur50(sousTotal - commission);
 
       parBoutique[boutiqueId] = DevisBoutique(
         boutiqueId: boutiqueId,

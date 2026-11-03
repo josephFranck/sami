@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sami/pages/legal/mentions_legales_page.dart';
 import 'package:sami/services/log_service.dart';
 import 'package:sami/services/notification_service.dart';
 import 'package:sami/services/paiement_service.dart';
@@ -221,6 +222,9 @@ class CommandeMultiService {
       if (refPaiement != null) 'refPaiement': refPaiement,
       // Transfert déclaré : la préparation ATTEND la vérification humaine
       if (methodePaiement == 'momo_declare') 'paiementVerifie': false,
+      // PREUVE (art. 26 loi 2010/021) : la version des CGU en vigueur
+      // au moment de la commande est figée sur la session.
+      'cguVersion': kCguVersion,
       if (gpsClientLat != null) 'destLat': gpsClientLat,
       if (gpsClientLng != null) 'destLng': gpsClientLng,
         'statut': 'enAttente',

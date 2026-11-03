@@ -29,6 +29,18 @@ import 'package:sami/services/parametres_service.dart';
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── Configuration Cloudflare R2 (à remplir quand tu migres) ──────────────
+/// Jeton d'authentification pour le worker : le JETON FIREBASE de
+/// l'utilisateur connecté (vérifié par le worker contre les clés
+/// publiques Google). Repli : token partagé si posé explicitement
+/// dans le code (déploiements existants) — jamais lu depuis Firestore.
+Future<String> _jetonAuth() async {
+  try {
+    final t = await FirebaseAuth.instance.currentUser?.getIdToken();
+    if (t != null && t.isNotEmpty) return t;
+  } catch (_) {}
+  return _R2Config.authToken;
+}
+
 class _R2Config {
   // Ton URL publique R2 (ex: https://pub-xxx.r2.dev)
   // ou ton domaine custom (ex: https://media.sami-garoua.com)
@@ -68,9 +80,10 @@ class StockageService {
         if ((d['workerUrl'] as String?)?.startsWith('http') ?? false) {
           _R2Config.workerUrl = d['workerUrl'] as String? ?? '';
         }
-        if ((d['authToken'] as String?)?.isNotEmpty ?? false) {
-          _R2Config.authToken = d['authToken'] as String? ?? '';
-        }
+        // SÉCURITÉ : le token partagé n'est PLUS lu ici — un document
+        // Firestore lisible par les clients n'est pas un coffre. L'auth
+        // du worker passe par le JETON FIREBASE de l'utilisateur connecté
+        // (vérifié côté worker) : aucun secret dans l'app ni en base.
         if ((d['urlPublique'] as String?)?.startsWith('http') ?? false) {
           _R2Config.urlPublique = d['urlPublique'] as String? ?? '';
         }
@@ -343,7 +356,7 @@ class StockageService {
     final response = await http.post(
       Uri.parse('${_R2Config.workerUrl}/upload'),
       headers: {
-        'Authorization': 'Bearer ${_R2Config.authToken}',
+        'Authorization': 'Bearer ${await _jetonAuth()}',
         'Content-Type': contentType,
         'X-Filename': chemin,
       },
@@ -363,7 +376,7 @@ class StockageService {
     await http.delete(
       Uri.parse('${_R2Config.workerUrl}/delete?file=$chemin'),
       headers: {
-        'Authorization': 'Bearer ${_R2Config.authToken}',
+        'Authorization': 'Bearer ${await _jetonAuth()}',
       },
     );
   }

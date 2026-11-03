@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:sami/firebase_options.dart';
 import 'package:sami/models/utilisateur.dart';
+import 'package:sami/pages/legal/mentions_legales_page.dart';
 import 'package:sami/pages/accueil_pagneshop.dart';
 import 'package:sami/pages/auth/login_page.dart';
 import 'package:sami/pages/auth/signup_page.dart';
@@ -260,6 +261,12 @@ Route<dynamic>? _generateRoute(RouteSettings settings) {
       return _slide(const DashboardLivreurPage());
     case '/mes-livraisons':
       return _slide(const MesLivraisonsPage());
+    case '/mentions-legales':
+      return _slide(const MentionsLegalesPage());
+    case '/cgu':
+      return _slide(const MentionsLegalesPage(ongletInitial: 1));
+    case '/confidentialite':
+      return _slide(const MentionsLegalesPage(ongletInitial: 2));
     case '/admin-commandes':
       return MaterialPageRoute(builder: (_) => const AdminCommandesPage());
     case '/retours':

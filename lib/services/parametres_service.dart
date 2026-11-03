@@ -151,7 +151,17 @@ class ParametresService {
         final f = await FirebaseFirestore.instance
             .collection('livreurs').doc(livreurId).get();
         final d = f.data() ?? {};
-        nb = (d['nombreLivraisons'] as num?)?.toInt() ?? 0;
+        // COMPTEUR INFALSIFIABLE : on compte les livraisons réellement
+        // « livree » (validées par le code HMAC du client) au lieu de lire
+        // un champ que l'appareil du livreur pourrait écrire lui-même.
+        final q = await FirebaseFirestore.instance
+            .collection('livraisons')
+            .where('livreurId', isEqualTo: livreurId)
+            .limit(1000)
+            .get();
+        nb = q.docs
+            .where((x) => ['livree', 'livre'].contains(x.data()['statut']))
+            .length;
         // Paliers fidélité-livreur (le plus haut atteint s'applique)
         if (nb >= seuil2) {
           bonusFid = bonus2;

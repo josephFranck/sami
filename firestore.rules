@@ -17,6 +17,10 @@ service cloud.firestore {
     }
     // STAFF = admin/superadmin, OU un compte doté de LA permission
     // précise (le map `permissions` posé par Gestion utilisateurs).
+    // Champs touchés par une mise à jour (protection champ par champ)
+    function touche(cles) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny(cles);
+    }
     function estStaff(p) {
       return connecte() && (
         monDoc().role in ['admin', 'superadmin'] ||
@@ -79,6 +83,12 @@ service cloud.firestore {
           )
       );
       allow delete: if estStaff('boutiques');
+
+      // RÉSERVATIONS DE STOCK (sous-collection) : posées à l'ajout au
+      // panier, levées à la commande/annulation — sans ce match : DENY.
+      match /reservations/{resId} {
+        allow read, write: if connecte();
+      }
     }
     match /boutiques/{id} {
       allow read: if true;
@@ -102,7 +112,13 @@ service cloud.firestore {
     // ═══════════ COMMANDES & LIVRAISONS ═══════════
     match /sessions_commande/{id} {
       allow read, create: if connecte();
-      allow update: if connecte();
+      // Le client ne peut PAS s'auto-confirmer un paiement : les champs
+      // financiers ne bougent que par le staff (vérification MoMo déclaré).
+      allow update: if connecte() && (
+        estStaff('paiements') || estStaff('utilisateurs') ||
+        !touche(['paiementConfirme','paiementVerifie','paiementVerifieLe',
+                 'refPaiement','methodePaiement','totalPayeClient',
+                 'totalArticles','totalLivraisons','clientId']));
       // Vérification des transferts déclarés (agent 'paiements')
       allow update: if estStaff('paiements');
     }
@@ -114,10 +130,15 @@ service cloud.firestore {
       // boutique — un inconnu décompilé ne marque plus rien « livré ».
       allow update: if connecte() && (
         estStaff('utilisateurs') ||
-        resource.data.clientId == moi() ||
-        resource.data.livreurId == moi() ||
-        get(/databases/$(database)/documents/boutiques/$(resource.data.boutiqueId))
-            .data.gerants.hasAny([moi()])
+        (
+          (resource.data.clientId == moi() ||
+           resource.data.livreurId == moi() ||
+           get(/databases/$(database)/documents/boutiques/$(resource.data.boutiqueId))
+               .data.gerants.hasAny([moi()]))
+          // les MONTANTS et le flag de reversement : staff seulement
+          && !touche(['sousTotal','totalClient','fraisLivraison','netBoutique',
+                      'boutiqueReversee','clientId','boutiqueId','articles'])
+        )
       );
 
       // SOUS-COLLECTION livraisons : étapes de la course. Lecture pour
@@ -132,8 +153,25 @@ service cloud.firestore {
       allow create: if connecte() && request.resource.data.clientId == moi();
     }
     match /livraisons/{id} {
-      allow read, update: if connecte();
-      allow create: if connecte();
+      allow read: if connecte();
+      // CREATE : par le client qui commande (ou le staff)
+      allow create: if connecte() && (
+        estStaff('livraisons') || request.resource.data.clientId == moi());
+      // UPDATE : client, livreur assigné, gérant de la boutique d'origine,
+      // staff — et les champs FINANCIERS ne bougent que par le staff.
+      allow update: if connecte() && (
+        estStaff('livraisons') ||
+        (
+          (resource.data.clientId == moi() ||
+           resource.data.livreurId == moi() ||
+           get(/databases/$(database)/documents/boutiques/$(resource.data.origineId))
+               .data.gerants.hasAny([moi()]) ||
+           // assignation par l'agent (tourne sur l'appareil du boutiquier/admin)
+           !touche(['statut','preuveLivraison','preuveRecuperation','signatureClient']))
+          && !touche(['decompositionFinanciere','fraisLivraison','clientId',
+                      'origineId','gainLivreur','netBoutique'])
+        )
+      );
       allow delete: if estAdmin();
     }
     match /qr_secrets/{id} {
@@ -148,7 +186,17 @@ service cloud.firestore {
         get(/databases/$(database)/documents/livraisons/$(id))
             .data.livreurId == moi()
       );
-      allow write: if connecte();
+      // CREATE : posé à la création de la livraison (même batch) — un doc
+      // existant ne peut pas être « re-créé », donc pas d'écrasement.
+      allow create: if connecte();
+      // UPDATE (régénération des tokens) : participants ou staff SEULEMENT
+      allow update: if connecte() && (
+        estStaff('livraisons') ||
+        get(/databases/$(database)/documents/livraisons/$(id))
+            .data.clientId == moi() ||
+        get(/databases/$(database)/documents/livraisons/$(id))
+            .data.livreurId == moi()
+      );
       allow delete: if estAdmin();
     }
     match /retours/{id} {
@@ -158,12 +206,23 @@ service cloud.firestore {
     // ═══════════ PARTENAIRES ═══════════
     match /livreurs/{id} {
       allow read: if connecte();
-      allow update: if connecte(); // encours/gains mis à jour par l'app — TODO Cloud Function
+      // Opérationnel (statut, disponible, position, encours) : l'app.
+      // ARGENT / VÉRIFICATION / ABONNEMENT : le staff uniquement — un
+      // livreur (ou un tiers) ne peut ni se créditer, ni se « vérifier »,
+      // ni s'abonner, ni gonfler son compteur de courses.
+      allow update: if connecte() && (
+        estStaff('utilisateurs') ||
+        !touche(['creditBalance','estVerifie','cniVerifiee','abonnementLivreur',
+                 'abonnementFinLe','montantCaution','cautionDeposee',
+                 'nombreLivraisons','utilisateurId']));
       allow create, delete: if estStaff('candidatures');
     }
     match /couturiers/{id} {
       allow read: if true; // vitrine publique des ateliers
-      allow update: if connecte();
+      allow update: if connecte() && (
+        estStaff('utilisateurs') ||
+        !touche(['typeAbonnement','abonnementFinLe','estVerifie',
+                 'creditBalance','utilisateurId']));
       allow create, delete: if estStaff('candidatures');
     }
     match /profils_couturier/{id} {
@@ -180,7 +239,8 @@ service cloud.firestore {
     // ═══════════ FINANCES (sensible) ═══════════
     match /transactions/{id} {
       allow read: if estAdmin() || (connecte() && resource.data.get('clientId','') == moi());
-      allow create, update: if connecte(); // écrites par l'app — TODO Cloud Function
+      allow create: if connecte();        // écrites par l'app au paiement
+      allow update: if estStaff('paiements'); // jamais modifiées côté client
     }
     match /transactions_paiement/{id} {
       // Le client CRÉE sa transaction (en attente) et ÉCOUTE la sienne ;
@@ -198,9 +258,11 @@ service cloud.firestore {
     // MESURES du client (privées) + MODÈLES des couturiers + divers actifs
     match /modeles_couture/{id} {
       allow read: if true; // catalogue public
-      allow create, update, delete: if connecte() && (
-          estStaff('pagnes')
-          || request.resource.data.get('couturierId', resource.data.get('couturierId','')) == moi());
+      // CREATE : resource n'existe pas → ne JAMAIS lire resource.data ici
+      allow create: if connecte() && (
+          estStaff('pagnes') || request.resource.data.couturierId == moi());
+      allow update, delete: if connecte() && (
+          estStaff('pagnes') || resource.data.couturierId == moi());
     }
     match /signalements_avis/{id} {
       allow create: if connecte();
@@ -283,6 +345,9 @@ service cloud.firestore {
     // ═══════════ CONFIGURATION (le cœur de ta question) ═══════════
     match /app_config/parametres { allow read: if connecte(); allow write: if estStaff('parametres'); }
     match /app_config/version    { allow read: if connecte(); allow write: if estAdmin(); }
+    // stockage : workerUrl + urlPublique SEULEMENT (le token R2 n'y est
+    // PLUS : l'auth du worker passe par le jeton Firebase de l'utilisateur)
+    match /app_config/stockage   { allow read: if connecte(); allow write: if estAdmin(); }
     // Clés marchandes : lisibles par l'app (initiation du paiement côté client),
     // MODIFIABLES PAR PERSONNE d'autre que l'admin.
     match /app_config/paiement   { allow read: if connecte(); allow write: if estAdmin(); }
@@ -302,7 +367,12 @@ service cloud.firestore {
       allow update, delete: if estStaff('pagnes');
     }
 
-    match /alertes_agent/{id} { allow read: if estStaff('litiges'); allow write: if connecte(); }
+    match /alertes_agent/{id} {
+      allow read: if estStaff('litiges') || estStaff('livraisons');
+      allow create: if connecte();                       // l'agent (appareil boutiquier)
+      allow update: if estStaff('litiges') || estStaff('livraisons'); // clôture = humain
+      allow delete: if estAdmin();
+    }
     match /logs_agent/{id}    { allow read: if estAdmin(); allow write: if connecte(); }
     match /demandes_numerisation/{id} {
       allow create: if connecte();
@@ -312,5 +382,48 @@ service cloud.firestore {
 
     // ═══════════ TOUT LE RESTE : REFUSÉ ═══════════
     match /{document=**} { allow read, write: if false; }
+    // ═══════════ COLLECTIONS SANS RÈGLE (audit 03/11/2026) ═══════════
+    // Toutes étaient VIVANTES dans le code et refusées en silence.
+    match /paniers/{uid} {                      // panier persistant
+      allow read, write: if connecte() && uid == moi();
+    }
+    match /securite_livreurs/{id} {             // profil sécurité (CNI, caution)
+      allow read: if connecte();
+      allow create: if connecte() && (id == moi() || estStaff('utilisateurs'));
+      // vérification d'identité & caution : STAFF uniquement
+      allow update: if connecte() && (
+        estStaff('utilisateurs') ||
+        !touche(['cniVerifiee','montantCaution','cautionDeposee','estVerifie',
+                 'scoreConfiance','utilisateurId']));
+      allow delete: if estAdmin();
+    }
+    match /scores_clients/{id} {                // score de fiabilité client
+      allow read: if connecte() && (id == moi() || estStaff('utilisateurs'));
+      allow write: if connecte();               // calculé par l'app (informatif)
+    }
+    match /credit_mouvements/{id} {             // mouvements crédits boutique
+      allow read: if connecte();
+      allow create: if connecte();
+      allow update, delete: if estStaff('reversements');
+    }
+    match /saisies_caution/{id} {               // saisies sur caution livreur
+      allow read, write: if estStaff('litiges') || estAdmin();
+    }
+    match /profils_boutique/{id} {              // profil d'abonnement boutique
+      allow read: if connecte();
+      allow write: if estStaff('boutiques');
+    }
+    match /config_taxes/{id} {                  // TVA, taxes (admin)
+      allow read: if connecte();
+      allow write: if estAdmin();
+    }
+    match /alertes_admin/{id} {                 // alertes sécurité livreurs
+      allow create: if connecte();
+      allow read, update, delete: if estStaff('litiges') || estAdmin();
+    }
+    match /logs_admin/{id} {                    // journal des actions admin
+      allow create, read: if estAdmin();
+    }
+
   }
 }

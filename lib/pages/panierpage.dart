@@ -630,7 +630,8 @@ class _PanierPageState extends State<PanierPage> {
               SizedBox(width: 8),
               Text('Commande passée !'),
             ]),
-            content: Text('Commande #${session.id.substring(0,6).toUpperCase()} créée.\n${session.nombreBoutiques} boutique(s) notifiée(s) — livraison en cours de planification.'),
+            content: Text('Commande #${session.id.substring(0,6).toUpperCase()} créée.\n${session.nombreBoutiques} boutique(s) notifiée(s) — livraison en cours de planification.\n\n'
+                'Ceci vaut accusé de réception. Droit de rétractation : 15 jours après réception pour les pagnes (hors couture sur mesure) — voir « Informations légales ».'),
             actions: [
               ElevatedButton(
                 onPressed: () {
@@ -661,16 +662,28 @@ class _PanierPageState extends State<PanierPage> {
       // COMPENSATION : la commande a échoué APRÈS le débit crédits →
       // on rend les crédits (jamais d'argent perdu dans les limbes).
       if (creditsDebites > 0) {
+        // Les règles interdisent de S'AUTO-CRÉDITER (anti-fraude) : la
+        // compensation passe donc par la FILE DE REMBOURSEMENT que le
+        // staff valide d'un geste — rien ne se perd, tout est tracé.
         try {
           await FirebaseFirestore.instance
-              .collection('utilisateurs')
-              .doc(FirebaseAuth.instance.currentUser?.uid)
-              .update({'creditBalance': FieldValue.increment(creditsDebites)});
+              .collection('remboursements_a_faire')
+              .add({
+            'clientId': FirebaseAuth.instance.currentUser?.uid,
+            'montant': creditsDebites,
+            'refPaiement': 'CREDITS',
+            'type': 'credits',
+            'motif': 'commande_echouee_apres_debit',
+            'statut': 'a_traiter',
+            'dateCreation': FieldValue.serverTimestamp(),
+          });
         } catch (_) {}
       }
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Erreur : $e'),
+            content: Text(creditsDebites > 0
+                ? 'Erreur : $e\nVos crédits (${PrixFCFA.formater(creditsDebites)}) seront re-crédités par notre équipe.'
+                : 'Erreur : $e'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 10)),
       );

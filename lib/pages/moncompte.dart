@@ -7,6 +7,7 @@ import 'package:sami/services/paiement_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:sami/pages/legal/mentions_legales_page.dart';
 import 'package:sami/widgets/image_universelle.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sami/models/strategies_marketing.dart';
@@ -28,12 +29,135 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   Utilisateur? _u;
+  bool _consentMarketing = false;
+
+  Future<void> _chargerConsentMarketing() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      final d = await FirebaseFirestore.instance
+          .collection('utilisateurs').doc(uid).get();
+      if (mounted) {
+        setState(() =>
+            _consentMarketing = d.data()?['consentMarketing'] == true);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _changerConsentMarketing(bool v) async {
+    setState(() => _consentMarketing = v);
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      await FirebaseFirestore.instance.collection('utilisateurs').doc(uid).set({
+        'consentMarketing': v,
+        'consentMarketingLe': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (_) {}
+  }
+
+  /// SUPPRESSION DU COMPTE — droit à l'effacement (loi n° 2024/017).
+  /// Les données d'IDENTIFICATION sont effacées/anonymisées ; les
+  /// enregistrements de transactions (commandes, paiements, preuves de
+  /// livraison) sont CONSERVÉS anonymisés pour la durée légale
+  /// (art. 32 loi 2010/021 ; obligations comptables) — ils ne sont plus
+  /// rattachables à la personne.
+  Future<void> _supprimerMonCompte() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer définitivement votre compte ?'),
+        content: const Text(
+            'Vos informations personnelles (nom, téléphone, courriel, '
+            'adresses, profils de mesures, panier) seront effacées. '
+            'Vos commandes passées sont conservées sous forme anonymisée '
+            'pour la durée légale. Vos crédits non utilisés seront perdus.\n\n'
+            'Cette action est irréversible.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Annuler')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final uid = user.uid;
+    final db = FirebaseFirestore.instance;
+    try {
+      // 1. Profils de mesures (données personnelles) → supprimés
+      final mesures = await db
+          .collection('utilisateurs').doc(uid).collection('mesures').get();
+      for (final d in mesures.docs) {
+        await d.reference.delete();
+      }
+      // 2. Panier → supprimé
+      try {
+        await db.collection('paniers').doc(uid).delete();
+      } catch (_) {}
+      // 3. Compte → ANONYMISÉ (le doc reste : clé des commandes passées)
+      await db.collection('utilisateurs').doc(uid).set({
+        'nom': 'Compte supprimé',
+        'prenom': '',
+        'email': 'supprime-$uid@anonyme.invalid',
+        'telephone': '',
+        'image': '',
+        'adresse': '',
+        'adresseLivraison': [],
+        'quartier': '',
+        'favoris': [],
+        'methodesPaiement': [],
+        'estActif': false,
+        'compteSupprime': true,
+        'compteSupprimeLe': FieldValue.serverTimestamp(),
+        'consentMarketing': false,
+      }, SetOptions(merge: true));
+      // 4. Identité d'authentification → supprimée
+      try {
+        await user.delete();
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'requires-recent-login') {
+          // Firebase exige une connexion récente : on déconnecte et on
+          // demande de se reconnecter puis de recommencer.
+          await FirebaseAuth.instance.signOut();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 8),
+              content: Text(
+                  'Par sécurité, reconnectez-vous puis relancez la '
+                  'suppression : vos données ont déjà été anonymisées.')));
+          Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
+          return;
+        }
+        rethrow;
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          backgroundColor: Colors.green,
+          content: Text('Compte supprimé. Vos données ont été effacées.')));
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('Suppression impossible : $e')));
+    }
+  }
+
   bool _chargement = true;
   double _uploadProgress = 0;
   bool _uploadEnCours = false;
 
   @override
-  void initState() { super.initState(); _charger(); }
+  void initState() { super.initState(); _charger(); _chargerConsentMarketing(); }
 
   Future<void> _editerProfil() async {
     if (_u == null) return;
@@ -198,11 +322,43 @@ class _ProfilePageState extends State<ProfilePage> {
                 // Stockage : réglage TECHNIQUE réservé à l'admin
                 if (_u?.role == 'admin') _buildCardStockage(),
                 const SizedBox(height: 24),
+                // ── Droits sur les données (loi n° 2024/017) ──
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.gavel_outlined, color: Colors.grey),
+                  title: const Text('Mentions légales, CGU et confidentialité',
+                      style: TextStyle(fontSize: 13.5)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const MentionsLegalesPage())),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('Recevoir les offres et promotions',
+                      style: TextStyle(fontSize: 13.5)),
+                  subtitle: const Text('Retirable à tout moment',
+                      style: TextStyle(fontSize: 11)),
+                  value: _consentMarketing,
+                  activeColor: const Color(0xFF6A1B9A),
+                  onChanged: _changerConsentMarketing,
+                ),
+                const SizedBox(height: 8),
                 OutlinedButton.icon(
                   onPressed: _deconnecter,
                   icon: const Icon(Icons.logout, color: Colors.red, size: 18),
                   label: const Text('Déconnexion', style: TextStyle(color: Colors.red)),
                   style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), minimumSize: const Size(double.infinity, 48)),
+                ),
+                const SizedBox(height: 10),
+                // DROIT À L'EFFACEMENT : suppression définitive du compte
+                TextButton(
+                  onPressed: _supprimerMonCompte,
+                  child: Text('Supprimer mon compte',
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5,
+                          decoration: TextDecoration.underline)),
                 ),
                 const SizedBox(height: 24),
               ]),

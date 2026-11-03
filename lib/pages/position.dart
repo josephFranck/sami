@@ -42,6 +42,30 @@ class _PositionPageState extends State<PositionPage> {
 
     PermissionStatus permissionGranted = await location.hasPermission();
     if (permissionGranted == PermissionStatus.denied) {
+      // INFORMATION PRÉALABLE (loi n° 2024/017) : dire POURQUOI avant de
+      // demander — le système n'affiche que « autoriser / refuser ».
+      if (mounted) {
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Votre position'),
+            content: const Text(
+                'PagneShop utilise votre position UNIQUEMENT pour placer le '
+                'point de livraison sur la carte et guider le livreur. Elle '
+                'n\'est ni suivie en continu ni partagée hors de votre '
+                'commande. Vous pouvez aussi saisir votre adresse à la main.'),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Pas maintenant')),
+              ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Continuer')),
+            ],
+          ),
+        );
+        if (ok != true) return;
+      }
       permissionGranted = await location.requestPermission();
       if (permissionGranted != PermissionStatus.granted) {
         return;

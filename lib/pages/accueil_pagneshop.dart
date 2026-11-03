@@ -277,6 +277,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
           _drawerItem(Icons.favorite_border, 'Favoris', () => _navProtege('/favoris')),
           _drawerItem(Icons.shopping_cart_outlined, 'Mon panier', () => _navProtege('/panier')),
           _drawerItem(Icons.receipt_long_outlined, 'Mes commandes', () => _navProtege('/commandes')),
+          _drawerItem(Icons.gavel_outlined, 'Informations légales', () => Navigator.pushNamed(context, '/mentions-legales')),
           _drawerItem(Icons.content_cut, 'Mes coutures', () => _navProtege('/mes-coutures')),
           _drawerItem(Icons.receipt_long_outlined, 'Mes reçus', () => _navProtege('/mes-recus')),
           if (role == 'client')

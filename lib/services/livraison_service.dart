@@ -458,8 +458,8 @@ class LivraisonService {
         if (l.livreurId != null && l.livreurId!.isNotEmpty) {
           await db.collection('livreurs').doc(l.livreurId).set({
             'statut': StatutLivreur.disponible.name,
-            // la BONNE livraison compte : elle fait grimper sa part
-            'nombreLivraisons': FieldValue.increment(1),
+            // (le compteur de carrière n'est plus écrit ici : la part
+            //  effective COMPTE les livraisons « livree » — infalsifiable)
           }, SetOptions(merge: true));
         }
         return;

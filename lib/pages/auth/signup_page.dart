@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sami/pages/legal/mentions_legales_page.dart';
 import 'package:sami/services/parrainage_service.dart';
 import 'package:sami/models/utilisateur.dart';
 import 'package:sami/pages/accueil_pagneshop.dart';
@@ -18,6 +19,11 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
+  // CONSENTEMENTS (loi n° 2024/017 : explicite, libre, non pré-coché ;
+  // art. 26 loi n° 2010/021 : le vendeur doit PROUVER le consentement)
+  bool _accepteCgu = false;
+  bool _majeur = false;
+  bool _consentMarketing = false; // facultatif, séparé (art. 7)
   final _formKey       = GlobalKey<FormState>();
   final _nomCtrl       = TextEditingController();
   final _prenomCtrl    = TextEditingController();
@@ -191,6 +197,39 @@ class _SignupPageState extends State<SignupPage> {
                         const SizedBox(height: 12),
                         _Champ(label: _i18n.codeParrainage, controller: _parainageCtrl,
                             icone: Icons.card_giftcard_outlined),
+                        const SizedBox(height: 14),
+                        // ── CONSENTEMENTS : jamais pré-cochés, chacun séparé ──
+                        _CaseConsentement(
+                          valeur: _accepteCgu,
+                          onChanged: (v) => setState(() => _accepteCgu = v),
+                          enfant: Wrap(children: [
+                            const Text("J'ai lu et j'accepte les ",
+                                style: TextStyle(fontSize: 12.5)),
+                            _Lien('conditions générales',
+                                () => _ouvrirLegal(context, 1)),
+                            const Text(' et la ',
+                                style: TextStyle(fontSize: 12.5)),
+                            _Lien('politique de confidentialité',
+                                () => _ouvrirLegal(context, 2)),
+                            const Text('. *', style: TextStyle(fontSize: 12.5)),
+                          ]),
+                        ),
+                        _CaseConsentement(
+                          valeur: _majeur,
+                          onChanged: (v) => setState(() => _majeur = v),
+                          enfant: const Text(
+                              'Je certifie avoir 18 ans ou plus. *',
+                              style: TextStyle(fontSize: 12.5)),
+                        ),
+                        _CaseConsentement(
+                          valeur: _consentMarketing,
+                          onChanged: (v) =>
+                              setState(() => _consentMarketing = v),
+                          enfant: const Text(
+                              'Je souhaite recevoir les offres et promotions '
+                              '(facultatif, modifiable à tout moment).',
+                              style: TextStyle(fontSize: 12.5)),
+                        ),
                       ],
 
                       // Erreur
@@ -282,7 +321,14 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
 
-    // Étape finale → créer le compte
+    // Étape finale → consentements OBLIGATOIRES d'abord
+    if (!_accepteCgu || !_majeur) {
+      setState(() => _erreur = !_accepteCgu
+          ? 'Vous devez accepter les conditions générales et la politique '
+              'de confidentialité pour créer un compte.'
+          : 'Le service est réservé aux personnes majeures (18 ans ou plus).');
+      return;
+    }
     setState(() => _enCours = true);
     try {
       final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
@@ -350,6 +396,16 @@ class _SignupPageState extends State<SignupPage> {
       );
 
       await FirebaseFirestore.instance.collection('utilisateurs').doc(uid).set(user.toMap());
+      // PREUVE DU CONSENTEMENT (art. 26 loi 2010/021 ; loi 2024/017) :
+      // version des CGU acceptée, horodatage serveur, majorité déclarée,
+      // choix marketing — relisibles en cas de litige ou de contrôle.
+      await FirebaseFirestore.instance.collection('utilisateurs').doc(uid).set({
+        'cguVersion': kCguVersion,
+        'cguAccepteeLe': FieldValue.serverTimestamp(),
+        'majeurDeclare': true,
+        'consentMarketing': _consentMarketing,
+        'consentMarketingLe': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
       // Appliquer le parrainage si code saisi
       if (_parainageCtrl.text.trim().isNotEmpty) {
@@ -528,4 +584,57 @@ class _SelecteurLang extends StatelessWidget {
       );
     }).toList()),
   );
+}
+
+// ─── Consentement : case jamais pré-cochée, libellé cliquable ─────────────
+void _ouvrirLegal(BuildContext context, int onglet) {
+  Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => MentionsLegalesPage(ongletInitial: onglet)));
+}
+
+class _CaseConsentement extends StatelessWidget {
+  final bool valeur;
+  final ValueChanged<bool> onChanged;
+  final Widget enfant;
+  const _CaseConsentement(
+      {required this.valeur, required this.onChanged, required this.enfant});
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: () => onChanged(!valeur),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(
+              width: 32,
+              height: 32,
+              child: Checkbox(
+                  value: valeur,
+                  activeColor: const Color(0xFF6A1B9A),
+                  onChanged: (v) => onChanged(v ?? false)),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+                child: Padding(
+                    padding: const EdgeInsets.only(top: 7), child: enfant)),
+          ]),
+        ),
+      );
+}
+
+class _Lien extends StatelessWidget {
+  final String texte;
+  final VoidCallback onTap;
+  const _Lien(this.texte, this.onTap);
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Text(texte,
+            style: const TextStyle(
+                fontSize: 12.5,
+                color: Color(0xFF6A1B9A),
+                decoration: TextDecoration.underline,
+                fontWeight: FontWeight.w600)),
+      );
 }

@@ -42,14 +42,18 @@ class NotificationService {
 
   /// Badge : nombre de notifications non lues de l'utilisateur courant.
   static Stream<int> nonLues() {
-    final uid = _uid;
-    if (uid == null) return Stream.value(0);
-    return _db
-        .collection('notifications')
-        .where('destinataireId', isEqualTo: uid)
-        .where('lue', isEqualTo: false)
-        .snapshots()
-        .map((s) => s.docs.length);
+    // Le flux SUIT l'authentification : à la déconnexion il se ferme
+    // (plus de « Listen failed: PERMISSION_DENIED » sur l'ancien uid),
+    // à la reconnexion il repart sur le nouvel utilisateur.
+    return FirebaseAuth.instance.authStateChanges().asyncExpand((u) {
+      if (u == null) return Stream.value(0);
+      return _db
+          .collection('notifications')
+          .where('destinataireId', isEqualTo: u.uid)
+          .where('lue', isEqualTo: false)
+          .snapshots()
+          .map((s) => s.docs.length);
+    });
   }
 
   /// Liste des notifications de l'utilisateur courant (tri client).

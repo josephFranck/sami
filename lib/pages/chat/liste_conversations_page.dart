@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:sami/widgets/image_universelle.dart';
 import 'package:sami/services/message_service.dart';
 import 'package:sami/pages/chat/conversation_page.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -15,7 +16,7 @@ class ListeConversationsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Messages'),
+        title: Text(Tr.s.messages),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         actions: [
@@ -38,7 +39,7 @@ class ListeConversationsPage extends StatelessWidget {
                 child: Text(
                   msg.contains('index')
                       ? 'Index Firestore en cours de création — réessayez dans quelques minutes.\n(firebase deploy --only firestore:indexes)'
-                      : 'Impossible de charger les messages :\n$msg',
+                      : Tr.s.impossibleChargerMessages(msg),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.red, fontSize: 12),
                 ),
@@ -83,10 +84,10 @@ class ListeConversationsPage extends StatelessWidget {
       children: [
         Icon(Icons.chat_bubble_outline, size: 72, color: Colors.grey.shade300),
         const SizedBox(height: 16),
-        const Text('Aucune conversation', style: TextStyle(fontSize: 16, color: Colors.grey)),
+        Text(Tr.s.aucuneConversation, style: TextStyle(fontSize: 16, color: Colors.grey)),
         const SizedBox(height: 8),
-        const Text(
-          'Démarrez une discussion depuis une boutique\nou une commande',
+        Text(
+          Tr.s.demarrezDiscussionDepuisBoutiqueOu,
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey, fontSize: 13),
         ),
@@ -204,7 +205,7 @@ class _CarteConversation extends StatelessWidget {
                         ),
                       Expanded(
                         child: Text(
-                          conv.lastMessage.isEmpty ? 'Conversation démarrée' : conv.lastMessage,
+                          conv.lastMessage.isEmpty ? Tr.s.conversationDemarree : conv.lastMessage,
                           style: TextStyle(
                             fontSize: 13,
                             color: conv.aMessageNonLu ? Colors.black87 : Colors.grey,

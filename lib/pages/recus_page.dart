@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sami/services/recu_service.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -18,12 +19,12 @@ class MesRecusPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F5FA),
       appBar: AppBar(
-        title: const Text('Mes reçus'),
+        title: Text(Tr.s.mesRecus),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            tooltip: 'Vérifier un reçu (scan)',
+            tooltip: Tr.s.verifierRecuScan,
             icon: const Icon(Icons.verified_outlined),
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const VerifierRecuPage())),
@@ -39,12 +40,11 @@ class MesRecusPage extends StatelessWidget {
           }
           final recus = snap.data!;
           if (recus.isEmpty) {
-            return const Center(
+            return Center(
                 child: Padding(
               padding: EdgeInsets.all(24),
               child: Text(
-                  'Aucun reçu pour le moment.\nIls apparaissent après une '
-                  'vente complétée, une couture livrée ou un paiement reçu.',
+                  Tr.s.aucunRecuPourMomentIls,
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey)),
             ));
@@ -96,12 +96,12 @@ class RecuPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade200,
       appBar: AppBar(
-        title: const Text('Reçu'),
+        title: Text(Tr.s.recu),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            tooltip: 'Partager',
+            tooltip: Tr.s.partager,
             icon: const Icon(Icons.share_outlined),
             onPressed: () => Share.share(
                 'REÇU ${r['numero']}\n${r['detail']}\nMontant : $montant\n'
@@ -133,18 +133,18 @@ class RecuPage extends StatelessWidget {
                           fontWeight: FontWeight.w900,
                           color: _kPrimary)),
                   const Spacer(),
-                  Text('REÇU',
+                  Text(Tr.s.recu2,
                       style: TextStyle(
                           fontSize: 16,
                           letterSpacing: 3,
                           color: Colors.grey.shade600)),
                 ]),
                 const Divider(height: 24),
-                _l('N°', r['numero'] as String? ?? ''),
-                _l('Date', (r['dateISO'] as String? ?? '').replaceFirst('T', '  ').split('.').first),
-                _l('Bénéficiaire', r['beneficiaireNom'] as String? ?? ''),
-                _l('Émetteur', r['contrepartie'] as String? ?? 'SAMI'),
-                _l('Objet', r['detail'] as String? ?? ''),
+                _l(Tr.s.n, r['numero'] as String? ?? ''),
+                _l(Tr.s.date, (r['dateISO'] as String? ?? '').replaceFirst('T', '  ').split('.').first),
+                _l(Tr.s.beneficiaire, r['beneficiaireNom'] as String? ?? ''),
+                _l(Tr.s.emetteur, r['contrepartie'] as String? ?? 'SAMI'),
+                _l(Tr.s.objet, r['detail'] as String? ?? ''),
                 const SizedBox(height: 10),
                 Container(
                   width: double.infinity,
@@ -172,10 +172,7 @@ class RecuPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
-                      'Reçu électronique signé (HMAC-SHA256).\n'
-                      'Toute modification invalide la signature — '
-                      'authenticité vérifiable par scan dans l\'app SAMI.\n'
-                      'Pour servir et valoir ce que de droit.',
+                      Tr.s.recuElectroniqueSigneHmacSha256,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontSize: 10, color: Colors.grey.shade600)),
@@ -217,7 +214,7 @@ class _VerifierRecuPageState extends State<VerifierRecuPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: const Text('Vérifier un reçu'),
+          title: Text(Tr.s.verifierRecu),
           backgroundColor: _kPrimary,
           foregroundColor: Colors.white),
       body: MobileScanner(onDetect: (cap) async {
@@ -232,17 +229,14 @@ class _VerifierRecuPageState extends State<VerifierRecuPage> {
           builder: (ctx) => AlertDialog(
             icon: Icon(ok ? Icons.verified : Icons.gpp_bad,
                 color: ok ? Colors.green : Colors.red, size: 42),
-            title: Text(ok ? 'REÇU AUTHENTIQUE' : 'REÇU NON VALIDE',
+            title: Text(ok ? Tr.s.recuAuthentique : Tr.s.recuNonValide,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: ok ? Colors.green : Colors.red, fontSize: 16)),
             content: Text(
                 ok
-                    ? '${contenu?['numero']}\n${contenu?['detail']}\n'
-                        'Montant : ${PrixFCFA.formater((contenu?['montant'] as num?)?.toDouble() ?? 0)}\n'
-                        'Bénéficiaire : ${contenu?['beneficiaireNom']}'
-                    : 'La signature ne correspond pas : ce reçu a été modifié '
-                        'ou ne provient pas de SAMI.',
+                    ? Tr.s.montantBeneficiaire(contenu?['numero'], contenu?['detail'], PrixFCFA.formater((contenu?['montant'] as num?)?.toDouble() ?? 0), contenu?['beneficiaireNom'])
+                    : Tr.s.signatureNeCorrespondPasCe,
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 13)),
             actions: [
@@ -251,13 +245,13 @@ class _VerifierRecuPageState extends State<VerifierRecuPage> {
                     Navigator.pop(ctx);
                     _traite = false;
                   },
-                  child: const Text('Scanner un autre')),
+                  child: Text(Tr.s.scannerAutre)),
               ElevatedButton(
                   onPressed: () {
                     Navigator.pop(ctx);
                     Navigator.pop(context);
                   },
-                  child: const Text('Fermer')),
+                  child: Text(Tr.s.fermer)),
             ],
           ),
         );

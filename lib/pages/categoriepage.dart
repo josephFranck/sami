@@ -8,6 +8,7 @@ import 'package:sami/utils/prix_fcfa.dart';
 import 'package:sami/pages/addcategorie.dart';
 import 'package:sami/pages/editcategorie.dart';
 import 'package:sami/utils/droits.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -26,13 +27,13 @@ class _CategorieListPageState extends State<CategorieListPage> with PageProtegee
     builder: (u) => Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Catégories'),
+        title: Text(Tr.s.categories),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
       floatingActionButton: Droits.fab(
         condition: Droits.peutGererCategories(u),
-        tooltip: 'Ajouter une catégorie',
+        tooltip: Tr.s.ajouterCategorie,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddCategoriePage())),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -41,7 +42,7 @@ class _CategorieListPageState extends State<CategorieListPage> with PageProtegee
           if (snap.connectionState == ConnectionState.waiting)
             return const Center(child: CircularProgressIndicator(color: _kPrimary));
           if (!snap.hasData || snap.data!.docs.isEmpty)
-            return const Center(child: Text('Aucune catégorie', style: TextStyle(color: Colors.grey)));
+            return Center(child: Text(Tr.s.aucuneCategorie, style: TextStyle(color: Colors.grey)));
           final cats = snap.data!.docs.map(Categorie.fromFirebaseDocument).toList();
           return GridView.builder(
             padding: const EdgeInsets.all(12),
@@ -73,16 +74,16 @@ class _CategorieListPageState extends State<CategorieListPage> with PageProtegee
         .get();
     if (utilises.docs.isNotEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(
-                'Impossible : des pagnes utilisent cette catégorie. Changez d\'abord leur catégorie.'),
+                Tr.s.impossiblePagnesUtilisentCetteCategorie),
             backgroundColor: Colors.red));
       }
       return;
     }
     await Categorie.categorieCollection.doc(c.id).delete();
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"${c.nom}" supprimée'), backgroundColor: Colors.red));
+        SnackBar(content: Text(Tr.s.supprimee(c.nom)), backgroundColor: Colors.red));
   }
 }
 
@@ -127,11 +128,11 @@ class _CarteCat extends StatelessWidget {
               child: const Icon(Icons.more_vert, color: Colors.white, size: 16)),
           onSelected: (v) { if (v == 'edit') onModifier(); else onSupprimer(); },
           itemBuilder: (_) => [
-            const PopupMenuItem(value: 'edit', child: Row(children: [
-              Icon(Icons.edit_outlined, size: 16, color: _kPrimary), SizedBox(width: 8), Text('Modifier')])),
-            const PopupMenuItem(value: 'del', child: Row(children: [
+            PopupMenuItem(value: 'edit', child: Row(children: [
+              Icon(Icons.edit_outlined, size: 16, color: _kPrimary), SizedBox(width: 8), Text(Tr.s.modifier)])),
+            PopupMenuItem(value: 'del', child: Row(children: [
               Icon(Icons.delete_outline, size: 16, color: Colors.red), SizedBox(width: 8),
-              Text('Supprimer', style: TextStyle(color: Colors.red))])),
+              Text(Tr.s.supprimer, style: TextStyle(color: Colors.red))])),
           ],
         ),
       ),
@@ -178,7 +179,7 @@ class PagnesParCategoriePage extends StatelessWidget {
                 children: [
                   Icon(Icons.category_outlined, size: 56, color: Colors.grey.shade300),
                   const SizedBox(height: 12),
-                  Text('Aucun pagne dans "$nomCategorie"',
+                  Text(Tr.s.aucunPagneDans(nomCategorie),
                       style: TextStyle(color: Colors.grey.shade500)),
                 ],
               ),

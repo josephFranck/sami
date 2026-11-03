@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sami/services/resilience_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // WIDGETS RÉSILIENTS — À intégrer dans les formulaires critiques
@@ -27,20 +28,19 @@ mixin AutoSaveMixin<T extends StatefulWidget> on State<T> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Row(children: [
+        title: Row(children: [
           Icon(Icons.restore, color: Color(0xFF6A1B9A), size: 22),
           SizedBox(width: 8),
-          Text('Reprendre où vous étiez ?'),
+          Text(Tr.s.reprendreOuVousEtiez),
         ]),
-        content: const Text(
-          'Vous avez des données non sauvegardées de votre dernière session.\n'
-          'Voulez-vous les récupérer ?',
+        content: Text(
+          Tr.s.vousAvezDonneesNonSauvegardees,
           style: TextStyle(color: Colors.grey),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Non, recommencer'),
+            child: Text(Tr.s.nonRecommencer),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -48,7 +48,7 @@ mixin AutoSaveMixin<T extends StatefulWidget> on State<T> {
               backgroundColor: const Color(0xFF6A1B9A),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Oui, reprendre'),
+            child: Text(Tr.s.ouiReprendre),
           ),
         ],
       ),
@@ -56,8 +56,8 @@ mixin AutoSaveMixin<T extends StatefulWidget> on State<T> {
 
     if (reprise == true && mounted) {
       onReprendre(donnees);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Données précédentes restaurées ✓'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(Tr.s.donneesPrecedentesRestaurees),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
       ));
@@ -183,7 +183,7 @@ class _BoutonResiliantState extends State<BoutonResiliant> {
                   if (widget.icone != null && !_enAttente) Icon(widget.icone, size: 18),
                   const SizedBox(width: 8),
                   Text(
-                    _enAttente ? 'En attente de connexion...' : widget.label,
+                    _enAttente ? Tr.s.attenteConnexion : widget.label,
                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ],
@@ -214,8 +214,8 @@ class _BoutonResiliantState extends State<BoutonResiliant> {
           );
           if (mounted) {
             setState(() { _enCours = false; _enAttente = true; });
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Action sauvegardée — sera envoyée au retour du réseau'),
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(Tr.s.actionSauvegardeeSeraEnvoyeeRetour),
               backgroundColor: Colors.orange,
               behavior: SnackBarBehavior.floating,
             ));
@@ -227,7 +227,7 @@ class _BoutonResiliantState extends State<BoutonResiliant> {
       if (mounted) {
         setState(() => _enCours = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Erreur : $e'),
+          content: Text(Tr.s.erreur2(e)),
           backgroundColor: Colors.red,
         ));
       }
@@ -272,14 +272,14 @@ class ScanQRResiliant extends StatelessWidget {
               const Icon(Icons.qr_code_scanner, size: 48, color: Color(0xFF6A1B9A)),
               const SizedBox(height: 8),
               Text(
-                estDepart ? 'Scanner le QR en boutique' : 'Scanner le QR de livraison',
+                estDepart ? Tr.s.scannerQrBoutique : Tr.s.scannerQrLivraison,
                 style: const TextStyle(fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 16),
               // Bouton de validation directe (démo)
               // En production : déclenché par mobile_scanner après scan
               BoutonResiliant(
-                label: estDepart ? 'Confirmer prise en charge' : 'Confirmer réception',
+                label: estDepart ? Tr.s.confirmerPriseCharge2 : Tr.s.confirmerReception,
                 typeOffline: estDepart ? TypeActionOffline.scanQR : TypeActionOffline.confirmerLivraison,
                 payloadOffline: {
                   'sousCommandeId': sousCommandeId,
@@ -346,7 +346,7 @@ class _SectionOTPSecoursState extends State<_SectionOTPSecours> {
       TextButton.icon(
         onPressed: () => setState(() => _afficher = !_afficher),
         icon: const Icon(Icons.sms_outlined, size: 16, color: Colors.grey),
-        label: const Text('Utiliser le code reçu par SMS',
+        label: Text(Tr.s.utiliserCodeRecuParSms,
             style: TextStyle(fontSize: 12, color: Colors.grey)),
       ),
       if (_afficher) ...[
@@ -360,8 +360,8 @@ class _SectionOTPSecoursState extends State<_SectionOTPSecours> {
           ),
           child: Column(
             children: [
-              const Text(
-                'Entrez le code PIN à 4 chiffres reçu par SMS',
+              Text(
+                Tr.s.entrezCodePin4Chiffres,
                 style: TextStyle(fontSize: 12, color: Colors.orange),
                 textAlign: TextAlign.center,
               ),
@@ -387,7 +387,7 @@ class _SectionOTPSecoursState extends State<_SectionOTPSecours> {
                   minimumSize: const Size(double.infinity, 42),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                child: const Text('Valider le code'),
+                child: Text(Tr.s.validerCode),
               ),
             ],
           ),
@@ -401,8 +401,8 @@ class _SectionOTPSecoursState extends State<_SectionOTPSecours> {
     // Le code est généré lors de la création de la livraison et envoyé par SMS
     final code = _otpCtrl.text.trim();
     if (code.length != 4) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Entrez un code à 4 chiffres'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.entrezCode4Chiffres), backgroundColor: Colors.red));
       return;
     }
 

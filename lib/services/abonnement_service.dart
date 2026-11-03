@@ -6,6 +6,7 @@ import 'package:sami/services/log_service.dart';
 import 'package:sami/services/notification_service.dart';
 import 'package:sami/services/parametres_service.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 /// ═══════════════════════════════════════════════════════════════════════
 /// ABONNEMENTS — décision du 03/11/2026 : souscription DANS L'APP,
@@ -44,10 +45,10 @@ enum ProfilAbonnement { boutique, couturier, livreur, client }
 
 extension ProfilAbonnementX on ProfilAbonnement {
   String get libelle => switch (this) {
-        ProfilAbonnement.boutique => 'Boutique',
-        ProfilAbonnement.couturier => 'Couturier',
-        ProfilAbonnement.livreur => 'Livreur',
-        ProfilAbonnement.client => 'Client',
+        ProfilAbonnement.boutique => Tr.s.boutique,
+        ProfilAbonnement.couturier => Tr.s.couturier,
+        ProfilAbonnement.livreur => Tr.s.livreur,
+        ProfilAbonnement.client => Tr.s.client,
       };
   String get collection => switch (this) {
         ProfilAbonnement.boutique => 'boutiques',
@@ -88,7 +89,7 @@ class PlanAbonnement {
   });
   bool get gratuit => prix <= 0;
   String get prixFmt =>
-      gratuit ? 'Gratuit' : '${PrixFCFA.formater(prix)} / $dureeJours j';
+      gratuit ? Tr.s.gratuit : Tr.s.j2(PrixFCFA.formater(prix), dureeJours);
 }
 
 /// Plan actif d'une fiche (tel que lu par le reste de l'app).
@@ -209,8 +210,8 @@ class AbonnementService {
               avantages: [
                 'Commission ${_pct(a.prixMensuel == 0 ? defaut : a.tauxCommission)} sur chaque confection',
                 a.limiteModeles >= 999
-                    ? 'Modèles publiés illimités'
-                    : 'Jusqu\'à ${a.limiteModeles} modèles publiés',
+                    ? Tr.s.modelesPubliesIllimites
+                    : Tr.s.jusquModelesPublies(a.limiteModeles),
                 if (a.negociationAutorisee)
                   'Modèles « sur devis » (négociation du prix)',
                 if (a.prixMensuel > 0 && contact)
@@ -274,7 +275,7 @@ class AbonnementService {
               .get();
           return [
             for (final d in q.docs)
-              (d.id, d.data()['nom'] as String? ?? 'Boutique')
+              (d.id, d.data()['nom'] as String? ?? Tr.s.boutique)
           ];
         case ProfilAbonnement.couturier:
         case ProfilAbonnement.livreur:
@@ -449,10 +450,10 @@ class AbonnementService {
     });
     await NotificationService.envoyer(
       destinataireId: d.utilisateurId,
-      titre: 'Abonnement activé ✅',
+      titre: (t) => t.abonnementActive,
       message: d.prix > 0
-          ? 'Votre abonnement ${d.planNom} est actif pour ${d.dureeJours} jours.'
-          : 'Votre plan ${d.planNom} est actif.',
+          ? Tr.s.votreAbonnementEstActifPour(d.planNom, d.dureeJours)
+          : Tr.s.votrePlanEstActif(d.planNom),
       route: '/abonnements',
     );
   }
@@ -469,9 +470,9 @@ class AbonnementService {
         details: {'demandeId': d.id, 'motif': motif});
     await NotificationService.envoyer(
       destinataireId: d.utilisateurId,
-      titre: 'Abonnement non validé',
+      titre: (t) => t.abonnementNonValide,
       message: motif.trim().isEmpty
-          ? 'Le transfert déclaré n\'a pas pu être vérifié. Contactez-nous.'
+          ? Tr.s.transfertDeclareNPasPu
           : motif.trim(),
       route: '/abonnements',
     );

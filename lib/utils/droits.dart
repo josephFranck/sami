@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sami/models/utilisateur.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SYSTÈME DE DROITS D'ACCÈS CENTRALISÉ
@@ -224,13 +225,13 @@ class Droits {
         title: Row(children: [
           const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 22),
           const SizedBox(width: 8),
-          Expanded(child: Text('Supprimer "$nom" ?', style: const TextStyle(fontSize: 16))),
+          Expanded(child: Text(Tr.s.supprimer2(nom), style: const TextStyle(fontSize: 16))),
         ]),
         content: Text(message, style: const TextStyle(color: Colors.grey)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: Text(Tr.s.annuler),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -239,7 +240,7 @@ class Droits {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Supprimer'),
+            child: Text(Tr.s.supprimer),
           ),
         ],
       ),
@@ -250,7 +251,7 @@ class Droits {
   /// Snackbar d'accès refusé
   static void accesRefuse(BuildContext context, [String? message]) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message ?? 'Accès refusé — droits insuffisants'),
+      content: Text(message ?? Tr.s.accesRefuseDroitsInsuffisants),
       backgroundColor: Colors.red.shade700,
       behavior: SnackBarBehavior.floating,
     ));
@@ -277,8 +278,8 @@ mixin PageProtegee<T extends StatefulWidget> on State<T> {
       return chargement ?? const Center(child: CircularProgressIndicator(color: Color(0xFF6A1B9A)));
     }
     if (utilisateur == null) {
-      return nonConnecte ?? const Center(
-        child: Text('Connectez-vous pour accéder à cette page',
+      return nonConnecte ?? Center(
+        child: Text(Tr.s.connectezVousPourAccederCette,
             style: TextStyle(color: Colors.grey)),
       );
     }

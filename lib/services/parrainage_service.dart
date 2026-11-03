@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sami/services/notification_service.dart';
 import 'package:sami/services/parametres_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 /// PARRAINAGE — les trois lois du système :
 /// 1. RIEN n'est crédité à l'inscription (l'auto-parrainage en boucle est
@@ -124,7 +125,7 @@ class ParrainageService {
           destinataireId: qui,
           titre: titre,
           message:
-              '${montant.round()} F d\'avoir arrivent sur votre compte (validation en cours).',
+              (t) => t.fAvoirArriventSurVotre(montant.round()),
           route: '/moncompte',
         );
       }

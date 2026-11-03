@@ -2,11 +2,12 @@ import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sami/pages/accueil_pagneshop.dart';
 import 'package:sami/pages/auth/reset_password_page.dart';
 import 'package:sami/pages/auth/signup_page.dart';
 import 'package:sami/utils/auth_i18n.dart';
+import 'package:sami/services/langue_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -33,23 +34,19 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     _chargerLang();
   }
 
+  // La langue est celle de TOUTE l'app (LangueService, même clé de
+  // préférence `auth_lang` qu'avant) : choisir ici vaut pour tous les écrans.
   Future<void> _chargerLang() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString('auth_lang') ?? 'fr';
+    final saved = LangueService.instance.langue;
     setState(() {
       _lang = AuthLang.values.firstWhere((l) => l.name == saved, orElse: () => AuthLang.fr);
       _i18n = AuthI18n(_lang);
     });
   }
 
-  Future<void> _sauverLang(AuthLang l) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('auth_lang', l.name);
-  }
-
   void _changerLang(AuthLang l) {
     setState(() { _lang = l; _i18n = AuthI18n(l); });
-    _sauverLang(l);
+    LangueService.instance.changer(l.name);
   }
 
   @override
@@ -200,7 +197,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text('© 2025 SAMI · Garoua',
+                    Text(Tr.s.k2025SamiGaroua,
                         style: TextStyle(color: Colors.white60, fontSize: 11)),
                   ]),
                 ),
@@ -329,7 +326,8 @@ class _SelecteurLang extends StatelessWidget {
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
-      children: AuthLang.values.map((l) {
+      // Fulfulde (ff) : hors lancement (décision 03/11/2026) — non proposé
+      children: AuthLang.values.where((l) => l != AuthLang.ff).map((l) {
         final actif = l == lang;
         final label = switch (l) { AuthLang.fr => '🇫🇷', AuthLang.en => '🇬🇧', AuthLang.ff => '🟡' };
         return GestureDetector(

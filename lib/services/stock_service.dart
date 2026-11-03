@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GESTION DU STOCK — Transactions atomiques Firestore
@@ -161,7 +162,7 @@ class StockService {
           final dispo = data['quantiteDisponible'] as int? ?? stock;
 
           if (dispo < article.quantite) {
-            final nomPagne = data['nom'] as String? ?? 'Pagne';
+            final nomPagne = data['nom'] as String? ?? Tr.s.pagne;
             if (dispo == 0) {
               erreurs.add('$nomPagne : épuisé depuis votre dernière consultation');
             } else {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
+import 'package:sami/l10n/tr.dart';
 
 // MapPage — utilise OpenStreetMap (flutter_map) — GRATUIT
 // Remplace Google Maps (supprimé du projet)
@@ -28,7 +29,7 @@ class _MapPageState extends State<MapPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.titre ?? 'Carte'),
+        title: Text(widget.titre ?? Tr.s.carte),
         backgroundColor: const Color(0xFF6A1B9A),
         foregroundColor: Colors.white,
       ),

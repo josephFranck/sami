@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _garoua = LatLng(9.3265, 13.3958);
@@ -108,7 +109,7 @@ class _SelecteurPositionPageState extends State<SelecteurPositionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Placer ma position'),
+        title: Text(Tr.s.placerMaPosition),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -172,15 +173,12 @@ class _SelecteurPositionPageState extends State<SelecteurPositionPage> {
               padding: const EdgeInsets.all(10),
               child: Text(
                   _choix == null
-                      ? '🔵 Vous êtes ici. Touchez la carte pour poser le '
-                          'point de livraison (votre portail, un repère…).'
+                      ? Tr.s.vousEtesIciTouchezCarte
                       : _calculEnCours
-                          ? 'Calcul de l\'itinéraire…'
+                          ? Tr.s.calculItineraire
                           : _distanceKm != null
-                              ? '🛵 ${_distanceKm!.toStringAsFixed(1)} km'
-                                  '${_dureeMin != null ? ' · ≈ $_dureeMin min' : ' (vol d\'oiseau)'}'
-                                  ' depuis votre position'
-                              : 'Point posé — validez en bas.',
+                              ? Tr.s.kmDepuisVotrePosition(_distanceKm!.toStringAsFixed(1), _dureeMin != null ? ' · ≈ $_dureeMin min' : ' (vol d\'oiseau)')
+                              : Tr.s.pointPoseValidezBas,
                   style: const TextStyle(fontSize: 12.5)),
             ),
           ),
@@ -210,8 +208,8 @@ class _SelecteurPositionPageState extends State<SelecteurPositionPage> {
                 _choix == null ? null : () => Navigator.pop(context, _choix),
             icon: const Icon(Icons.check),
             label: Text(_choix == null
-                ? 'Touchez la carte d\'abord'
-                : 'Valider cette position'),
+                ? Tr.s.touchezCarteAbord
+                : Tr.s.validerCettePosition),
           ),
         ),
       ),

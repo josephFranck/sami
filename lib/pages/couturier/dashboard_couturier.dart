@@ -17,6 +17,7 @@ import 'package:sami/pages/abonnements/abonnements_page.dart';
 import 'package:sami/services/abonnement_service.dart';
 import 'package:sami/models/utilisateur.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kTeal    = Color(0xFF1D9E75);
@@ -53,8 +54,8 @@ class _DashboardCouturierState extends State<DashboardCouturier>
         .get();
     if (q.docs.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Profil couturier introuvable.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(Tr.s.profilCouturierIntrouvable)));
       }
       return;
     }
@@ -68,34 +69,34 @@ class _DashboardCouturierState extends State<DashboardCouturier>
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Mon profil couturier'),
+        title: Text(Tr.s.monProfilCouturier),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(
               controller: atelier,
-              decoration: const InputDecoration(
-                  labelText: 'Nom de l\'atelier',
+              decoration: InputDecoration(
+                  labelText: Tr.s.nomAtelier,
                   border: OutlineInputBorder())),
           const SizedBox(height: 10),
           TextField(
               controller: bio,
               maxLines: 3,
-              decoration: const InputDecoration(
-                  labelText: 'Présentation (les clients la lisent)',
+              decoration: InputDecoration(
+                  labelText: Tr.s.presentationClientsLisent,
                   border: OutlineInputBorder())),
           const SizedBox(height: 10),
           TextField(
               controller: spec,
-              decoration: const InputDecoration(
-                  labelText: 'Spécialités (virgules)',
+              decoration: InputDecoration(
+                  labelText: Tr.s.specialitesVirgules,
                   border: OutlineInputBorder())),
         ]),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Annuler')),
+              child: Text(Tr.s.annuler)),
           ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Enregistrer')),
+              child: Text(Tr.s.enregistrer)),
         ],
       ),
     );
@@ -110,8 +111,8 @@ class _DashboardCouturierState extends State<DashboardCouturier>
             .toList(),
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Profil mis à jour ✅'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(Tr.s.profilMisJour),
             backgroundColor: Colors.green));
       }
     }
@@ -125,12 +126,12 @@ class _DashboardCouturierState extends State<DashboardCouturier>
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Mon espace couturier'),
+        title: Text(Tr.s.monEspaceCouturier),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            tooltip: 'Modifier mon profil',
+            tooltip: Tr.s.modifierMonProfil,
             icon: const Icon(Icons.edit_outlined),
             onPressed: _editerProfil,
           ),
@@ -141,11 +142,11 @@ class _DashboardCouturierState extends State<DashboardCouturier>
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white60,
           isScrollable: true,
-          tabs: const [
-            Tab(icon: Icon(Icons.receipt_long, size: 18), text: 'Commandes'),
-            Tab(icon: Icon(Icons.style, size: 18), text: 'Mes modèles'),
-            Tab(icon: Icon(Icons.bar_chart, size: 18), text: 'Stats'),
-            Tab(icon: Icon(Icons.workspace_premium, size: 18), text: 'Abonnement'),
+          tabs: [
+            Tab(icon: Icon(Icons.receipt_long, size: 18), text: Tr.s.commandes),
+            Tab(icon: Icon(Icons.style, size: 18), text: Tr.s.mesModeles),
+            Tab(icon: Icon(Icons.bar_chart, size: 18), text: Tr.s.stats),
+            Tab(icon: Icon(Icons.workspace_premium, size: 18), text: Tr.s.abonnement2),
           ],
         ),
       ),
@@ -177,14 +178,14 @@ class _OngletCommandes extends StatelessWidget {
       child: Column(children: [
         Container(
           color: Colors.white,
-          child: const TabBar(
+          child: TabBar(
             labelColor: _kPrimary,
             unselectedLabelColor: Colors.grey,
             indicatorColor: _kPrimary,
             tabs: [
-              Tab(text: 'À traiter'),
-              Tab(text: 'En cours'),
-              Tab(text: 'Terminées'),
+              Tab(text: Tr.s.traiter),
+              Tab(text: Tr.s.cours),
+              Tab(text: Tr.s.terminees),
             ],
           ),
         ),
@@ -244,7 +245,7 @@ class _ListeCommandesCouturier extends StatelessWidget {
           }
         }
         if (filtrees.isEmpty)
-          return const Center(child: Text('Aucune commande ici', style: TextStyle(color: Colors.grey)));
+          return Center(child: Text(Tr.s.aucuneCommandeIci, style: TextStyle(color: Colors.grey)));
 
         return ListView.separated(
           padding: const EdgeInsets.all(12),
@@ -275,7 +276,7 @@ class _CarteCommandeCouturier extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Expanded(child: Text(
-              'Commande #${commande.id.substring(0, 6).toUpperCase()}',
+              Tr.s.commande(commande.id.substring(0, 6).toUpperCase()),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             )),
             Container(
@@ -290,7 +291,7 @@ class _CarteCommandeCouturier extends StatelessWidget {
           const SizedBox(height: 8),
           // Mesures snapshot
           Text(
-            '${commande.mesuresSnapshot.length} mesures · ${commande.modeRencontre.name}',
+            Tr.s.mesures2(commande.mesuresSnapshot.length, commande.modeRencontre.name),
             style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
           const SizedBox(height: 4),
@@ -308,10 +309,10 @@ class _CarteCommandeCouturier extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                child: const Text('Accepter', style: TextStyle(fontSize: 12)),
+                child: Text(Tr.s.accepter, style: TextStyle(fontSize: 12)),
               ),
             if (commande.statut == StatutCommandeCouturier.devisPropose)
-              Text('Devis envoyé : ${PrixFCFA.formater(commande.prixPropose ?? 0)}',
+              Text(Tr.s.devisEnvoye(PrixFCFA.formater(commande.prixPropose ?? 0)),
                   style: const TextStyle(fontSize: 11, color: Colors.orange)),
             if (commande.statut == StatutCommandeCouturier.enConfection)
               ElevatedButton(
@@ -322,7 +323,7 @@ class _CarteCommandeCouturier extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                child: const Text('Prête', style: TextStyle(fontSize: 12)),
+                child: Text(Tr.s.prete, style: TextStyle(fontSize: 12)),
               ),
           ]),
           Align(
@@ -331,7 +332,7 @@ class _CarteCommandeCouturier extends StatelessWidget {
               onPressed: () async {
                 final u = await FirebaseFirestore.instance
                     .collection('utilisateurs').doc(commande.clientId).get();
-                final nom = u.data()?['nom'] as String? ?? 'Client';
+                final nom = u.data()?['nom'] as String? ?? Tr.s.client;
                 if (!context.mounted) return;
                 MessageService.contacter(context,
                     autreUserId: commande.clientId,
@@ -340,7 +341,7 @@ class _CarteCommandeCouturier extends StatelessWidget {
                     contexteId: commande.id);
               },
               icon: const Icon(Icons.chat_bubble_outline, size: 15),
-              label: const Text('Écrire au client',
+              label: Text(Tr.s.ecrireClient,
                   style: TextStyle(fontSize: 12)),
               style: TextButton.styleFrom(foregroundColor: _kPrimary),
             ),
@@ -354,7 +355,7 @@ class _CarteCommandeCouturier extends StatelessWidget {
                 return Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                      '💬 Contre-proposition du client : ${PrixFCFA.formater((cp as num? ?? 0).toDouble())}',
+                      Tr.s.contrePropositionClient(PrixFCFA.formater((cp as num? ?? 0).toDouble())),
                       style: const TextStyle(
                           fontSize: 12,
                           color: Colors.deepOrange,
@@ -372,20 +373,20 @@ class _CarteCommandeCouturier extends StatelessWidget {
                 onPressed: () async {
                   await NotificationService.envoyer(
                     destinataireId: commande.clientId,
-                    titre: 'Mesures à vérifier 📏',
+                    titre: (t) => t.mesuresVerifier,
                     message:
-                        'Votre couturier vous demande de vérifier/reprendre vos mesures pour cette commande.',
+                        (t) => t.votreCouturierVousDemandeVerifier,
                     route: '/mes-coutures',
                     refId: commande.id,
                   );
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('Demande envoyée au client'),
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(Tr.s.demandeEnvoyeeClient),
                         backgroundColor: Colors.green));
                   }
                 },
                 icon: const Icon(Icons.straighten, size: 15),
-                label: const Text('Demander de reprendre les mesures',
+                label: Text(Tr.s.demanderReprendreMesures,
                     style: TextStyle(fontSize: 12)),
               ),
             ),
@@ -397,7 +398,7 @@ class _CarteCommandeCouturier extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: () => _proposerPrix(context, commande),
                 icon: const Icon(Icons.request_quote_outlined, size: 16),
-                label: const Text('Proposer un prix (devis)',
+                label: Text(Tr.s.proposerPrixDevis,
                     style: TextStyle(fontSize: 12)),
                 style: TextButton.styleFrom(foregroundColor: _kPrimary),
               ),
@@ -441,13 +442,12 @@ class _CarteCommandeCouturier extends StatelessWidget {
     final prix = await showDialog<double>(
       context: ctx,
       builder: (c) => AlertDialog(
-        title: const Text('Proposer un prix'),
+        title: Text(Tr.s.proposerPrix),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-                'Indiquez le prix de confection pour cette demande. '
-                'Le client devra l\'accepter.',
+            Text(
+                Tr.s.indiquezPrixConfectionPourCette,
                 style: TextStyle(fontSize: 13, color: Colors.grey)),
             const SizedBox(height: 12),
             TextField(
@@ -461,7 +461,7 @@ class _CarteCommandeCouturier extends StatelessWidget {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c),
-              child: const Text('Annuler')),
+              child: Text(Tr.s.annuler)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: _kPrimary, foregroundColor: Colors.white),
@@ -469,7 +469,7 @@ class _CarteCommandeCouturier extends StatelessWidget {
               final v = double.tryParse(ctrl.text.replaceAll(',', '.'));
               if (v != null && v > 0) Navigator.pop(c, v);
             },
-            child: const Text('Envoyer le devis'),
+            child: Text(Tr.s.envoyerDevis),
           ),
         ],
       ),
@@ -481,8 +481,8 @@ class _CarteCommandeCouturier extends StatelessWidget {
         prixPropose: prix,
       );
       if (ctx.mounted) {
-        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-          content: Text('Devis envoyé au client'),
+        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+          content: Text(Tr.s.devisEnvoyeClient),
           backgroundColor: Colors.green,
         ));
       }
@@ -495,7 +495,7 @@ class _CarteCommandeCouturier extends StatelessWidget {
       'dateConfirmation': FieldValue.serverTimestamp(),
     });
     if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(
-      const SnackBar(content: Text('Commande acceptée'), backgroundColor: Colors.green));
+      SnackBar(content: Text(Tr.s.commandeAcceptee), backgroundColor: Colors.green));
   }
 
   Future<void> _marquerPrete(BuildContext ctx, CommandeCouturier cmd) async {
@@ -507,8 +507,8 @@ class _CarteCommandeCouturier extends StatelessWidget {
           .pickImage(source: ImageSource.camera, imageQuality: 70);
       if (x == null) {
         if (ctx.mounted) {
-          ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-              content: Text('Photo du vêtement fini requise')));
+          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+              content: Text(Tr.s.photoVetementFiniRequise)));
         }
         return;
       }
@@ -531,7 +531,7 @@ class _CarteCommandeCouturier extends StatelessWidget {
       statut: StatutCommandeCouturier.preteLivraison,
     );
     if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(
-      const SnackBar(content: Text('Vêtement marqué prêt pour livraison'), backgroundColor: _kTeal));
+      SnackBar(content: Text(Tr.s.vetementMarquePretPourLivraison), backgroundColor: _kTeal));
   }
 }
 
@@ -557,7 +557,7 @@ class _OngletModeles extends StatelessWidget {
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('Nouveau modèle'),
+        label: Text(Tr.s.nouveauModele),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: ModeleCouture.collection
@@ -570,9 +570,9 @@ class _OngletModeles extends StatelessWidget {
             return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               Icon(Icons.style_outlined, size: 64, color: Colors.grey.shade300),
               const SizedBox(height: 12),
-              const Text('Aucun modèle publié', style: TextStyle(color: Colors.grey, fontSize: 16)),
+              Text(Tr.s.aucunModelePublie, style: TextStyle(color: Colors.grey, fontSize: 16)),
               const SizedBox(height: 8),
-              const Text('Créez votre premier modèle pour recevoir des commandes',
+              Text(Tr.s.creezVotrePremierModelePour,
                   style: TextStyle(color: Colors.grey, fontSize: 13), textAlign: TextAlign.center),
             ]));
 
@@ -628,13 +628,13 @@ class _CarteModele extends StatelessWidget {
         ),
         subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(
-            '${modele.typeVetement.name} · ${modele.mesuresRequises.length} mesures',
+            Tr.s.mesures3(modele.typeVetement.name, modele.mesuresRequises.length),
             style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
           Row(children: [
             const Icon(Icons.star, color: Colors.amber, size: 12),
             Text(
-              ' ${modele.noteMoyenne.toStringAsFixed(1)} · ${modele.nombreRealisations} réalisations',
+              Tr.s.realisations(modele.noteMoyenne.toStringAsFixed(1), modele.nombreRealisations),
               style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
           ]),
@@ -645,7 +645,7 @@ class _CarteModele extends StatelessWidget {
           children: [
             Text(
               modele.surDevis
-                  ? 'Sur devis'
+                  ? Tr.s.surDevis
                   : PrixFCFA.formater(modele.prixBase),
               style: const TextStyle(fontWeight: FontWeight.bold, color: _kPrimary),
             ),
@@ -688,21 +688,21 @@ class _OngletStats extends StatelessWidget {
           children: [
             // Gains du mois
             _CardStat(
-              titre: 'Ce mois-ci',
+              titre: Tr.s.ceMoisCi,
               items: [
-                _StatItem('Commandes', '$nbMois', Icons.receipt_long, Colors.blue),
-                _StatItem('Gains bruts', PrixFCFA.formater(gains), Icons.trending_up, _kTeal),
-                _StatItem('Commission', '-${PrixFCFA.formater(commissions)}', Icons.percent, Colors.orange),
-                _StatItem('Net perçu', PrixFCFA.formater(netMois), Icons.account_balance_wallet, _kPrimary),
+                _StatItem(Tr.s.commandes, '$nbMois', Icons.receipt_long, Colors.blue),
+                _StatItem(Tr.s.gainsBruts, PrixFCFA.formater(gains), Icons.trending_up, _kTeal),
+                _StatItem(Tr.s.commission, '-${PrixFCFA.formater(commissions)}', Icons.percent, Colors.orange),
+                _StatItem(Tr.s.netPercu, PrixFCFA.formater(netMois), Icons.account_balance_wallet, _kPrimary),
               ],
             ),
             const SizedBox(height: 14),
             // Totaux
             _CardStat(
-              titre: 'Depuis le début',
+              titre: Tr.s.depuisDebut,
               items: [
-                _StatItem('Total commandes', '$nbTotal', Icons.all_inclusive, Colors.grey),
-                _StatItem('Gains totaux', PrixFCFA.formater((d['gainsTotal'] as num?)?.toDouble() ?? 0), Icons.savings, _kTeal),
+                _StatItem(Tr.s.totalCommandes, '$nbTotal', Icons.all_inclusive, Colors.grey),
+                _StatItem(Tr.s.gainsTotaux, PrixFCFA.formater((d['gainsTotal'] as num?)?.toDouble() ?? 0), Icons.savings, _kTeal),
               ],
             ),
             const SizedBox(height: 14),
@@ -731,7 +731,7 @@ class _OngletStats extends StatelessWidget {
                         border: Border.all(color: Colors.teal.shade200),
                       ),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Text('Abonnement actuel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text(Tr.s.abonnementActuel, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         const SizedBox(height: 8),
                         Row(children: [
                           const Icon(Icons.workspace_premium, color: Colors.teal, size: 20),
@@ -739,7 +739,7 @@ class _OngletStats extends StatelessWidget {
                           Text(plan?.nom ?? '…', style: const TextStyle(fontWeight: FontWeight.w600)),
                           const Spacer(),
                           if (a != null && a.actif && a.finLe != null)
-                            Text('jusqu\'au ${a.finFmt}',
+                            Text(Tr.s.jusqu2(a.finFmt),
                                 style: const TextStyle(color: Colors.teal, fontSize: 12)),
                         ]),
                       ]),
@@ -760,25 +760,23 @@ class _OngletStats extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(children: const [
+                  Row(children: [
                     Icon(Icons.auto_awesome, color: _kPrimary, size: 20),
                     SizedBox(width: 8),
-                    Text('Numérisation de votre catalogue',
+                    Text(Tr.s.numerisationVotreCatalogue,
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 13)),
                   ]),
                   const SizedBox(height: 6),
                   Text(
-                      'Vous n\'avez pas le temps de saisir vos modèles ? '
-                      'Notre équipe vient photographier et mettre en ligne '
-                      'votre catalogue pour vous.',
+                      Tr.s.vousNAvezPasTemps,
                       style: TextStyle(
                           fontSize: 12, color: Colors.grey.shade600)),
                   const SizedBox(height: 10),
                   ElevatedButton.icon(
                     onPressed: () => _demanderNumerisation(context, uid),
                     icon: const Icon(Icons.support_agent, size: 16),
-                    label: const Text('Demander ce service'),
+                    label: Text(Tr.s.demanderCeService),
                     style: ElevatedButton.styleFrom(
                         backgroundColor: _kPrimary,
                         foregroundColor: Colors.white,
@@ -797,20 +795,18 @@ class _OngletStats extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: ctx,
       builder: (c) => AlertDialog(
-        title: const Text('Numérisation du catalogue'),
-        content: const Text(
-            'Notre équipe vous contactera pour convenir d\'un rendez-vous. '
-            'Ce service est payant et facturé selon le nombre de modèles. '
-            'Confirmer la demande ?'),
+        title: Text(Tr.s.numerisationCatalogue),
+        content: Text(
+            Tr.s.notreEquipeVousContacteraPour),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
-              child: const Text('Annuler')),
+              child: Text(Tr.s.annuler)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: _kPrimary, foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('Confirmer'),
+            child: Text(Tr.s.confirmer),
           ),
         ],
       ),
@@ -822,8 +818,8 @@ class _OngletStats extends StatelessWidget {
         'dateCreation': FieldValue.serverTimestamp(),
       });
       if (ctx.mounted) {
-        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-          content: Text('Demande envoyée — nous vous contacterons'),
+        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+          content: Text(Tr.s.demandeEnvoyeeNousVousContacterons),
           backgroundColor: Colors.green,
         ));
       }
@@ -899,7 +895,7 @@ class _OngletAbonnement extends StatelessWidget {
           return const Center(child: CircularProgressIndicator(color: _kPrimary));
         }
         final u = snap.data;
-        if (u == null) return const Center(child: Text('Compte introuvable'));
+        if (u == null) return Center(child: Text(Tr.s.compteIntrouvable2));
         return PageSouscription(
             utilisateur: u, profil: ProfilAbonnement.couturier, integree: true);
       },

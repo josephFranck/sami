@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sami/l10n/tr.dart';
+import 'package:sami/services/langue_service.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // NOTIFICATIONS
@@ -19,10 +21,17 @@ class NotificationService {
   static String? get _uid => FirebaseAuth.instance.currentUser?.uid;
 
   /// Crée une notification pour un utilisateur (in-app + future base du push).
+  ///
+  /// `titre` / `message` : une chaîne (telle quelle, FR) OU une fonction
+  /// `(Tr t) => t.cle` — le document porte alors les DEUX langues
+  /// (`titre`/`message` en français, `titreEn`/`messageEn`) : le
+  /// destinataire lit celle de SA langue, quelle que soit celle de
+  /// l'expéditeur (le livreur qui scanne n'est pas forcément dans la
+  /// langue du client).
   static Future<void> envoyer({
     required String destinataireId,
-    required String titre,
-    required String message,
+    required Object titre,
+    required Object message,
     String? route,     // route à ouvrir au tap (ex: '/mes-coutures')
     String? refId,     // ID de l'objet concerné
   }) async {
@@ -30,14 +39,28 @@ class NotificationService {
     try {
       await _db.collection('notifications').add({
         'destinataireId': destinataireId,
-        'titre': titre,
-        'message': message,
+        'titre': _dans(titre, Tr.fr),
+        'message': _dans(message, Tr.fr),
+        'titreEn': _dans(titre, Tr.en),
+        'messageEn': _dans(message, Tr.en),
         'route': route,
         'refId': refId,
         'lue': false,
         'date': FieldValue.serverTimestamp(),
       });
     } catch (_) {}
+  }
+
+  static String _dans(Object v, Tr t) =>
+      v is String Function(Tr) ? v(t) : v.toString();
+
+  /// Texte d'une notification dans la langue courante (`titre` ou `message`).
+  static String texte(Map<String, dynamic> d, String champ) {
+    if (LangueService.instance.estAnglais) {
+      final en = d['${champ}En'] as String?;
+      if (en != null && en.isNotEmpty) return en;
+    }
+    return d[champ] as String? ?? '';
   }
 
   /// Badge : nombre de notifications non lues de l'utilisateur courant.

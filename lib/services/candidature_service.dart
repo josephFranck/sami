@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sami/services/notification_service.dart';
 import 'package:sami/services/parametres_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CANDIDATURES PARTENAIRES
@@ -55,8 +56,8 @@ class CandidatureService {
       for (final a in admins.docs) {
         await NotificationService.envoyer(
           destinataireId: a.id,
-          titre: 'Nouvelle candidature 📋',
-          message: 'Un candidat $type attend votre validation.',
+          titre: (t) => t.nouvelleCandidature,
+          message: (t) => t.candidatAttendVotreValidation(type),
           route: '/candidatures',
           refId: user.uid,
         );
@@ -87,7 +88,7 @@ class CandidatureService {
       case 'boutiquier':
         final bRef = _db.collection('boutiques').doc();
         batch.set(bRef, {
-          'nom': infos['nomBoutique'] ?? 'Boutique',
+          'nom': infos['nomBoutique'] ?? Tr.s.boutique,
           'adresse': infos['quartier'] ?? 'Garoua',
           'telephone': infos['telephone'] ?? '',
           'description': infos['description'] ?? '',
@@ -173,8 +174,8 @@ class CandidatureService {
     await _purgerCNI(c); // conformité loi 2024/017 : la pièce n'a plus d'utilité
     await NotificationService.envoyer(
       destinataireId: c.utilisateurId,
-      titre: 'Candidature validée 🎉',
-      message: 'Votre compte ${c.type} est activé. Bienvenue sur SAMI !',
+      titre: (t) => t.candidatureValidee,
+      message: (t) => t.votreCompteEstActiveBienvenue(c.type),
     );
   }
 
@@ -188,10 +189,10 @@ class CandidatureService {
     await _purgerCNI(c);
     await NotificationService.envoyer(
       destinataireId: c.utilisateurId,
-      titre: 'Candidature refusée 📋',
+      titre: (t) => t.candidatureRefusee,
       message: motif?.isNotEmpty == true
-          ? 'Motif : $motif'
-          : 'Votre candidature ${c.type} a été refusée.',
+          ? Tr.s.motif2(motif)
+          : Tr.s.votreCandidatureEteRefusee(c.type),
     );
   }
 

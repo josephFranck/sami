@@ -5,6 +5,7 @@ import 'package:sami/models/pagne.dart';
 import 'package:sami/pages/couturier/commander_couture_page.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 import 'package:sami/widgets/image_universelle.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kOrange = Colors.deepOrange;
 
@@ -19,7 +20,7 @@ class ChoisirPagnePourModelePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFFDF8F5),
       appBar: AppBar(
-        title: Text('Tissu pour « ${modele.nom} »',
+        title: Text(Tr.s.tissuPour(modele.nom),
             style: const TextStyle(fontSize: 16)),
         backgroundColor: _kOrange,
         foregroundColor: Colors.white,
@@ -49,8 +50,7 @@ class ChoisirPagnePourModelePage extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Choisissez le pagne à coudre en « ${modele.nom} » '
-                '(${modele.surDevis ? "prix sur devis" : PrixFCFA.formater(modele.prixBase)})',
+                Tr.s.choisissezPagneCoudre(modele.nom, modele.surDevis ? "prix sur devis" : PrixFCFA.formater(modele.prixBase)),
                 style: const TextStyle(fontSize: 12.5),
               ),
             ),
@@ -70,8 +70,8 @@ class ChoisirPagnePourModelePage extends StatelessWidget {
               final pagnes =
                   snap.data!.docs.map(Pagne.fromFirebaseDocument).toList();
               if (pagnes.isEmpty) {
-                return const Center(
-                    child: Text('Aucun pagne disponible pour le moment',
+                return Center(
+                    child: Text(Tr.s.aucunPagneDisponiblePourMoment,
                         style: TextStyle(color: Colors.grey)));
               }
               return GridView.builder(

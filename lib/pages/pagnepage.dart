@@ -12,6 +12,7 @@ import 'package:sami/pages/pagnedetail.dart';
 import 'package:sami/utils/droits.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 import 'package:sami/widgets/connectivity_widgets.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kAccent = Color(0xFFFF8F00);
@@ -68,13 +69,13 @@ class _PagneListPageState extends State<PagneListPage> with PageProtegee {
     builder: (u) => Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text(widget.boutiqueNom != null ? 'Pagnes — ${widget.boutiqueNom}' : 'Pagnes'),
+        title: Text(widget.boutiqueNom != null ? Tr.s.pagnes(widget.boutiqueNom) : Tr.s.pagnes2),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
       floatingActionButton: Droits.fab(
         condition: Droits.peutAjouterPagne(u),
-        tooltip: 'Ajouter un pagne',
+        tooltip: Tr.s.ajouterPagne,
         onTap: () => Navigator.push(context,
             MaterialPageRoute(builder: (_) => const AddPagnePage())),
       ),
@@ -87,7 +88,7 @@ class _PagneListPageState extends State<PagneListPage> with PageProtegee {
             controller: _searchCtrl,
             onChanged: (v) => setState(() => _recherche = v),
             decoration: InputDecoration(
-              hintText: 'Rechercher un pagne...',
+              hintText: Tr.s.rechercherPagne,
               prefixIcon: const Icon(Icons.search, size: 20),
               suffixIcon: _recherche.isNotEmpty
                   ? IconButton(icon: const Icon(Icons.clear, size: 18),
@@ -155,7 +156,7 @@ class _PagneListPageState extends State<PagneListPage> with PageProtegee {
                 p.description.toLowerCase().contains(q)).toList();
             }
             if (pagnes.isEmpty)
-              return const Center(child: Text('Aucun résultat', style: TextStyle(color: Colors.grey)));
+              return Center(child: Text(Tr.s.aucunResultat, style: TextStyle(color: Colors.grey)));
             return GridView.builder(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 80),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -184,13 +185,13 @@ class _PagneListPageState extends State<PagneListPage> with PageProtegee {
     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       Icon(Icons.shopping_bag_outlined, size: 64, color: Colors.grey.shade300),
       const SizedBox(height: 12),
-      const Text('Aucun pagne disponible', style: TextStyle(color: Colors.grey, fontSize: 16)),
+      Text(Tr.s.aucunPagneDisponible, style: TextStyle(color: Colors.grey, fontSize: 16)),
       if (Droits.peutAjouterPagne(utilisateur)) ...[
         const SizedBox(height: 16),
         ElevatedButton.icon(
           onPressed: () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const AddPagnePage())),
-          icon: const Icon(Icons.add), label: const Text('Ajouter le premier pagne'),
+          icon: const Icon(Icons.add), label: Text(Tr.s.ajouterPremierPagne),
           style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
         ),
       ],
@@ -202,11 +203,11 @@ class _PagneListPageState extends State<PagneListPage> with PageProtegee {
         (_idsMesBoutiques?.contains(p.boutiqueId) ?? false);
     if (!proprio) { Droits.accesRefuse(context); return; }
     final ok = await Droits.confirmerSuppression(context, nom: p.nom,
-        message: 'Le pagne sera masqué du catalogue.');
+        message: Tr.s.pagneSeraMasqueCatalogue);
     if (!ok) return;
     await Pagne.pagneCollection.doc(p.id).update({'disponible': false});
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"${p.nom}" retiré du catalogue'), backgroundColor: Colors.orange));
+        SnackBar(content: Text(Tr.s.retireCatalogue(p.nom)), backgroundColor: Colors.orange));
   }
 }
 
@@ -222,10 +223,10 @@ Future<void> _proposerPromotion(BuildContext context, dynamic pagne) async {
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setD) => AlertDialog(
-        title: Text('Promotion sur « ${pagne.nom} »'),
+        title: Text(Tr.s.promotionSur(pagne.nom)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           Row(children: [
-            const Text('Réduction'),
+            Text(Tr.s.reduction),
             Expanded(
               child: Slider(
                 value: pct, min: 5, max: 50, divisions: 9,
@@ -237,32 +238,31 @@ Future<void> _proposerPromotion(BuildContext context, dynamic pagne) async {
                 style: const TextStyle(fontWeight: FontWeight.bold)),
           ]),
           Row(children: [
-            const Text('Durée'),
+            Text(Tr.s.duree),
             Expanded(
               child: Slider(
                 value: heures, min: 6, max: 168, divisions: 27,
                 label: heures >= 24
-                    ? '${(heures / 24).round()} j'
-                    : '${heures.round()} h',
+                    ? Tr.s.j((heures / 24).round())
+                    : Tr.s.h(heures.round()),
                 onChanged: (v) => setD(() => heures = v),
               ),
             ),
             Text(heures >= 24
-                ? '${(heures / 24).round()} j'
-                : '${heures.round()} h'),
+                ? Tr.s.j((heures / 24).round())
+                : Tr.s.h(heures.round())),
           ]),
           Text(
-              'Nouveau prix : ${PrixFCFA.formater(PrixFCFA.arrondirAu50(pagne.prixParBoutique * (1 - pct / 100)))}'
-              '${pagne.prixPlancher != null ? '  (votre plancher : ${PrixFCFA.formater(pagne.prixPlancher)})' : '  (plancher auto : seuil de rentabilité)'}',
+              Tr.s.nouveauPrix(PrixFCFA.formater(PrixFCFA.arrondirAu50(pagne.prixParBoutique * (1 - pct / 100))), pagne.prixPlancher != null ? '  (votre plancher : ${PrixFCFA.formater(pagne.prixPlancher)})' : '  (plancher auto : seuil de rentabilité)'),
               style: const TextStyle(fontSize: 12.5)),
         ]),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Annuler')),
+              child: Text(Tr.s.annuler)),
           ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Proposer à l\'admin')),
+              child: Text(Tr.s.proposerAdmin)),
         ],
       ),
     ),
@@ -277,8 +277,8 @@ Future<void> _proposerPromotion(BuildContext context, dynamic pagne) async {
       duree: Duration(hours: heures.round()),
     );
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Promotion proposée — en attente de validation admin'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.promotionProposeeAttenteValidationAdmin),
           backgroundColor: Colors.green));
     }
   } catch (e) {
@@ -301,27 +301,27 @@ Future<void> _supprimerDefinitivement(BuildContext context, dynamic pagne) async
           .any((a) => (a as Map)['pagneId'] == pagne.id));
   if (!context.mounted) return;
   if (commande) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
-            'Impossible : ce pagne a déjà été commandé (historique et reçus). Utilisez la désactivation.'),
+            Tr.s.impossibleCePagneDejaEte),
         backgroundColor: Colors.red));
     return;
   }
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Supprimer définitivement ?'),
+      title: Text(Tr.s.supprimerDefinitivement),
       content: Text(
-          '« ${pagne.nom} » et ses images seront effacés pour toujours.'),
+          Tr.s.sesImagesSerontEffacesPour(pagne.nom)),
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler')),
+            child: Text(Tr.s.annuler)),
         ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red, foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Supprimer')),
+            child: Text(Tr.s.supprimer)),
       ],
     ),
   );
@@ -353,12 +353,12 @@ Future<void> _voirCommandesPagne(BuildContext context, dynamic pagne) async {
   showDialog(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: Text('Commandes — ${pagne.nom}',
+      title: Text(Tr.s.commandes2(pagne.nom),
           style: const TextStyle(fontSize: 15)),
       content: SizedBox(
         width: double.maxFinite,
         child: lignes.isEmpty
-            ? const Text('Aucune commande pour ce pagne pour le moment.',
+            ? Text(Tr.s.aucuneCommandePourCePagne,
                 style: TextStyle(color: Colors.grey))
             : ListView(
                 shrinkWrap: true,
@@ -372,7 +372,7 @@ Future<void> _voirCommandesPagne(BuildContext context, dynamic pagne) async {
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(ctx), child: const Text('Fermer'))
+            onPressed: () => Navigator.pop(ctx), child: Text(Tr.s.fermer))
       ],
     ),
   );
@@ -394,21 +394,21 @@ class _CartePagne extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Réapprovisionner « ${pagne.nom} »'),
+        title: Text(Tr.s.reapprovisionner(pagne.nom)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Stock actuel : ${pagne.quantiteDisponible} unité(s)',
+            Text(Tr.s.stockActuelUniteS(pagne.quantiteDisponible),
                 style: const TextStyle(fontSize: 13, color: Colors.grey)),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,
               keyboardType: TextInputType.number,
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Unités à ajouter',
-                hintText: 'ex: 10',
+              decoration: InputDecoration(
+                labelText: Tr.s.unitesAjouter,
+                hintText: Tr.s.ex10,
                 border: OutlineInputBorder(),
               ),
             ),
@@ -417,7 +417,7 @@ class _CartePagne extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
+            child: Text(Tr.s.annuler),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -431,13 +431,13 @@ class _CartePagne extends StatelessWidget {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text(ok
-                      ? '+$ajout ajouté(s) — nouveau stock : ${pagne.quantiteDisponible + ajout}'
-                      : 'Échec du réapprovisionnement'),
+                      ? Tr.s.ajouteSNouveauStock(ajout, pagne.quantiteDisponible + ajout)
+                      : Tr.s.echecReapprovisionnement),
                   backgroundColor: ok ? Colors.green : Colors.red,
                 ));
               }
             },
-            child: const Text('Ajouter'),
+            child: Text(Tr.s.ajouter),
           ),
         ],
       ),
@@ -494,21 +494,21 @@ class _CartePagne extends StatelessWidget {
                 } if (v == 'edit') onModifier(); else if (v == 'restock') _dialogReappro(context); else onSupprimer(); },
                   itemBuilder: (_) => [
                     if (!pagne.disponible)
-                      const PopupMenuItem(value: 'reactiver', child: Row(children: [
-                        Icon(Icons.visibility_outlined, size: 16, color: Colors.green), SizedBox(width: 8), Text('Réactiver (remettre en vente)')])),
-                    const PopupMenuItem(value: 'promo', child: Row(children: [
-                      Icon(Icons.local_offer, size: 16, color: Colors.deepOrange), SizedBox(width: 8), Text('Proposer une promotion')])),
-                    const PopupMenuItem(value: 'delFor', child: Row(children: [
-                      Icon(Icons.delete_forever, size: 16, color: Colors.red), SizedBox(width: 8), Text('Supprimer DÉFINITIVEMENT')])),
-                    const PopupMenuItem(value: 'commandes', child: Row(children: [
-                      Icon(Icons.receipt_long_outlined, size: 16, color: _kPrimary), SizedBox(width: 8), Text('Commandes de ce pagne')])),
-                    if (peutModifier) const PopupMenuItem(value: 'edit', child: Row(children: [
-                      Icon(Icons.edit_outlined, size: 16, color: _kPrimary), SizedBox(width: 8), Text('Modifier')])),
-                    if (peutModifier) const PopupMenuItem(value: 'restock', child: Row(children: [
-                      Icon(Icons.add_box_outlined, size: 16, color: Colors.green), SizedBox(width: 8), Text('Réapprovisionner')])),
-                    if (peutSupprimer) const PopupMenuItem(value: 'del', child: Row(children: [
+                      PopupMenuItem(value: 'reactiver', child: Row(children: [
+                        Icon(Icons.visibility_outlined, size: 16, color: Colors.green), SizedBox(width: 8), Text(Tr.s.reactiverRemettreVente)])),
+                    PopupMenuItem(value: 'promo', child: Row(children: [
+                      Icon(Icons.local_offer, size: 16, color: Colors.deepOrange), SizedBox(width: 8), Text(Tr.s.proposerPromotion)])),
+                    PopupMenuItem(value: 'delFor', child: Row(children: [
+                      Icon(Icons.delete_forever, size: 16, color: Colors.red), SizedBox(width: 8), Text(Tr.s.supprimerDefinitivement2)])),
+                    PopupMenuItem(value: 'commandes', child: Row(children: [
+                      Icon(Icons.receipt_long_outlined, size: 16, color: _kPrimary), SizedBox(width: 8), Text(Tr.s.commandesCePagne)])),
+                    if (peutModifier) PopupMenuItem(value: 'edit', child: Row(children: [
+                      Icon(Icons.edit_outlined, size: 16, color: _kPrimary), SizedBox(width: 8), Text(Tr.s.modifier)])),
+                    if (peutModifier) PopupMenuItem(value: 'restock', child: Row(children: [
+                      Icon(Icons.add_box_outlined, size: 16, color: Colors.green), SizedBox(width: 8), Text(Tr.s.reapprovisionner2)])),
+                    if (peutSupprimer) PopupMenuItem(value: 'del', child: Row(children: [
                       Icon(Icons.delete_outline, size: 16, color: Colors.red), SizedBox(width: 8),
-                      Text('Retirer', style: TextStyle(color: Colors.red))])),
+                      Text(Tr.s.retirer, style: TextStyle(color: Colors.red))])),
                   ],
                 ),
               ),

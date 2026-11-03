@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:share_plus/share_plus.dart';
 import 'package:sami/services/parametres_service.dart';
+import 'package:sami/services/langue_service.dart';
 import 'package:sami/services/parrainage_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,6 +17,7 @@ import 'package:sami/pages/commandes/mes_commandes_page.dart';
 import 'package:sami/pages/panierpage.dart';
 import 'package:sami/services/stockage_service.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kAccent = Color(0xFFFF8F00);
@@ -66,22 +68,18 @@ class _ProfilePageState extends State<ProfilePage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer définitivement votre compte ?'),
-        content: const Text(
-            'Vos informations personnelles (nom, téléphone, courriel, '
-            'adresses, profils de mesures, panier) seront effacées. '
-            'Vos commandes passées sont conservées sous forme anonymisée '
-            'pour la durée légale. Vos crédits non utilisés seront perdus.\n\n'
-            'Cette action est irréversible.'),
+        title: Text(Tr.s.supprimerDefinitivementVotreCompte),
+        content: Text(
+            Tr.s.vosInformationsPersonnellesNomTelephone),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Annuler')),
+              child: Text(Tr.s.annuler)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red, foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Supprimer'),
+            child: Text(Tr.s.supprimer),
           ),
         ],
       ),
@@ -128,27 +126,26 @@ class _ProfilePageState extends State<ProfilePage> {
           // demande de se reconnecter puis de recommencer.
           await FirebaseAuth.instance.signOut();
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               backgroundColor: Colors.orange,
               duration: Duration(seconds: 8),
               content: Text(
-                  'Par sécurité, reconnectez-vous puis relancez la '
-                  'suppression : vos données ont déjà été anonymisées.')));
+                  Tr.s.parSecuriteReconnectezVousPuis)));
           Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
           return;
         }
         rethrow;
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           backgroundColor: Colors.green,
-          content: Text('Compte supprimé. Vos données ont été effacées.')));
+          content: Text(Tr.s.compteSupprimeVosDonneesOnt)));
       Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           backgroundColor: Colors.red,
-          content: Text('Suppression impossible : $e')));
+          content: Text(Tr.s.suppressionImpossible(e))));
     }
   }
 
@@ -170,25 +167,25 @@ class _ProfilePageState extends State<ProfilePage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Modifier mon profil'),
+        title: Text(Tr.s.modifierMonProfil),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _champEdit(prenomCtrl, 'Prénom'),
-              _champEdit(nomCtrl, 'Nom'),
-              _champEdit(telCtrl, 'Téléphone', clavier: TextInputType.phone),
-              _champEdit(quartierCtrl, 'Quartier'),
-              _champEdit(villeCtrl, 'Ville'),
+              _champEdit(prenomCtrl, Tr.s.prenom),
+              _champEdit(nomCtrl, Tr.s.nom),
+              _champEdit(telCtrl, Tr.s.telephone, clavier: TextInputType.phone),
+              _champEdit(quartierCtrl, Tr.s.quartier2),
+              _champEdit(villeCtrl, Tr.s.ville),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(Tr.s.annuler)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Enregistrer'),
+            child: Text(Tr.s.enregistrer),
           ),
         ],
       ),
@@ -207,13 +204,13 @@ class _ProfilePageState extends State<ProfilePage> {
         });
         await _charger(); // recharge l'affichage
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Profil mis à jour'), backgroundColor: Colors.green));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(Tr.s.profilMisJour2), backgroundColor: Colors.green));
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Erreur de mise à jour'), backgroundColor: Colors.red));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(Tr.s.erreurMiseJour), backgroundColor: Colors.red));
         }
       }
     }
@@ -249,7 +246,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     if (_chargement) return const Scaffold(body: Center(child: CircularProgressIndicator(color: _kPrimary)));
-    if (_u == null) return Scaffold(body: Center(child: ElevatedButton(onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage())), child: const Text('Se connecter'))));
+    if (_u == null) return Scaffold(body: Center(child: ElevatedButton(onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage())), child: Text(Tr.s.seConnecter))));
 
     // Paliers de la CONFIG ADMIN — les mêmes que le devis (réduction
     // livraison) ; avant : constantes NiveauFidelite, différentes du devis.
@@ -267,16 +264,16 @@ class _ProfilePageState extends State<ProfilePage> {
             pinned: true,
             backgroundColor: _kPrimary,
             foregroundColor: Colors.white,
-            title: const Text('Mon profil'),
+            title: Text(Tr.s.monProfil),
             actions: [
               IconButton(icon: const Icon(Icons.edit), onPressed: _editerProfil),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),
                 onSelected: _handleMenu,
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'stockage', child: Text('Paramètres stockage')),
-                  const PopupMenuItem(value: 'parrainage', child: Text('Mon code parrainage')),
-                  const PopupMenuItem(value: 'logout', child: Text('Déconnexion')),
+                  PopupMenuItem(value: 'stockage', child: Text(Tr.s.parametresStockage)),
+                  PopupMenuItem(value: 'parrainage', child: Text(Tr.s.monCodeParrainage)),
+                  PopupMenuItem(value: 'logout', child: Text(Tr.s.deconnexion)),
                 ],
               ),
             ],
@@ -333,7 +330,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.gavel_outlined, color: Colors.grey),
-                  title: const Text('Mentions légales, CGU et confidentialité',
+                  title: Text(Tr.s.mentionsLegalesCguConfidentialite,
                       style: TextStyle(fontSize: 13.5)),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(
@@ -344,9 +341,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   dense: true,
-                  title: const Text('Recevoir les offres et promotions',
+                  title: Text(Tr.s.recevoirOffresPromotions,
                       style: TextStyle(fontSize: 13.5)),
-                  subtitle: const Text('Retirable à tout moment',
+                  subtitle: Text(Tr.s.retirableToutMoment,
                       style: TextStyle(fontSize: 11)),
                   value: _consentMarketing,
                   activeColor: const Color(0xFF6A1B9A),
@@ -356,14 +353,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 OutlinedButton.icon(
                   onPressed: _deconnecter,
                   icon: const Icon(Icons.logout, color: Colors.red, size: 18),
-                  label: const Text('Déconnexion', style: TextStyle(color: Colors.red)),
+                  label: Text(Tr.s.deconnexion, style: TextStyle(color: Colors.red)),
                   style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), minimumSize: const Size(double.infinity, 48)),
                 ),
                 const SizedBox(height: 10),
                 // DROIT À L'EFFACEMENT : suppression définitive du compte
                 TextButton(
                   onPressed: _supprimerMonCompte,
-                  child: Text('Supprimer mon compte',
+                  child: Text(Tr.s.supprimerMonCompte,
                       style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5,
                           decoration: TextDecoration.underline)),
                 ),
@@ -388,7 +385,7 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(niveau.nom, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-              Text('${_u!.pointsFidelite} points · -${niveau.reductionLivraison.round()}% livraison · ${niveau.cashback.toStringAsFixed(niveau.cashback % 1 == 0 ? 0 : 1)}% cashback', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              Text(Tr.s.pointsLivraisonCashback(_u!.pointsFidelite, niveau.reductionLivraison.round(), niveau.cashback.toStringAsFixed(niveau.cashback % 1 == 0 ? 0 : 1)), style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ])),
             if (_u!.creditBalance > 0)
               Container(
@@ -405,7 +402,7 @@ class _ProfilePageState extends State<ProfilePage> {
             child: LinearProgressIndicator(value: pct, backgroundColor: Colors.white24, valueColor: const AlwaysStoppedAnimation(_kAccent), minHeight: 6),
           ),
           const SizedBox(height: 4),
-          Text('${suivant.pointsRequis - _u!.pointsFidelite} pts pour ${suivant.emoji} ${suivant.nom}', style: const TextStyle(color: Colors.white70, fontSize: 11)),
+          Text(Tr.s.ptsPour(suivant.pointsRequis - _u!.pointsFidelite, suivant.emoji, suivant.nom), style: const TextStyle(color: Colors.white70, fontSize: 11)),
         ],
       ],
     ),
@@ -417,11 +414,11 @@ class _ProfilePageState extends State<ProfilePage> {
       final nb = snap.data?.docs.length ?? 0;
       return Row(
         children: [
-          _statCard(Icons.receipt_long, 'Commandes', '$nb', Colors.teal),
+          _statCard(Icons.receipt_long, Tr.s.commandes, '$nb', Colors.teal),
           const SizedBox(width: 10),
-          _statCard(Icons.favorite, 'Favoris', '${_u!.favoris.length}', Colors.pink),
+          _statCard(Icons.favorite, Tr.s.favoris, '${_u!.favoris.length}', Colors.pink),
           const SizedBox(width: 10),
-          _statCard(Icons.account_balance_wallet, 'Crédits', _u!.creditBalance > 0 ? PrixFCFA.formaterCompact(_u!.creditBalance) : '0', _kPrimary),
+          _statCard(Icons.account_balance_wallet, Tr.s.credits, _u!.creditBalance > 0 ? PrixFCFA.formaterCompact(_u!.creditBalance) : '0', _kPrimary),
         ],
       );
     },
@@ -446,27 +443,57 @@ class _ProfilePageState extends State<ProfilePage> {
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade100)),
     child: Column(
       children: [
-        _actionTile(Icons.shopping_bag_outlined, 'Mon panier', Colors.indigo, () => Navigator.push(context, MaterialPageRoute(builder: (_) => PanierPage(utilisateur: _u!)))),
+        _actionTile(Icons.language, 'Langue / Language · ${LangueService.libelle(LangueService.instance.langue)}', Colors.blue, _choisirLangue),
         const Divider(height: 1, indent: 56),
-        _actionTile(Icons.receipt_long_outlined, 'Mes commandes', Colors.teal, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MesCommandesPage()))),
+        _actionTile(Icons.shopping_bag_outlined, Tr.s.monPanier, Colors.indigo, () => Navigator.push(context, MaterialPageRoute(builder: (_) => PanierPage(utilisateur: _u!)))),
         const Divider(height: 1, indent: 56),
-        _actionTile(Icons.favorite_border, 'Mes favoris', Colors.pink, () => Navigator.pushNamed(context, '/favoris')),
+        _actionTile(Icons.receipt_long_outlined, Tr.s.mesCommandes, Colors.teal, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MesCommandesPage()))),
+        const Divider(height: 1, indent: 56),
+        _actionTile(Icons.favorite_border, Tr.s.mesFavoris, Colors.pink, () => Navigator.pushNamed(context, '/favoris')),
         const Divider(height: 1, indent: 56),
         // Les crédits sont des AVOIRS (remboursements, parrainage) : pas de
         // rechargement en argent (décision 03/11/2026).
-        _actionTile(Icons.account_balance_wallet_outlined, 'Mes avoirs', Colors.amber.shade800, () => Navigator.pushNamed(context, '/avoirs')),
+        _actionTile(Icons.account_balance_wallet_outlined, Tr.s.mesAvoirs, Colors.amber.shade800, () => Navigator.pushNamed(context, '/avoirs')),
         const Divider(height: 1, indent: 56),
-        _actionTile(Icons.card_giftcard, 'Mon code de parrainage', Colors.purple, _showCodeParrainage),
+        _actionTile(Icons.card_giftcard, Tr.s.monCodeParrainage2, Colors.purple, _showCodeParrainage),
         const Divider(height: 1, indent: 56),
-        _actionTile(Icons.lock_outline, 'Sécurité (email / mot de passe)', Colors.blueGrey, _securiteCompte),
+        _actionTile(Icons.lock_outline, Tr.s.securiteEmailMotPasse, Colors.blueGrey, _securiteCompte),
         const Divider(height: 1, indent: 56),
-        _actionTile(Icons.chat_bubble_outline, 'Mes messages', Colors.orange, () => Navigator.pushNamed(context, '/chatpage')),
-        if (_u!.aRole('couturier')) ...[const Divider(height: 1, indent: 56), _actionTile(Icons.content_cut, 'Espace couturier', Colors.teal, () => Navigator.pushNamed(context, '/dashboard_couturier'))],
+        _actionTile(Icons.chat_bubble_outline, Tr.s.mesMessages, Colors.orange, () => Navigator.pushNamed(context, '/chatpage')),
+        if (_u!.aRole('couturier')) ...[const Divider(height: 1, indent: 56), _actionTile(Icons.content_cut, Tr.s.espaceCouturier, Colors.teal, () => Navigator.pushNamed(context, '/dashboard_couturier'))],
         const Divider(height: 1, indent: 56),
-        _actionTile(Icons.workspace_premium, 'Abonnements', Color(0xFFBA7517), () => Navigator.pushNamed(context, '/abonnements')),
+        _actionTile(Icons.workspace_premium, Tr.s.abonnements, Color(0xFFBA7517), () => Navigator.pushNamed(context, '/abonnements')),
       ],
     ),
   );
+
+  /// Langue de l'application (fr | en) — décision 03/11/2026 : les deux au
+  /// lancement. Le MaterialApp se reconstruit, tous les écrans suivent.
+  Future<void> _choisirLangue() async {
+    final actuelle = LangueService.instance.langue;
+    final choix = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Langue / Language'),
+        children: [
+          for (final code in LangueService.disponibles)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, code),
+              child: Row(children: [
+                Text(LangueService.drapeau(code), style: const TextStyle(fontSize: 20)),
+                const SizedBox(width: 12),
+                Expanded(child: Text(LangueService.libelle(code), style: const TextStyle(fontSize: 15))),
+                if (code == actuelle) const Icon(Icons.check, color: _kPrimary),
+              ]),
+            ),
+        ],
+      ),
+    );
+    if (choix != null && choix != actuelle) {
+      await LangueService.instance.changer(choix);
+      if (mounted) setState(() {});
+    }
+  }
 
   /// Changer email/mot de passe exige de REprouver son identité
   /// (règle Firebase) : mot de passe actuel, puis les nouveautés.
@@ -477,35 +504,35 @@ class _ProfilePageState extends State<ProfilePage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Sécurité du compte'),
+        title: Text(Tr.s.securiteCompte),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(
               controller: actuel,
               obscureText: true,
-              decoration: const InputDecoration(
-                  labelText: 'Mot de passe ACTUEL (obligatoire)',
+              decoration: InputDecoration(
+                  labelText: Tr.s.motPasseActuelObligatoire,
                   border: OutlineInputBorder())),
           const SizedBox(height: 10),
           TextField(
               controller: nouvelEmail,
-              decoration: const InputDecoration(
-                  labelText: 'Nouvel email (optionnel)',
+              decoration: InputDecoration(
+                  labelText: Tr.s.nouvelEmailOptionnel,
                   border: OutlineInputBorder())),
           const SizedBox(height: 10),
           TextField(
               controller: nouveauMdp,
               obscureText: true,
-              decoration: const InputDecoration(
-                  labelText: 'Nouveau mot de passe (optionnel, 6+)',
+              decoration: InputDecoration(
+                  labelText: Tr.s.nouveauMotPasseOptionnel6,
                   border: OutlineInputBorder())),
         ]),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Annuler')),
+              child: Text(Tr.s.annuler)),
           ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Appliquer')),
+              child: Text(Tr.s.appliquer)),
         ],
       ),
     );
@@ -534,8 +561,8 @@ class _ProfilePageState extends State<ProfilePage> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(e.code == 'wrong-password' ||
                     e.code == 'invalid-credential'
-                ? 'Mot de passe actuel incorrect.'
-                : 'Erreur : ${e.code}'),
+                ? Tr.s.motPasseActuelIncorrect
+                : Tr.s.erreur3(e.code)),
             backgroundColor: Colors.red));
       }
     } finally {
@@ -552,8 +579,8 @@ class _ProfilePageState extends State<ProfilePage> {
     final code = await ParrainageService.monCode(uid);
     if (!mounted) return;
     if (!actif) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Le programme de parrainage arrive bientôt 🎁')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.programmeParrainageArriveBientot)));
       return;
     }
     await Share.share(
@@ -575,7 +602,7 @@ class _ProfilePageState extends State<ProfilePage> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Informations', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(Tr.s.informations, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 10),
         _infoLigne(Icons.phone, _u!.telephone),
         _infoLigne(Icons.location_on_outlined, '${_u!.quartier}, ${_u!.ville}'),
@@ -598,11 +625,11 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Icon(Icons.cloud_outlined, color: StockageService.estCloudflare ? Colors.orange : Colors.blue, size: 18)),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Stockage photos', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-          Text(StockageService.estCloudflare ? 'Cloudflare R2 — actif' : 'Firebase Storage — actif',
+          Text(Tr.s.stockagePhotos, style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+          Text(StockageService.estCloudflare ? Tr.s.cloudflareR2Actif : Tr.s.firebaseStorageActif,
             style: TextStyle(fontSize: 11, color: StockageService.estCloudflare ? Colors.orange : Colors.blue)),
         ])),
-        TextButton(onPressed: _showStockageDialog, child: const Text('Changer', style: TextStyle(fontSize: 12))),
+        TextButton(onPressed: _showStockageDialog, child: Text(Tr.s.changer, style: TextStyle(fontSize: 12))),
       ],
     ),
   );
@@ -623,7 +650,7 @@ class _ProfilePageState extends State<ProfilePage> {
       await Utilisateur.utilisateurCollection.doc(FirebaseAuth.instance.currentUser!.uid).update({'image': url});
       await _charger();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur : $e'), backgroundColor: Colors.red));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(Tr.s.erreur2(e)), backgroundColor: Colors.red));
     } finally {
       if (mounted) setState(() => _uploadEnCours = false);
     }
@@ -647,8 +674,8 @@ class _ProfilePageState extends State<ProfilePage> {
     final actif = await ParametresService.parrainageActif();
     if (!mounted) return;
     if (!actif) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Le programme de parrainage arrive bientôt 🎁')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.programmeParrainageArriveBientot)));
       return;
     }
     final code = await ParrainageService.monCode(uid);
@@ -656,18 +683,18 @@ class _ProfilePageState extends State<ProfilePage> {
     final gainFilleul = await ParametresService.recompenseFilleulF();
     if (!mounted) return;
     await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('Mon code de parrainage'),
+      title: Text(Tr.s.monCodeParrainage2),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: _kPrimary.withOpacity(0.08), borderRadius: BorderRadius.circular(12)), child: Text(code, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _kPrimary, letterSpacing: 2))),
         const SizedBox(height: 10),
-        Text('Votre filleul gagne ${PrixFCFA.formater(gainFilleul)} d\'avoir\nVous gagnez ${PrixFCFA.formater(gainParrain)} d\'avoir\nà sa première commande livrée.',
+        Text(Tr.s.votreFilleulGagneAvoirVous(PrixFCFA.formater(gainFilleul), PrixFCFA.formater(gainParrain)),
             textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 13)),
       ]),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fermer')),
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(Tr.s.fermer)),
         ElevatedButton.icon(
           icon: const Icon(Icons.share, size: 16),
-          label: const Text('Partager'),
+          label: Text(Tr.s.partager),
           onPressed: () { Navigator.pop(ctx); _partagerCode(); },
         ),
       ],
@@ -676,11 +703,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _deconnecter() async {
     final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
-      title: const Text('Déconnexion'),
-      content: const Text('Voulez-vous vraiment vous déconnecter ?'),
+      title: Text(Tr.s.deconnexion),
+      content: Text(Tr.s.voulezVousVraimentVousDeconnecter),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
-        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Déconnecter', style: TextStyle(color: Colors.red))),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(Tr.s.annuler)),
+        TextButton(onPressed: () => Navigator.pop(context, true), child: Text(Tr.s.deconnecter, style: TextStyle(color: Colors.red))),
       ],
     ));
     if (ok == true && mounted) {
@@ -704,7 +731,7 @@ class _DialogStockageState extends State<_DialogStockage> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Row(children: [Icon(Icons.cloud_outlined, color: _kPrimary, size: 20), SizedBox(width: 8), Flexible(child: Text('Stockage des photos', overflow: TextOverflow.ellipsis))]),
+    title: Row(children: [Icon(Icons.cloud_outlined, color: _kPrimary, size: 20), SizedBox(width: 8), Flexible(child: Text(Tr.s.stockagePhotos2, overflow: TextOverflow.ellipsis))]),
     content: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -719,7 +746,7 @@ class _DialogStockageState extends State<_DialogStockage> {
       ],
     ),
     actions: [
-      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(Tr.s.annuler)),
       ElevatedButton(
         onPressed: () async {
           await StockageService.activerCloudflare(_cloudflare);
@@ -727,7 +754,7 @@ class _DialogStockageState extends State<_DialogStockage> {
           if (context.mounted) Navigator.pop(context);
         },
         style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
-        child: const Text('Appliquer'),
+        child: Text(Tr.s.appliquer),
       ),
     ],
   );

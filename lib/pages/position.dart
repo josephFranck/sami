@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:location/location.dart';
 import 'package:sami/pages/mappage.dart';
+import 'package:sami/l10n/tr.dart';
 
 class PositionPage extends StatefulWidget {
   const PositionPage({super.key});
@@ -48,19 +49,16 @@ class _PositionPageState extends State<PositionPage> {
         final ok = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Votre position'),
-            content: const Text(
-                'PagneShop utilise votre position UNIQUEMENT pour placer le '
-                'point de livraison sur la carte et guider le livreur. Elle '
-                'n\'est ni suivie en continu ni partagée hors de votre '
-                'commande. Vous pouvez aussi saisir votre adresse à la main.'),
+            title: Text(Tr.s.votrePosition),
+            content: Text(
+                Tr.s.pagneshopUtiliseVotrePositionUniquement),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Pas maintenant')),
+                  child: Text(Tr.s.pasMaintenant)),
               ElevatedButton(
                   onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Continuer')),
+                  child: Text(Tr.s.continuer)),
             ],
           ),
         );
@@ -104,8 +102,8 @@ class _PositionPageState extends State<PositionPage> {
       longitude = currentLocation?.longitude;
     }
     if (latitude == null || longitude == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Position non disponible')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(Tr.s.positionNonDisponible)));
       return;
     }
     final user = FirebaseAuth.instance.currentUser;
@@ -120,14 +118,14 @@ class _PositionPageState extends State<PositionPage> {
         'longitude': longitude,
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Adresse de livraison enregistrée'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.adresseLivraisonEnregistree),
           backgroundColor: Colors.green));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Erreur d\'enregistrement'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.erreurEnregistrement), backgroundColor: Colors.red));
       }
     } finally {
       if (mounted) setState(() => _enregistrement = false);
@@ -138,7 +136,7 @@ class _PositionPageState extends State<PositionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Position'),
+        title: Text(Tr.s.position),
       ),
       body: Center(
         child: Column(
@@ -146,19 +144,19 @@ class _PositionPageState extends State<PositionPage> {
           children: <Widget>[
             if (currentLocation != null)
               Text(
-                'Latitude: ${currentLocation!.latitude}\nLongitude: ${currentLocation!.longitude}',
+                Tr.s.latitudeLongitude(currentLocation!.latitude, currentLocation!.longitude),
                 style: const TextStyle(fontSize: 20),
                 textAlign: TextAlign.center,
               ),
             if (currentLocation == null)
-              const Text(
-                'En attente de la position...',
+              Text(
+                Tr.s.attentePosition,
                 style: TextStyle(fontSize: 20),
               ),
             ElevatedButton(
               onPressed:
                   navigateToMapPage, // Appeler la fonction pour naviguer vers MapPage
-              child: const Text('Afficher sur la carte'),
+              child: Text(Tr.s.afficherSurCarte),
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
@@ -168,7 +166,7 @@ class _PositionPageState extends State<PositionPage> {
                   ? const SizedBox(width: 16, height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.save_outlined),
-              label: const Text('Enregistrer comme adresse de livraison'),
+              label: Text(Tr.s.enregistrerCommeAdresseLivraison),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6A1B9A),
                 foregroundColor: Colors.white,

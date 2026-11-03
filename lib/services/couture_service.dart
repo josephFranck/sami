@@ -13,6 +13,7 @@ import 'package:sami/services/livraison_service.dart';
 import 'package:sami/models/livraison_v2.dart';
 import 'package:sami/agents/agent_livraison.dart';
 import 'package:flutter/foundation.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SERVICE COUTURE
@@ -332,7 +333,7 @@ class CoutureService {
         articles: [
           PanierItem(
             pagneId: pagneId,
-            pagneNom: pd2['nom'] as String? ?? 'Pagne',
+            pagneNom: pd2['nom'] as String? ?? Tr.s.pagne,
             pagneImage: images.isNotEmpty ? images.first : null,
             quantite: nb,
             prixUnitaire: nb > 0 ? prixPagneTotal / nb : prixPagneTotal,
@@ -397,8 +398,8 @@ class CoutureService {
       if (gerants.isNotEmpty) {
         await NotificationService.envoyer(
           destinataireId: gerants.first,
-          titre: 'Pagne à préparer ✂️',
-          message: 'Un livreur viendra chercher le tissu pour l\'atelier du couturier.',
+          titre: (t) => t.pagnePreparer,
+          message: (t) => t.livreurViendraChercherTissuPour,
           route: '/dashboard_boutiquier',
           refId: commandeId,
         );
@@ -497,7 +498,7 @@ class CoutureService {
         if (ud != null) {
           destLat = (ud['latitude'] as num?)?.toDouble() ?? destLat;
           destLng = (ud['longitude'] as num?)?.toDouble() ?? destLng;
-          destAdresse = ud['quartier'] as String? ?? 'Client, Garoua';
+          destAdresse = ud['quartier'] as String? ?? Tr.s.clientGaroua;
         }
       } catch (_) {}
 
@@ -554,8 +555,8 @@ class CoutureService {
     final doc = await CommandeCouturier.collection.doc(commandeId).get();
     await NotificationService.envoyer(
       destinataireId: doc.data()?['clientId'] as String? ?? '',
-      titre: 'Devis reçu 📄',
-      message: 'Le couturier propose ${PrixFCFA.formater(prixPropose)}. Acceptez ou refusez.',
+      titre: (t) => t.devisRecu,
+      message: (t) => t.couturierProposeAcceptezOuRefusez(PrixFCFA.formater(prixPropose)),
       route: '/mes-coutures', refId: commandeId,
     );
   }
@@ -584,8 +585,8 @@ class CoutureService {
     }
     await NotificationService.envoyer(
       destinataireId: doc.data()?['couturierId'] as String? ?? '',
-      titre: 'Devis accepté ✅',
-      message: 'Le client a accepté votre devis. La confection peut commencer.',
+      titre: (t) => t.devisAccepte,
+      message: (t) => t.clientAccepteVotreDevisConfection,
       refId: commandeId,
     );
   }

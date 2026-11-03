@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sami/utils/auth_i18n.dart';
+import 'package:sami/services/langue_service.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final AuthLang lang;
@@ -25,7 +26,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     _i18n = AuthI18n(_lang);
   }
 
-  void _changerLang(AuthLang l) => setState(() { _lang = l; _i18n = AuthI18n(l); });
+  void _changerLang(AuthLang l) {
+    setState(() { _lang = l; _i18n = AuthI18n(l); });
+    LangueService.instance.changer(l.name); // langue de toute l'app
+  }
 
   @override
   void dispose() { _emailCtrl.dispose(); super.dispose(); }
@@ -207,7 +211,7 @@ class _SelecteurLang extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
-    child: Row(mainAxisSize: MainAxisSize.min, children: AuthLang.values.map((l) {
+    child: Row(mainAxisSize: MainAxisSize.min, children: AuthLang.values.where((l) => l != AuthLang.ff).map((l) {
       final actif = l == lang;
       return GestureDetector(
         onTap: () => onChange(l),

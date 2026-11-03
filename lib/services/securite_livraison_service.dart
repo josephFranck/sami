@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sami/models/commande_multi.dart';
 import 'package:sami/services/stockage_service.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SYSTÈME DE SÉCURITÉ LIVRAISON
@@ -564,7 +565,7 @@ class SecuriteLivraisonService {
     if (conflits >= 3) {
       await _creerAlerteAdmin(
         livreurId: livreurId,
-        message: '$conflits conflits signalés — investigation requise',
+        message: Tr.s.conflitsSignalesInvestigationRequise(conflits),
         niveau: 'haute',
       );
     }
@@ -789,11 +790,11 @@ class ProfilPublicLivreur {
   });
 
   String get badgeNiveau => switch (niveauConfiance) {
-    NiveauConfianceLivreur.nouveau  => '🆕 Nouveau',
-    NiveauConfianceLivreur.confirme => '✅ Confirmé',
-    NiveauConfianceLivreur.fiable   => '⭐ Fiable',
-    NiveauConfianceLivreur.expert   => '🏆 Expert',
-    _ => '⚠️ Indisponible',
+    NiveauConfianceLivreur.nouveau  => Tr.s.nouveau,
+    NiveauConfianceLivreur.confirme => Tr.s.confirme,
+    NiveauConfianceLivreur.fiable   => Tr.s.fiable,
+    NiveauConfianceLivreur.expert   => Tr.s.expert,
+    _ => Tr.s.indisponible2,
   };
 
   String get montantCautionFmt =>

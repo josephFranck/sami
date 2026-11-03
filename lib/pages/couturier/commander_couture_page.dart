@@ -9,10 +9,13 @@ import 'package:sami/models/pagne.dart';
 import 'package:sami/services/couture_service.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 import 'package:sami/widgets/silhouette_mesure.dart';
+import 'package:sami/services/langue_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kBg = Color(0xFFF7F5FA);
-const _lang = Langue.fr;
+// Langue des libellés de modèles/mesures (catalogues FR/EN) : celle de l'app.
+Langue get _lang => LangueService.instance.estAnglais ? Langue.en : Langue.fr;
 
 /// Parcours client : faire coudre un pagne.
 /// Étapes : couturier → modèle → bénéficiaire (profil) → mode mesures → confirmer.
@@ -42,7 +45,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
-        title: Text('Faire coudre — étape ${_etape + 1}/3'),
+        title: Text(Tr.s.faireCoudreEtape3(_etape + 1)),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -63,7 +66,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
   Widget _etapeModele() {
     return Column(
       children: [
-        _bandeau('Quel modèle pour ce pagne ?'),
+        _bandeau(Tr.s.quelModelePourCePagne),
         Expanded(
           child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             // Tous les modèles actifs ; choisir révèle le couturier.
@@ -94,8 +97,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
                   padding: const EdgeInsets.all(24),
                   child: Center(
                     child: Text(
-                        'Aucun modèle disponible pour le moment. '
-                        'Les couturiers ajoutent bientôt leurs créations.',
+                        Tr.s.aucunModeleDisponiblePourMoment,
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.grey.shade600)),
                   ),
@@ -122,13 +124,12 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
                               child: Icon(Icons.checkroom, color: Colors.white),
                             ),
                       title: Text(
-                          m.noms[_lang] ?? m.noms[Langue.fr] ?? 'Modèle'),
+                          m.noms[_lang] ?? m.noms[Langue.fr] ?? Tr.s.modele),
                       subtitle: Text(
-                          '${_typeVetementLabel(m.typeVetement)} · '
-                          'délai ${m.delaiJours} j · ${m.mesuresRequises.length} mesures'),
+                          Tr.s.delaiJMesures(_typeVetementLabel(m.typeVetement), m.delaiJours, m.mesuresRequises.length)),
                       trailing: Text(
                           m.surDevis
-                              ? 'Dès ${PrixFCFA.formater(m.prixBase)}'
+                              ? Tr.s.des(PrixFCFA.formater(m.prixBase))
                               : PrixFCFA.formater(m.prixBase),
                           style: const TextStyle(
                               color: _kPrimary, fontWeight: FontWeight.bold)),
@@ -145,15 +146,15 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
   }
 
   String _typeVetementLabel(TypeVetement t) => switch (t) {
-        TypeVetement.boubou => 'Boubou',
-        TypeVetement.gandoura => 'Gandoura',
-        TypeVetement.robe => 'Robe',
-        TypeVetement.costume => 'Costume',
-        TypeVetement.chemise => 'Chemise',
-        TypeVetement.jupe => 'Jupe',
-        TypeVetement.pantalon => 'Pantalon',
-        TypeVetement.ensemble => 'Ensemble',
-        TypeVetement.autre => 'Autre',
+        TypeVetement.boubou => Tr.s.boubou,
+        TypeVetement.gandoura => Tr.s.gandoura,
+        TypeVetement.robe => Tr.s.robe,
+        TypeVetement.costume => Tr.s.costume,
+        TypeVetement.chemise => Tr.s.chemise,
+        TypeVetement.jupe => Tr.s.jupe,
+        TypeVetement.pantalon => Tr.s.pantalon,
+        TypeVetement.ensemble => Tr.s.ensemble,
+        TypeVetement.autre => Tr.s.autre,
       };
 
   // Au choix d'un modèle : on charge le couturier et on le présente au client.
@@ -176,7 +177,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Couturier'),
+        title: Text(Tr.s.couturier),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,7 +192,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
                   child: Text(
                       couturier != null
                           ? '${couturier.prenom} ${couturier.nom}'
-                          : 'Couturier',
+                          : Tr.s.couturier,
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
@@ -199,18 +200,18 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
             ),
             if (couturier != null) ...[
               const SizedBox(height: 8),
-              Text('Quartier : ${couturier.quartier}',
+              Text(Tr.s.quartier(couturier.quartier),
                   style: TextStyle(color: Colors.grey.shade600)),
             ],
             const SizedBox(height: 12),
-            Text('Ce modèle sera confectionné par ce couturier.',
+            Text(Tr.s.ceModeleSeraConfectionnePar,
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
           ],
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Changer de modèle')),
+              child: Text(Tr.s.changerModele)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: _kPrimary, foregroundColor: Colors.white),
@@ -218,7 +219,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
               Navigator.pop(ctx);
               _suivant();
             },
-            child: const Text('Continuer'),
+            child: Text(Tr.s.continuer),
           ),
         ],
       ),
@@ -229,7 +230,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
   Widget _etapeProfil() {
     return Column(
       children: [
-        _bandeau('Pour qui ? (bénéficiaire)'),
+        _bandeau(Tr.s.pourQuiBeneficiaire),
         Expanded(
           child: StreamBuilder<List<MesuresClient>>(
             stream: CoutureService.streamProfils(),
@@ -238,8 +239,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
                 return Padding(
                   padding: const EdgeInsets.all(20),
                   child: Text(
-                      'Impossible de charger vos profils :\n${snap.error}\n\n'
-                      '→ Règles Firestore à déployer ?',
+                      Tr.s.impossibleChargerVosProfilsRegles(snap.error),
                       style: const TextStyle(color: Colors.red, fontSize: 12)),
                 );
               }
@@ -252,8 +252,8 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
                         child: ListTile(
                           leading: const Icon(Icons.person_outline,
                               color: _kPrimary),
-                          title: Text(p.nomProfil ?? 'Profil'),
-                          subtitle: Text('${p.valeurs.length} mesure(s) enregistrée(s)'),
+                          title: Text(p.nomProfil ?? Tr.s.profil),
+                          subtitle: Text(Tr.s.mesureSEnregistreeS(p.valeurs.length)),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
                             setState(() {
@@ -269,7 +269,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
                   OutlinedButton.icon(
                     onPressed: _creerProfilEnLigne,
                     icon: const Icon(Icons.add),
-                    label: const Text('Nouveau profil (saisir les mesures)'),
+                    label: Text(Tr.s.nouveauProfilSaisirMesures),
                     style: OutlinedButton.styleFrom(
                         foregroundColor: _kPrimary,
                         side: const BorderSide(color: _kPrimary),
@@ -280,7 +280,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
                   ElevatedButton.icon(
                     onPressed: _profilSansMesures,
                     icon: const Icon(Icons.event_outlined),
-                    label: const Text('Le couturier prendra les mesures'),
+                    label: Text(Tr.s.couturierPrendraMesures),
                     style: ElevatedButton.styleFrom(
                         backgroundColor: _kPrimary,
                         foregroundColor: Colors.white,
@@ -312,8 +312,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             backgroundColor: Colors.red,
-            content: Text('Profil non enregistré : $e\n'
-                '→ Vérifiez le déploiement des règles Firestore.')));
+            content: Text(Tr.s.profilNonEnregistreVerifiezDeploiement(e))));
         return;
       }
       final profil = MesuresClient(
@@ -344,8 +343,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           backgroundColor: Colors.red,
-          content: Text('Profil non enregistré : $e\n'
-              '→ Vérifiez le déploiement des règles Firestore.')));
+          content: Text(Tr.s.profilNonEnregistreVerifiezDeploiement(e))));
       return;
     }
     setState(() {
@@ -366,23 +364,23 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Nom du bénéficiaire'),
+        title: Text(Tr.s.nomBeneficiaire),
         content: TextField(
           controller: ctrl,
           autofocus: true,
-          decoration: const InputDecoration(
-              hintText: 'ex: Moi, Mon mari, Aïssa',
+          decoration: InputDecoration(
+              hintText: Tr.s.exMoiMonMariAissa,
               border: OutlineInputBorder()),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuler')),
+              child: Text(Tr.s.annuler)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: _kPrimary, foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('Valider'),
+            child: Text(Tr.s.valider),
           ),
         ],
       ),
@@ -399,8 +397,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
       return SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: SelectableText(
-          '⛔ ERREUR ÉTAPE 3/3 (diag v2)\n\n$e\n\n'
-          '${st.toString().split('\n').take(14).join('\n')}',
+          Tr.s.erreurEtape33Diag(e, st.toString().split('\n').take(14).join('\n')),
           style: const TextStyle(
               color: Colors.red, fontSize: 11.5, height: 1.35),
         ),
@@ -412,10 +409,10 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
     if (_modele == null || _couturier == null || _profil == null) {
       // JAMAIS un écran vide : dire CE qui manque et Y RAMENER.
       final manque = _modele == null
-          ? 'le modèle de couture'
+          ? Tr.s.modeleCouture
           : _couturier == null
-              ? 'le couturier'
-              : 'le bénéficiaire (profil de mesures)';
+              ? Tr.s.couturier2
+              : Tr.s.beneficiaireProfilMesures;
       final etapeCible = _modele == null || _couturier == null ? 0 : 1;
       return Center(
         child: Padding(
@@ -425,7 +422,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
                 const Icon(Icons.info_outline,
                     size: 44, color: Colors.orange),
                 const SizedBox(height: 12),
-                Text('Il manque $manque pour récapituler.',
+                Text(Tr.s.ilManquePourRecapituler(manque),
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 14)),
                 const SizedBox(height: 14),
@@ -433,7 +430,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
                   onPressed: () =>
                       setState(() => _etape = etapeCible),
                   icon: const Icon(Icons.arrow_back, size: 16),
-                  label: Text('Revenir à l\'étape ${etapeCible + 1}'),
+                  label: Text(Tr.s.revenirEtape(etapeCible + 1)),
                 ),
               ]),
         ),
@@ -450,38 +447,38 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _bandeau('Récapitulatif'),
+        _bandeau(Tr.s.recapitulatif),
         const SizedBox(height: 8),
-        _recapLigne('Pagne', widget.pagne.nom,
+        _recapLigne(Tr.s.pagne, widget.pagne.nom,
             PrixFCFA.formater(widget.pagne.prixParBoutique)),
-        _recapLigne('Modèle',
-            _modele!.noms[_lang] ?? _modele!.noms[Langue.fr] ?? 'Modèle',
+        _recapLigne(Tr.s.modele,
+            _modele!.noms[_lang] ?? _modele!.noms[Langue.fr] ?? Tr.s.modele,
             _modele!.surDevis
-                ? 'Dès ${PrixFCFA.formater(_modele!.prixBase)}'
+                ? Tr.s.des(PrixFCFA.formater(_modele!.prixBase))
                 : PrixFCFA.formater(_modele!.prixBase)),
-        _recapLigne('Couturier', '${_couturier!.prenom} ${_couturier!.nom}', ''),
-        _recapLigne('Bénéficiaire', _profil!.nomProfil ?? 'Profil', ''),
+        _recapLigne(Tr.s.couturier, '${_couturier!.prenom} ${_couturier!.nom}', ''),
+        _recapLigne(Tr.s.beneficiaire, _profil!.nomProfil ?? Tr.s.profil, ''),
         _recapLigne(
-            'Mesures',
+            Tr.s.mesures,
             _mode == ModeRencontre.enLigne
-                ? 'Saisies en ligne'
-                : 'Prises par le couturier',
+                ? Tr.s.saisiesLigne
+                : Tr.s.prisesParCouturier,
             ''),
         const Divider(height: 28),
         // ═══ COLUMN (pas Row) ═══ un Row contenant un Divider exige une
         // largeur infinie → conflit de contraintes → layout qui boucle
         // → « PagneShop ne répond pas ». Empilement vertical = correct.
-        _ligneRecap('Tissu × $_nbPagnes', PrixFCFA.formater(prixTissu)),
+        _ligneRecap(Tr.s.tissu(_nbPagnes), PrixFCFA.formater(prixTissu)),
         _ligneRecap(
-            _modele!.surDevis ? 'Confection (sur devis)' : 'Confection',
+            _modele!.surDevis ? Tr.s.confectionSurDevis : Tr.s.confection,
             PrixFCFA.formater(_modele!.prixBase)),
-        _ligneRecap('Livraison (2 trajets)',
+        _ligneRecap(Tr.s.livraison2Trajets,
             PrixFCFA.formater(fraisLivraison2Trajets)),
         const Divider(height: 14),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Total',
+            Text(Tr.s.total,
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             Text(PrixFCFA.formater(prixTotal),
                 style: const TextStyle(
@@ -493,7 +490,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
         const SizedBox(height: 8),
         // QUANTITÉ DE TISSU (grand boubou, ensemble… = plusieurs pagnes)
         Row(children: [
-          const Text('Nombre de pagnes :',
+          Text(Tr.s.nombrePagnes,
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const Spacer(),
           IconButton(
@@ -508,14 +505,13 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
                   _nbPagnes < 6 ? () => setState(() => _nbPagnes++) : null,
               icon: const Icon(Icons.add_circle_outline)),
         ]),
-        Text('Délai de confection estimé : ${_modele!.delaiJours} jours',
+        Text(Tr.s.delaiConfectionEstimeJours(_modele!.delaiJours),
             style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
         if (_modele!.surDevis)
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-                'Prix indicatif — le couturier confirmera le montant final '
-                'après avoir vu votre demande.',
+                Tr.s.prixIndicatifCouturierConfirmeraMontant,
                 style: TextStyle(color: Colors.orange.shade700, fontSize: 12)),
           ),
         const SizedBox(height: 24),
@@ -537,8 +533,8 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
                       strokeWidth: 2, color: Colors.white))
               : const Icon(Icons.shopping_bag_outlined),
           label: Text(_envoiEnCours
-              ? 'Commande en cours…'
-              : 'Commander (pagne + couture)'),
+              ? Tr.s.commandeCours
+              : Tr.s.commanderPagneCouture),
           style: ElevatedButton.styleFrom(
               backgroundColor: _kPrimary,
               foregroundColor: Colors.white,
@@ -546,8 +542,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
         ),
         const SizedBox(height: 8),
         Text(
-            'Astuce : pour habiller plusieurs personnes, ajoutez ce pagne, '
-            'puis recommencez avec un autre bénéficiaire.',
+            Tr.s.astucePourHabillerPlusieursPersonnes,
             style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
             textAlign: TextAlign.center),
       ],
@@ -587,16 +582,16 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
         methodePaiement: 'mobile_money',
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Commande enregistrée : pagne réservé + couture lancée'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.commandeEnregistreePagneReserveCouture),
           backgroundColor: Colors.green,
         ));
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Erreur lors de l\'enregistrement'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.erreurLorsEnregistrement),
           backgroundColor: Colors.red,
         ));
       }
@@ -675,15 +670,15 @@ class _DialogMesuresState extends State<_DialogMesures> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Mesures du bénéficiaire'),
+      title: Text(Tr.s.mesuresBeneficiaire),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: _nomCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Nom (ex: Moi, Aïssa)',
+              decoration: InputDecoration(
+                  labelText: Tr.s.nomExMoiAissa,
                   border: OutlineInputBorder(),
                   isDense: true),
             ),
@@ -728,7 +723,7 @@ class _DialogMesuresState extends State<_DialogMesures> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
-                    labelText: '$label (cm)',
+                    labelText: Tr.s.cm(label),
                     border: const OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -741,7 +736,7 @@ class _DialogMesuresState extends State<_DialogMesures> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler')),
+            child: Text(Tr.s.annuler)),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
               backgroundColor: _kPrimary, foregroundColor: Colors.white),
@@ -755,7 +750,7 @@ class _DialogMesuresState extends State<_DialogMesures> {
             });
             Navigator.pop(context, {'nom': nom, 'valeurs': valeurs});
           },
-          child: const Text('Enregistrer'),
+          child: Text(Tr.s.enregistrer),
         ),
       ],
     );

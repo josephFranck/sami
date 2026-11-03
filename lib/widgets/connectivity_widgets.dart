@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sami/services/resilience_service.dart';
 import 'package:sami/services/stock_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -47,7 +48,7 @@ class BoutonAjouterPanier extends StatelessWidget {
         if (!estConnecte) {
           // ─── HORS LIGNE : bouton désactivé avec explication ───────────────
           return _BoutonDesactive(
-            label: 'Ajouter au panier',
+            label: Tr.s.ajouterPanier,
             icone: Icons.add_shopping_cart_outlined,
             raisonDesactivation: 'Connexion requise pour ajouter au panier',
           );
@@ -61,12 +62,12 @@ class BoutonAjouterPanier extends StatelessWidget {
             final enChargement = !snapStock.hasData;
 
             if (enChargement) {
-              return const _BoutonChargement(label: 'Vérification du stock...');
+              return _BoutonChargement(label: Tr.s.verificationStock);
             }
 
             if (stock == 0) {
-              return const _BoutonDesactive(
-                label: 'Épuisé',
+              return _BoutonDesactive(
+                label: Tr.s.epuise,
                 icone: Icons.block_outlined,
                 raisonDesactivation: 'Ce pagne est actuellement épuisé',
                 couleur: Colors.red,
@@ -75,7 +76,7 @@ class BoutonAjouterPanier extends StatelessWidget {
 
             if (stock < quantiteDemandee) {
               return _BoutonDesactive(
-                label: 'Stock insuffisant ($stock disponible)',
+                label: Tr.s.stockInsuffisantDisponible(stock),
                 icone: Icons.warning_amber_outlined,
                 raisonDesactivation: 'Seulement $stock disponible — réduisez la quantité',
                 couleur: Colors.orange,
@@ -84,7 +85,7 @@ class BoutonAjouterPanier extends StatelessWidget {
 
             // ✅ Stock OK + Connecté → bouton actif
             return _BoutonActif(
-              label: 'Ajouter au panier',
+              label: Tr.s.ajouterPanier,
               icone: Icons.add_shopping_cart_outlined,
               stock: stock,
               onTap: onAjoute,
@@ -124,7 +125,7 @@ class BoutonCommander extends StatelessWidget {
               _BanniereOfflineCommande(),
               const SizedBox(height: 8),
               _BoutonDesactive(
-                label: 'Impossible de commander hors ligne',
+                label: Tr.s.impossibleCommanderHorsLigne,
                 icone: Icons.wifi_off,
                 raisonDesactivation: null, // message déjà dans la bannière
                 pleineLargeur: true,
@@ -149,7 +150,7 @@ class BoutonCommander extends StatelessWidget {
                 const Icon(Icons.shopping_bag_outlined, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Commander · $labelMontant',
+                  Tr.s.commander(labelMontant),
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ],
@@ -191,8 +192,8 @@ class _BoutonValiderPaiementState extends State<BoutonValiderPaiement> {
         final estConnecte = snap.data ?? true;
 
         if (!estConnecte) {
-          return const _BoutonDesactive(
-            label: 'Paiement indisponible hors ligne',
+          return _BoutonDesactive(
+            label: Tr.s.paiementIndisponibleHorsLigne,
             icone: Icons.wifi_off,
             raisonDesactivation: 'Le paiement Mobile Money nécessite une connexion',
             pleineLargeur: true,
@@ -210,21 +211,21 @@ class _BoutonValiderPaiementState extends State<BoutonValiderPaiement> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: _enCours
-                ? const Row(
+                ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       SizedBox(width: 18, height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
                       SizedBox(width: 10),
-                      Text('Vérification du stock...', style: TextStyle(fontSize: 14)),
+                      Text(Tr.s.verificationStock, style: TextStyle(fontSize: 14)),
                     ],
                   )
-                : const Row(
+                : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.lock_outline, size: 18),
                       SizedBox(width: 8),
-                      Text('Payer maintenant', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      Text(Tr.s.payerMaintenant, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ],
                   ),
           ),
@@ -248,17 +249,17 @@ class _BoutonValiderPaiementState extends State<BoutonValiderPaiement> {
         context: context,
         builder: (_) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: const Row(children: [
+          title: Row(children: [
             Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 22),
             SizedBox(width: 8),
-            Text('Stock modifié', style: TextStyle(fontSize: 16)),
+            Text(Tr.s.stockModifie, style: TextStyle(fontSize: 16)),
           ]),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Le stock a changé depuis votre dernière consultation :',
+              Text(
+                Tr.s.stockChangeDepuisVotreDerniere,
                 style: TextStyle(color: Colors.grey, fontSize: 13),
               ),
               const SizedBox(height: 10),
@@ -271,8 +272,8 @@ class _BoutonValiderPaiementState extends State<BoutonValiderPaiement> {
                 ]),
               )),
               const SizedBox(height: 10),
-              const Text(
-                'Veuillez mettre à jour votre panier.',
+              Text(
+                Tr.s.veuillezMettreJourVotrePanier,
                 style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
             ],
@@ -281,7 +282,7 @@ class _BoutonValiderPaiementState extends State<BoutonValiderPaiement> {
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
-              child: const Text('Mettre à jour le panier'),
+              child: Text(Tr.s.mettreJourPanier),
             ),
           ],
         ),
@@ -296,7 +297,7 @@ class _BoutonValiderPaiementState extends State<BoutonValiderPaiement> {
       if (mounted) {
         setState(() => _enCours = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur paiement : $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(Tr.s.erreurPaiement(e)), backgroundColor: Colors.red),
         );
       }
     }
@@ -346,9 +347,9 @@ class BanniereConnectivite extends StatelessWidget {
                 child: Text(
                   estConnecte
                       ? (nbAttente > 0
-                          ? 'Synchronisation en cours ($nbAttente en attente)…'
-                          : 'Connecté')
-                      : 'Hors ligne — certaines actions sont désactivées',
+                          ? Tr.s.synchronisationCoursAttente(nbAttente)
+                          : Tr.s.connecte)
+                      : Tr.s.horsLigneCertainesActionsSont,
                   style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ),
@@ -392,8 +393,8 @@ class PageOnlyGuard extends StatelessWidget {
                 children: [
                   Icon(Icons.wifi_off, size: 72, color: Colors.grey.shade300),
                   const SizedBox(height: 20),
-                  const Text(
-                    'Hors ligne',
+                  Text(
+                    Tr.s.horsLigne,
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
@@ -407,7 +408,7 @@ class PageOnlyGuard extends StatelessWidget {
                   TextButton.icon(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.arrow_back),
-                    label: const Text('Retour'),
+                    label: Text(Tr.s.retour2),
                   ),
                 ],
               ),
@@ -440,11 +441,11 @@ class IndicateurStock extends StatelessWidget {
         final stock = snap.data!;
 
         if (stock == 0) {
-          return _Badge('Épuisé', Colors.red);
+          return _Badge(Tr.s.epuise, Colors.red);
         }
         if (stock <= 3) {
           return _Badge(
-            afficherNombre ? 'Plus que $stock !' : 'Stock limité',
+            afficherNombre ? Tr.s.plusQue(stock) : Tr.s.stockLimite,
             Colors.orange,
           );
         }
@@ -569,14 +570,13 @@ class _BanniereOfflineCommande extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
       border: Border.all(color: Colors.orange.shade200),
     ),
-    child: const Row(
+    child: Row(
       children: [
         Icon(Icons.wifi_off, color: Colors.orange, size: 18),
         SizedBox(width: 10),
         Expanded(
           child: Text(
-            'Vous êtes hors ligne. Reconnectez-vous pour commander. '
-            'Votre panier est sauvegardé.',
+            Tr.s.vousEtesHorsLigneReconnectez,
             style: TextStyle(color: Colors.orange, fontSize: 12),
           ),
         ),

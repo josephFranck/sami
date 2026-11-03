@@ -28,6 +28,7 @@ import 'package:sami/services/fidelite_service.dart';
 import 'package:sami/pages/auth/login_page.dart';
 import 'package:sami/pages/pagnedetail.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ─── Couleurs de l'app ────────────────────────────────────────────────────────
 /// Prix barré à afficher : celui du boutiquier s'il existe, sinon le
@@ -257,7 +258,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
         (role == 'agent' && perms.contains(p));
     final nom = _utilisateur != null
         ? '${_utilisateur!.prenom} ${_utilisateur!.nom}'.trim()
-        : 'Invité';
+        : Tr.s.invite;
     final email = _utilisateur?.email ?? '';
 
     return Drawer(
@@ -267,7 +268,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
           // En-tête profil
           UserAccountsDrawerHeader(
             decoration: const BoxDecoration(color: _kPrimary),
-            accountName: Text(nom.isEmpty ? 'Invité' : nom,
+            accountName: Text(nom.isEmpty ? Tr.s.invite : nom,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
             accountEmail: Text(email),
             currentAccountPicture: CircleAvatar(
@@ -280,21 +281,21 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
           ),
 
           // Navigation commune à tous
-          _drawerItem(Icons.home_outlined, 'Accueil', () => Navigator.pop(context)),
-          _drawerItem(Icons.shopping_bag_outlined, 'Catalogue', () => _navProtege('/pagnepage')),
-          _drawerItem(Icons.store_outlined, 'Boutiques', () => Navigator.pushNamed(context, '/boutiques')),
-          _drawerItem(Icons.category_outlined, 'Catégories', () => _navProtege('/categorie')),
-          _drawerItem(Icons.favorite_border, 'Favoris', () => _navProtege('/favoris')),
-          _drawerItem(Icons.shopping_cart_outlined, 'Mon panier', () => _navProtege('/panier')),
-          _drawerItem(Icons.receipt_long_outlined, 'Mes commandes', () => _navProtege('/commandes')),
-          _drawerItem(Icons.gavel_outlined, 'Informations légales', () => Navigator.pushNamed(context, '/mentions-legales')),
-          _drawerItem(Icons.content_cut, 'Mes coutures', () => _navProtege('/mes-coutures')),
-          _drawerItem(Icons.receipt_long_outlined, 'Mes reçus', () => _navProtege('/mes-recus')),
+          _drawerItem(Icons.home_outlined, Tr.s.accueil, () => Navigator.pop(context)),
+          _drawerItem(Icons.shopping_bag_outlined, Tr.s.catalogue, () => _navProtege('/pagnepage')),
+          _drawerItem(Icons.store_outlined, Tr.s.boutiques, () => Navigator.pushNamed(context, '/boutiques')),
+          _drawerItem(Icons.category_outlined, Tr.s.categories, () => _navProtege('/categorie')),
+          _drawerItem(Icons.favorite_border, Tr.s.favoris, () => _navProtege('/favoris')),
+          _drawerItem(Icons.shopping_cart_outlined, Tr.s.monPanier, () => _navProtege('/panier')),
+          _drawerItem(Icons.receipt_long_outlined, Tr.s.mesCommandes, () => _navProtege('/commandes')),
+          _drawerItem(Icons.gavel_outlined, Tr.s.informationsLegales, () => Navigator.pushNamed(context, '/mentions-legales')),
+          _drawerItem(Icons.content_cut, Tr.s.mesCoutures, () => _navProtege('/mes-coutures')),
+          _drawerItem(Icons.receipt_long_outlined, Tr.s.mesRecus, () => _navProtege('/mes-recus')),
           // Tout le monde est client (décision 03/11/2026) : un pro peut
           // aussi devenir partenaire d'un AUTRE métier.
           if (!_a('admin') && !_a('superadmin') && !_a('agent'))
-            _drawerItem(Icons.handshake_outlined, 'Devenir partenaire', () => _navProtege('/devenir-partenaire')),
-          _drawerItem(Icons.chat_bubble_outline, 'Messages', () => _navProtege('/chatpage')),
+            _drawerItem(Icons.handshake_outlined, Tr.s.devenirPartenaire, () => _navProtege('/devenir-partenaire')),
+          _drawerItem(Icons.chat_bubble_outline, Tr.s.messages, () => _navProtege('/chatpage')),
 
           const Divider(),
 
@@ -304,61 +305,61 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
           // (bug corrigé : des `if` sans accolades laissaient « Commandes
           //  reçues » et « Mes livraisons » visibles par TOUT LE MONDE)
           if (_a('couturier'))
-            _drawerItem(Icons.content_cut, 'Espace couturier', () => _navProtege('/dashboard_couturier')),
+            _drawerItem(Icons.content_cut, Tr.s.espaceCouturier, () => _navProtege('/dashboard_couturier')),
           if (_a('boutiquier') || _a('admin')) ...[
-            _drawerItem(Icons.dashboard_outlined, 'Tableau de bord', () => _navProtege('/dashboard_boutiquier')),
-            _drawerItem(Icons.inbox_outlined, 'Commandes reçues 📦', () => _navProtege('/dashboard_boutiquier')),
-            _drawerItem(Icons.storefront_outlined, 'Gérer mes boutiques', () => _navProtege('/mes-boutiques')),
-            _drawerItem(Icons.add_business_outlined, 'Gérer mes pagnes', () => _navProtege('/pagnepage')),
+            _drawerItem(Icons.dashboard_outlined, Tr.s.tableauBord, () => _navProtege('/dashboard_boutiquier')),
+            _drawerItem(Icons.inbox_outlined, Tr.s.commandesRecues2, () => _navProtege('/dashboard_boutiquier')),
+            _drawerItem(Icons.storefront_outlined, Tr.s.gererMesBoutiques, () => _navProtege('/mes-boutiques')),
+            _drawerItem(Icons.add_business_outlined, Tr.s.gererMesPagnes, () => _navProtege('/pagnepage')),
           ],
           if (_a('livreur')) ...[
-            _drawerItem(Icons.insights, 'Mes gains 💰', () => _navProtege('/dashboard-livreur')),
-            _drawerItem(Icons.delivery_dining, 'Mes livraisons', () => _navProtege('/mes-livraisons')),
+            _drawerItem(Icons.insights, Tr.s.mesGains, () => _navProtege('/dashboard-livreur')),
+            _drawerItem(Icons.delivery_dining, Tr.s.mesLivraisons, () => _navProtege('/mes-livraisons')),
           ],
           if (peut('livraisons'))
-            _drawerItem(Icons.support_agent, 'Supervision Agent IA',
+            _drawerItem(Icons.support_agent, Tr.s.supervisionAgentIa,
                 () => _navProtege('/supervision')),
           if (peut('pagnes'))
-            _drawerItem(Icons.local_offer_outlined, 'Promotions',
+            _drawerItem(Icons.local_offer_outlined, Tr.s.promotions,
                 () => _navProtege('/admin-promotions')),
           if (peut('paiements'))
-            _drawerItem(Icons.price_check, 'Vérification paiements',
+            _drawerItem(Icons.price_check, Tr.s.verificationPaiements,
                 () => _navProtege('/verification-paiements')),
           if (peut('reversements'))
-            _drawerItem(Icons.replay_circle_filled_outlined, 'Remboursements',
+            _drawerItem(Icons.replay_circle_filled_outlined, Tr.s.remboursements,
                 () => _navProtege('/admin-remboursements')),
           if (peut('parametres'))
-            _drawerItem(Icons.settings_outlined, 'Paramètres plateforme',
+            _drawerItem(Icons.settings_outlined, Tr.s.parametresPlateforme,
                 () => _navProtege('/parametres')),
           if (peut('utilisateurs'))
-            _drawerItem(Icons.group_outlined, 'Utilisateurs',
+            _drawerItem(Icons.group_outlined, Tr.s.utilisateurs,
                 () => _navProtege('/listuser')),
           if (peut('evenements'))
-            _drawerItem(Icons.event_outlined, 'Événements & bandeaux',
+            _drawerItem(Icons.event_outlined, Tr.s.evenementsBandeaux,
                 () => _navProtege('/evenements')),
           if (peut('livraisons'))
-            _drawerItem(Icons.delivery_dining, 'Livreurs', () => _navProtege('/livreurs')),
+            _drawerItem(Icons.delivery_dining, Tr.s.livreurs, () => _navProtege('/livreurs')),
           if (role == 'admin' || Droits.estStaff(_utilisateur)) ...[
-            _drawerItem(Icons.people_outline, 'Utilisateurs', () => _navProtege('/utilisateurs')),
-            _drawerItem(Icons.dashboard_outlined, 'Tableau de bord admin', () => _navProtege('/dashboard-admin')),
-            _drawerItem(Icons.map_outlined, 'Carte des boutiques', () => _navProtege('/carte-boutiques')),
-            _drawerItem(Icons.storefront_outlined, 'Gestion des boutiques', () => _navProtege('/gestion-boutiques')),
-            _drawerItem(Icons.local_offer_outlined, 'Promotions & fidélité', () => _navProtege('/config-marketing')),
-            _drawerItem(Icons.account_balance_wallet_outlined, 'Répartition des paiements', () => _navProtege('/repartition-paiements')),
+            _drawerItem(Icons.people_outline, Tr.s.utilisateurs, () => _navProtege('/utilisateurs')),
+            _drawerItem(Icons.dashboard_outlined, Tr.s.tableauBordAdmin, () => _navProtege('/dashboard-admin')),
+            _drawerItem(Icons.map_outlined, Tr.s.carteBoutiques, () => _navProtege('/carte-boutiques')),
+            _drawerItem(Icons.storefront_outlined, Tr.s.gestionBoutiques, () => _navProtege('/gestion-boutiques')),
+            _drawerItem(Icons.local_offer_outlined, Tr.s.promotionsFidelite, () => _navProtege('/config-marketing')),
+            _drawerItem(Icons.account_balance_wallet_outlined, Tr.s.repartitionPaiements, () => _navProtege('/repartition-paiements')),
             if (Droits.peut(_utilisateur, 'litiges'))
-              _drawerItem(Icons.flag_outlined, 'Livraisons à vérifier', () => _navProtege('/livraisons-a-verifier')),
+              _drawerItem(Icons.flag_outlined, Tr.s.livraisonsVerifier, () => _navProtege('/livraisons-a-verifier')),
             if (Droits.peut(_utilisateur, 'candidatures'))
-              _drawerItem(Icons.how_to_reg_outlined, 'Candidatures', () => _navProtege('/candidatures')),
-            _drawerItem(Icons.receipt_long, 'Toutes les commandes', () => _navProtege('/admin-commandes')),
-            _drawerItem(Icons.assignment_return_outlined, 'Retours', () => _navProtege('/retours')),
+              _drawerItem(Icons.how_to_reg_outlined, Tr.s.candidatures, () => _navProtege('/candidatures')),
+            _drawerItem(Icons.receipt_long, Tr.s.toutesCommandes, () => _navProtege('/admin-commandes')),
+            _drawerItem(Icons.assignment_return_outlined, Tr.s.retours, () => _navProtege('/retours')),
           ],
 
-          _drawerItem(Icons.card_membership_outlined, 'Abonnements & crédits', () => _navProtege('/abonnements')),
+          _drawerItem(Icons.card_membership_outlined, Tr.s.abonnementsCredits, () => _navProtege('/abonnements')),
 
           const Divider(),
 
-          _drawerItem(Icons.person_outline, 'Mon compte', () => _navProtege('/moncompte')),
-          _drawerItem(Icons.logout, 'Déconnexion', _deconnexion, couleur: Colors.red),
+          _drawerItem(Icons.person_outline, Tr.s.monCompte, () => _navProtege('/moncompte')),
+          _drawerItem(Icons.logout, Tr.s.deconnexion, _deconnexion, couleur: Colors.red),
         ],
       ),
     );
@@ -425,7 +426,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
       globalBackgroundColor: _kPrimary,
       pages: [
         PageViewModel(
-          title: 'Bienvenue sur PagneShop',
+          title: Tr.s.bienvenueSurPagneshop,
           body: 'Trouvez les plus beaux pagnes, bazins et gandouras du Grand Marché de Garoua. Livraison à domicile.',
           image: Center(
             child: Image.asset('lib/assets/images/pagne_back.jpg',
@@ -438,7 +439,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
           ),
         ),
         PageViewModel(
-          title: 'Paiement Mobile Money',
+          title: Tr.s.paiementMobileMoney,
           body: 'Payez facilement par Orange Money ou MTN MoMo. Livraison en moto-taxi dans tout Garoua.',
           image: const Center(child: Icon(Icons.phone_android, size: 120, color: Colors.white70)),
           decoration: const PageDecoration(
@@ -447,7 +448,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
           ),
         ),
         PageViewModel(
-          title: 'Couturiers partenaires',
+          title: Tr.s.couturiersPartenaires,
           body: 'Achetez votre tissu et faites-le coudre par nos artisans certifiés de Lopéré et Yelwa.',
           image: const Center(child: Icon(Icons.content_cut, size: 120, color: Colors.white70)),
           decoration: const PageDecoration(
@@ -462,9 +463,9 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
         if (mounted) setState(() => _showIntro = false);
       },
       showSkipButton: true,
-      skip: const Text('Passer', style: TextStyle(color: Colors.white70)),
+      skip: Text(Tr.s.passer, style: TextStyle(color: Colors.white70)),
       next: const Icon(Icons.arrow_forward, color: Colors.white),
-      done: const Text("C'est parti !", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      done: Text(Tr.s.cEstParti, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       dotsDecorator: DotsDecorator(
         activeColor: _kAccent,
         color: Colors.white38,
@@ -518,7 +519,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
                   if (_recherche.isNotEmpty || _categorieSelectee != null)
                     Column(children: [
                       _GrillePagnes(
-                        titre: 'Résultats',
+                        titre: Tr.s.resultats,
                         pagnes: _pagnesFiltres,
                         onTap: _ouvrirPagne,
                       ),
@@ -544,10 +545,10 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Padding(
+                                Padding(
                                   padding:
                                       EdgeInsets.fromLTRB(14, 10, 14, 6),
-                                  child: Text('✂️ Modèles correspondants',
+                                  child: Text(Tr.s.modelesCorrespondants,
                                       style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.bold,
@@ -612,7 +613,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
                                                                 .w600)),
                                                 Text(
                                                     mo.surDevis
-                                                        ? 'Sur devis'
+                                                        ? Tr.s.surDevis
                                                         : PrixFCFA.formater(
                                                             mo.prixBase),
                                                     style: const TextStyle(
@@ -647,7 +648,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
                     if (_pagnesFlash.isNotEmpty) ...[
                       const SizedBox(height: 18), // ── espacement de section
                       _TitreSection(
-                        titre: 'Ventes flash',
+                        titre: Tr.s.ventesFlash,
                         icone: Icons.flash_on,
                         couleur: Colors.orange,
                         action: 'Voir tout',
@@ -670,7 +671,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
                     // Catalogue complet
                     const SizedBox(height: 18), // ── espacement de section
                     _TitreSection(
-                      titre: 'Tous les pagnes',
+                      titre: Tr.s.tousPagnes,
                       action: 'Voir tout ›',
                       onAction: () =>
                           Navigator.pushNamed(context, '/tous-les-pagnes'),
@@ -690,7 +691,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
                     // (après les pagnes — la priorité d'affichage)
                     const SizedBox(height: 18), // ── espacement de section
                     _TitreSection(
-                      titre: 'Modèles de couture',
+                      titre: Tr.s.modelesCouture,
                       icone: Icons.content_cut,
                       couleur: Colors.deepOrange,
                       action: 'Voir tout ›',
@@ -711,8 +712,8 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
                             } catch (_) {}
                           }
                           if (modeles.isEmpty) {
-                            return const Center(
-                                child: Text('Les modèles des couturiers arrivent bientôt…',
+                            return Center(
+                                child: Text(Tr.s.modelesCouturiersArriventBientot,
                                     style: TextStyle(color: Colors.grey, fontSize: 12)));
                           }
                           return ListView.builder(
@@ -753,7 +754,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
                                                 fontSize: 12, fontWeight: FontWeight.w600)),
                                         Text(
                                             mo.surDevis
-                                                ? 'Sur devis'
+                                                ? Tr.s.surDevis
                                                 : PrixFCFA.formater(mo.prixBase),
                                             style: const TextStyle(
                                                 fontSize: 11.5, color: Colors.deepOrange,
@@ -855,7 +856,7 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
                     Text(
                       _utilisateur != null
                           ? '${niveauFid.emoji} ${_utilisateur!.nom} · ${niveauFid.nom}'
-                          : 'Grand Marché de Garoua',
+                          : Tr.s.grandMarcheGaroua,
                       style: const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ],
@@ -904,10 +905,10 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
           icon: const Icon(Icons.more_vert, color: Colors.white),
           onSelected: _handleMenu,
           itemBuilder: (_) => [
-            const PopupMenuItem(value: 'compte', child: Text('Mon compte')),
-            const PopupMenuItem(value: 'commandes', child: Text('Mes commandes')),
-            const PopupMenuItem(value: 'messages', child: Text('Messages')),
-            const PopupMenuItem(value: 'logout', child: Text('Déconnexion')),
+            PopupMenuItem(value: 'compte', child: Text(Tr.s.monCompte)),
+            PopupMenuItem(value: 'commandes', child: Text(Tr.s.mesCommandes)),
+            PopupMenuItem(value: 'messages', child: Text(Tr.s.messages)),
+            PopupMenuItem(value: 'logout', child: Text(Tr.s.deconnexion)),
           ],
         ),
       ],
@@ -939,12 +940,12 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
         type: BottomNavigationBarType.fixed,
         selectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         unselectedLabelStyle: const TextStyle(fontSize: 11),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Accueil'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite_border), activeIcon: Icon(Icons.favorite), label: 'Favoris'),
-          BottomNavigationBarItem(icon: Icon(Icons.category_outlined), activeIcon: Icon(Icons.category), label: 'Catégories'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), activeIcon: Icon(Icons.receipt_long), label: 'Commandes'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profil'),
+        items: [
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: Tr.s.accueil),
+          BottomNavigationBarItem(icon: Icon(Icons.favorite_border), activeIcon: Icon(Icons.favorite), label: Tr.s.favoris),
+          BottomNavigationBarItem(icon: Icon(Icons.category_outlined), activeIcon: Icon(Icons.category), label: Tr.s.categories),
+          BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), activeIcon: Icon(Icons.receipt_long), label: Tr.s.commandes),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: Tr.s.profil),
         ],
       ),
     );
@@ -973,13 +974,13 @@ class _AccueilPagneShopState extends State<AccueilPagneShop> {
         final ok = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text('Déconnexion'),
-            content: const Text('Voulez-vous vraiment vous déconnecter ?'),
+            title: Text(Tr.s.deconnexion),
+            content: Text(Tr.s.voulezVousVraimentVousDeconnecter),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(context, false), child: Text(Tr.s.annuler)),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Déconnecter', style: TextStyle(color: Colors.red)),
+                child: Text(Tr.s.deconnecter, style: TextStyle(color: Colors.red)),
               ),
             ],
           ),
@@ -1013,10 +1014,10 @@ class _BanniereEvent extends StatelessWidget {
     // « 0 jours » pour un événement imminent.
     final delta = event.dateDebut.difference(DateTime.now());
     final compte = delta.inDays >= 1
-        ? '${delta.inDays} jour${delta.inDays > 1 ? 's' : ''}'
+        ? Tr.s.jour(delta.inDays, delta.inDays > 1 ? 's' : '')
         : delta.inHours >= 1
-            ? '${delta.inHours} h'
-            : '${delta.inMinutes.clamp(1, 59)} min';
+            ? Tr.s.h(delta.inHours)
+            : Tr.s.min(delta.inMinutes.clamp(1, 59));
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1033,7 +1034,7 @@ class _BanniereEvent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${event.nom} dans $compte !',
+                  Tr.s.dans(event.nom, compte),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1085,7 +1086,7 @@ class _BarreRecherche extends StatelessWidget {
         controller: controller,
         onChanged: onChanged,
         decoration: InputDecoration(
-          hintText: 'Rechercher un pagne, une matière...',
+          hintText: Tr.s.rechercherPagneMatiere,
           hintStyle: const TextStyle(fontSize: 14, color: Colors.grey),
           prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
           suffixIcon: controller.text.isNotEmpty
@@ -1534,14 +1535,14 @@ class _GrillePagnes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (pagnes.isEmpty) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.all(32),
         child: Center(
           child: Column(
             children: [
               Icon(Icons.search_off, size: 48, color: Colors.grey),
               SizedBox(height: 8),
-              Text('Aucun pagne trouvé',
+              Text(Tr.s.aucunPagneTrouve,
                   style: TextStyle(color: Colors.grey, fontSize: 14)),
             ],
           ),
@@ -1823,7 +1824,7 @@ class _BandeauFidelite extends StatelessWidget {
       child: Row(children: [
         Icon(Icons.stars, size: 15, color: Colors.amber.shade700),
         const SizedBox(width: 6),
-        Text('${niveau.nom} · $points pts',
+        Text(Tr.s.pts(niveau.nom, points),
             style: TextStyle(
                 fontSize: 11.5,
                 color: Colors.grey.shade600,
@@ -1831,7 +1832,7 @@ class _BandeauFidelite extends StatelessWidget {
         const Spacer(),
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/moncompte'),
-          child: Text('détails ›',
+          child: Text(Tr.s.details,
               style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
         ),
       ]),

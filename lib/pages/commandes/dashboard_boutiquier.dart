@@ -7,6 +7,7 @@ import 'package:sami/models/commande_multi.dart';
 import 'package:sami/services/commande_multi_service.dart';
 import 'package:sami/utils/droits.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -38,19 +39,19 @@ class _DashboardBoutiquierState extends State<DashboardBoutiquier>
     builder: (u) {
       if (!Droits.estBoutiquier(u)) {
         return Scaffold(
-          appBar: AppBar(title: const Text('Mes commandes'), backgroundColor: _kPrimary, foregroundColor: Colors.white),
-          body: const Center(child: Text('Accès réservé aux boutiquiers')));
+          appBar: AppBar(title: Text(Tr.s.mesCommandes), backgroundColor: _kPrimary, foregroundColor: Colors.white),
+          body: Center(child: Text(Tr.s.accesReserveBoutiquiers)));
       }
       return Scaffold(
         backgroundColor: Colors.grey.shade50,
         appBar: AppBar(
-          title: const Text('Mes commandes'),
+          title: Text(Tr.s.mesCommandes),
           backgroundColor: _kPrimary,
           foregroundColor: Colors.white,
           actions: [
             IconButton(
               icon: const Icon(Icons.insights_outlined),
-              tooltip: 'Analyse',
+              tooltip: Tr.s.analyse,
               onPressed: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => AnalysePage(boutiqueId: widget.boutiqueId),
               )),
@@ -61,10 +62,10 @@ class _DashboardBoutiquierState extends State<DashboardBoutiquier>
             indicatorColor: Colors.white,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white60,
-            tabs: const [
-              Tab(text: 'À traiter'),
-              Tab(text: 'En livraison'),
-              Tab(text: 'Terminées'),
+            tabs: [
+              Tab(text: Tr.s.traiter),
+              Tab(text: Tr.s.livraison),
+              Tab(text: Tr.s.terminees),
             ],
           ),
         ),
@@ -75,7 +76,7 @@ class _DashboardBoutiquierState extends State<DashboardBoutiquier>
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text('Impossible de charger les commandes :\n${snap.error}',
+                child: Text(Tr.s.impossibleChargerCommandes(snap.error),
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.red, fontSize: 12)),
               ),
@@ -84,7 +85,7 @@ class _DashboardBoutiquierState extends State<DashboardBoutiquier>
             if (snap.connectionState == ConnectionState.waiting)
               return const Center(child: CircularProgressIndicator(color: _kPrimary));
             if (!snap.hasData || snap.data!.isEmpty)
-              return const Center(child: Text('Aucune commande', style: TextStyle(color: Colors.grey)));
+              return Center(child: Text(Tr.s.aucuneCommande, style: TextStyle(color: Colors.grey)));
 
             final toutes = snap.data!;
             final aTraiter = toutes.where((sc) => [
@@ -138,14 +139,14 @@ class _DashboardBoutiquierState extends State<DashboardBoutiquier>
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Confirmer la commande'),
-        content: Text('Confirmez-vous prendre en charge la commande de ${sc.articles.length} article(s) pour ${PrixFCFA.formater(sc.totalClient)} ?'),
+        title: Text(Tr.s.confirmerCommande),
+        content: Text(Tr.s.confirmezVousPrendreChargeCommande(sc.articles.length, PrixFCFA.formater(sc.totalClient))),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(Tr.s.annuler)),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
-            child: const Text('Confirmer'),
+            child: Text(Tr.s.confirmer),
           ),
         ],
       ),
@@ -153,13 +154,13 @@ class _DashboardBoutiquierState extends State<DashboardBoutiquier>
     if (ok != true) return;
     await CommandeMultiService.confirmerParBoutique(sc.id);
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Commande confirmée'), backgroundColor: Colors.green));
+        SnackBar(content: Text(Tr.s.commandeConfirmee), backgroundColor: Colors.green));
   }
 
   Future<void> _marquerPrete(SousCommande sc) async {
     await CommandeMultiService.marquerPrete(sc.id);
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Commande marquée prête — livreur en cours d\'assignation'), backgroundColor: Colors.blue));
+        SnackBar(content: Text(Tr.s.commandeMarqueePreteLivreurCours), backgroundColor: Colors.blue));
   }
 }
 
@@ -170,8 +171,8 @@ class _ListeSousCommandes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (scs.isEmpty) return const Center(
-        child: Text('Aucune commande dans cette catégorie', style: TextStyle(color: Colors.grey)));
+    if (scs.isEmpty) return Center(
+        child: Text(Tr.s.aucuneCommandeDansCetteCategorie, style: TextStyle(color: Colors.grey)));
 
     return ListView.separated(
       padding: const EdgeInsets.all(12),
@@ -199,7 +200,7 @@ class _CarteSCBoutique extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Expanded(child: Text('Commande #${sc.id.substring(0,6).toUpperCase()}',
+            Expanded(child: Text(Tr.s.commande(sc.id.substring(0,6).toUpperCase()),
                 style: const TextStyle(fontWeight: FontWeight.bold))),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -223,7 +224,7 @@ class _CarteSCBoutique extends StatelessWidget {
                 Expanded(
                     child: Text(
                         sc.notesClient ??
-                            '✂️ COUTURE — à livrer chez le couturier',
+                            Tr.s.coutureLivrerChezCouturier,
                         style: TextStyle(
                             fontSize: 11.5, color: Colors.teal.shade900))),
               ]),
@@ -232,11 +233,10 @@ class _CarteSCBoutique extends StatelessWidget {
               style: TextStyle(
                   fontSize: 10.5, color: Colors.grey.shade600)),
           if (sc.articles.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 2),
               child: Text(
-                  '⚠️ Aucun article lisible — commande de test corrompue ? '
-                  'Annulez-la et refaites l\'essai.',
+                  Tr.s.aucunArticleLisibleCommandeTest,
                   style: TextStyle(fontSize: 11, color: Colors.orange)),
             ),
           ...sc.articles.map((item) => Padding(
@@ -296,7 +296,7 @@ class _CarteSCBoutique extends StatelessWidget {
           const Divider(height: 16),
           Row(children: [
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Net boutiquier : ${PrixFCFA.formater(sc.netBoutique)}',
+              Text(Tr.s.netBoutiquier(PrixFCFA.formater(sc.netBoutique)),
                   style: const TextStyle(fontWeight: FontWeight.bold, color: _kPrimary, fontSize: 14)),
               // QR DE REMISE : toujours proposé dès « Prête » — la
               // livraison réelle est cherchée AU TAP dans sa collection
@@ -316,9 +316,9 @@ class _CarteSCBoutique extends StatelessWidget {
                       if (!context.mounted) return;
                       if (q.docs.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                                 content: Text(
-                                    'L\'agent assigne un livreur — le QR sera prêt dans un instant.'),
+                                    Tr.s.agentAssigneLivreurQrSera),
                                 backgroundColor: Colors.orange));
                         return;
                       }
@@ -333,7 +333,7 @@ class _CarteSCBoutique extends StatelessWidget {
                       );
                     },
                     icon: const Icon(Icons.qr_code_2, size: 15),
-                    label: const Text('QR de remise au livreur',
+                    label: Text(Tr.s.qrRemiseLivreur,
                         style: TextStyle(fontSize: 11)),
                     style: TextButton.styleFrom(
                       foregroundColor: _kPrimary,

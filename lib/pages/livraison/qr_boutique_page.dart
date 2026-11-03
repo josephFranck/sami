@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:sami/services/qr_crypto_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -78,7 +79,7 @@ class _QrBoutiquePageState extends State<QrBoutiquePage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('QR de remise au livreur'),
+        title: Text(Tr.s.qrRemiseLivreur),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -90,12 +91,11 @@ class _QrBoutiquePageState extends State<QrBoutiquePage> {
 
   Widget _contenu() {
     if (_qrDepart == null) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
-              'QR indisponible. Vérifiez la connexion une première fois '
-              'pour le télécharger, il restera ensuite accessible hors-ligne.',
+              Tr.s.qrIndisponibleVerifiezConnexionPremiere,
               textAlign: TextAlign.center),
         ),
       );
@@ -105,13 +105,13 @@ class _QrBoutiquePageState extends State<QrBoutiquePage> {
       child: Column(
         children: [
           if (widget.referenceCommande != null)
-            Text('Commande ${widget.referenceCommande}',
+            Text(Tr.s.commande2(widget.referenceCommande),
                 style: TextStyle(color: Colors.grey.shade600)),
           const SizedBox(height: 16),
-          const Text('Montrez ce code au livreur',
+          Text(Tr.s.montrezCeCodeLivreur,
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text('Il le scanne pour confirmer la prise en charge du colis.',
+          Text(Tr.s.ilScannePourConfirmerPrise,
               style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
               textAlign: TextAlign.center),
           const SizedBox(height: 24),
@@ -147,7 +147,7 @@ class _QrBoutiquePageState extends State<QrBoutiquePage> {
               ),
               child: Column(
                 children: [
-                  Text('Code de secours',
+                  Text(Tr.s.codeSecours,
                       style: TextStyle(
                           fontSize: 12, color: Colors.grey.shade600)),
                   const SizedBox(height: 4),
@@ -162,14 +162,13 @@ class _QrBoutiquePageState extends State<QrBoutiquePage> {
             ),
             const SizedBox(height: 8),
             Text(
-                'Si le scan ne marche pas, dictez ce code au livreur.',
+                Tr.s.siScanNeMarchePas,
                 style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
                 textAlign: TextAlign.center),
           ],
           const SizedBox(height: 24),
           Text(
-              'Astuce : vous pouvez imprimer cet écran et coller le QR sur le '
-              'colis. Le livreur pourra le scanner même sans votre téléphone.',
+              Tr.s.astuceVousPouvezImprimerCet,
               style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
               textAlign: TextAlign.center),
         ],

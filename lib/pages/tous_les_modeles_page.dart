@@ -3,6 +3,7 @@ import 'package:sami/models/couture.dart';
 import 'package:sami/pages/couturier/commander_couture_page.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 import 'package:sami/widgets/image_universelle.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kOrange = Colors.deepOrange;
 
@@ -14,12 +15,12 @@ class TousLesModelesPage extends StatelessWidget {
   const TousLesModelesPage({super.key, this.filtreType});
 
   String _libelle(TypeVetement t) => switch (t) {
-        TypeVetement.boubou => '👘 Boubous',
-        TypeVetement.robe => '👗 Robes',
-        TypeVetement.chemise => '👔 Chemises',
-        TypeVetement.pantalon => '👖 Pantalons',
-        TypeVetement.jupe => '🩳 Jupes',
-        TypeVetement.ensemble => '🧥 Ensembles',
+        TypeVetement.boubou => Tr.s.boubous,
+        TypeVetement.robe => Tr.s.robes,
+        TypeVetement.chemise => Tr.s.chemises,
+        TypeVetement.pantalon => Tr.s.pantalons,
+        TypeVetement.jupe => Tr.s.jupes,
+        TypeVetement.ensemble => Tr.s.ensembles,
         _ => '✂️ ${t.name}',
       };
 
@@ -29,7 +30,7 @@ class TousLesModelesPage extends StatelessWidget {
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: Text(filtreType == null
-            ? 'Modèles de couture'
+            ? Tr.s.modelesCouture
             : _libelle(filtreType!)),
         backgroundColor: _kOrange,
         foregroundColor: Colors.white,
@@ -42,7 +43,7 @@ class TousLesModelesPage extends StatelessWidget {
         builder: (context, snap) {
           if (snap.hasError) {
             return Center(
-                child: Text('Erreur : ${snap.error}',
+                child: Text(Tr.s.erreur3(snap.error),
                     style: const TextStyle(fontSize: 12)));
           }
           if (!snap.hasData) {
@@ -56,8 +57,8 @@ class TousLesModelesPage extends StatelessWidget {
             } catch (_) {}
           }
           if (tous.isEmpty) {
-            return const Center(
-                child: Text('Aucun modèle publié pour le moment',
+            return Center(
+                child: Text(Tr.s.aucunModelePubliePourMoment,
                     style: TextStyle(color: Colors.grey)));
           }
           // ── VUE CATÉGORIE (Voir tout) : grille simple ──
@@ -107,7 +108,7 @@ class TousLesModelesPage extends StatelessWidget {
                               MaterialPageRoute(
                                   builder: (_) => TousLesModelesPage(
                                       filtreType: t))),
-                          child: const Text('Voir tout ›',
+                          child: Text(Tr.s.voirTout,
                               style: TextStyle(
                                   color: _kOrange,
                                   fontWeight: FontWeight.w600)),
@@ -157,7 +158,7 @@ class _CarteModele extends StatelessWidget {
                         child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text(
-                          'Pour commander ce modèle : choisissez un pagne, puis « Faire coudre ».',
+                          Tr.s.pourCommanderCeModeleChoisissez,
                           textAlign: TextAlign.center),
                     )),
                   ))),
@@ -193,7 +194,7 @@ class _CarteModele extends StatelessWidget {
                   fontSize: 12, fontWeight: FontWeight.w600)),
           Text(
               mo.surDevis
-                  ? 'Sur devis'
+                  ? Tr.s.surDevis
                   : PrixFCFA.formater(mo.prixBase),
               style: const TextStyle(
                   fontSize: 11.5,

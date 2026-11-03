@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:location/location.dart';
 import 'package:sami/services/stockage_service.dart';
+import 'package:sami/l10n/tr.dart';
 import 'package:sami/models/boutique.dart'; // Importez le modèle Boutique
 
 class AddBoutiquePage extends StatefulWidget {
@@ -89,15 +90,15 @@ class _AddBoutiquePageState extends State<AddBoutiquePage> {
     }
     if (!_accesAutorise) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Créer une boutique')),
+        appBar: AppBar(title: Text(Tr.s.creerBoutique)),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               const Icon(Icons.storefront_outlined, size: 56, color: Colors.grey),
               const SizedBox(height: 12),
-              const Text(
-                'Pour ouvrir votre boutique sur SAMI, déposez une candidature « Devenir partenaire » : c\'est sa validation qui crée votre boutique (vérification d\'identité et localisation incluses).',
+              Text(
+                Tr.s.pourOuvrirVotreBoutiqueSur,
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13.5),
               ),
@@ -106,7 +107,7 @@ class _AddBoutiquePageState extends State<AddBoutiquePage> {
                 onPressed: () => Navigator.pushReplacementNamed(
                     context, '/devenir-partenaire'),
                 icon: const Icon(Icons.how_to_reg_outlined),
-                label: const Text('Devenir partenaire'),
+                label: Text(Tr.s.devenirPartenaire),
               ),
             ]),
           ),
@@ -115,7 +116,7 @@ class _AddBoutiquePageState extends State<AddBoutiquePage> {
     }
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ajouter une boutique'),
+        title: Text(Tr.s.ajouterBoutique),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -125,12 +126,12 @@ class _AddBoutiquePageState extends State<AddBoutiquePage> {
             children: [
               TextField(
                 controller: _nomController,
-                decoration: const InputDecoration(labelText: 'Nom'),
+                decoration: InputDecoration(labelText: Tr.s.nom),
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _adresseController,
-                decoration: const InputDecoration(labelText: 'Adresse'),
+                decoration: InputDecoration(labelText: Tr.s.adresse),
               ),
               const SizedBox(height: 16.0),
               // Bouton de capture GPS de la boutique
@@ -143,32 +144,32 @@ class _AddBoutiquePageState extends State<AddBoutiquePage> {
                     : Icon(_latitude != null ? Icons.check_circle : Icons.my_location,
                         color: _latitude != null ? Colors.green : null),
                 label: Text(_latitude != null
-                    ? 'Position enregistrée ✓'
-                    : 'Capturer la position GPS de la boutique'),
+                    ? Tr.s.positionEnregistree
+                    : Tr.s.capturerPositionGpsBoutique),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _telephoneController,
-                decoration: const InputDecoration(labelText: 'Téléphone'),
+                decoration: InputDecoration(labelText: Tr.s.telephone),
                 keyboardType: TextInputType.phone, // Clavier numérique
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
+                decoration: InputDecoration(labelText: Tr.s.description),
                 maxLines: 3,
               ),
               const SizedBox(height: 16.0),
-              const Text("Gérants :"),
+              Text(Tr.s.gerants),
               _isLoadingUsers
                   ? const CircularProgressIndicator() // Afficher un indicateur de chargement
                   : _buildGerantDropdown(), // Liste déroulante des gérants
 
               const SizedBox(height: 16.0),
               // Sélection des méthodes de paiement (exemple avec CheckboxListTile)
-              const Text("Méthodes de paiement :"),
+              Text(Tr.s.methodesPaiement),
               CheckboxListTile(
-                title: const Text("Carte de crédit"),
+                title: Text(Tr.s.carteCredit),
                 value: _methodesPaiement.contains("carte"),
                 onChanged: (bool? value) {
                   setState(() {
@@ -181,7 +182,7 @@ class _AddBoutiquePageState extends State<AddBoutiquePage> {
                 },
               ),
               CheckboxListTile(
-                title: const Text("Espèces"),
+                title: Text(Tr.s.especes),
                 value: _methodesPaiement.contains("especes"),
                 onChanged: (bool? value) {
                   setState(() {
@@ -201,10 +202,10 @@ class _AddBoutiquePageState extends State<AddBoutiquePage> {
                 onPressed: () {
                   _selectImage();
                 },
-                child: const Text('Sélectionner un logo'),
+                child: Text(Tr.s.selectionnerLogo),
               ),
               const SizedBox(height: 16.0),
-              const Text('Logo sélectionné :'),
+              Text(Tr.s.logoSelectionne),
               const SizedBox(height: 8.0),
               _imageFile != null
                   ? ImageXFile(
@@ -224,7 +225,7 @@ class _AddBoutiquePageState extends State<AddBoutiquePage> {
                 onPressed: () {
                   _addBoutique();
                 },
-                child: const Text('Ajouter'),
+                child: Text(Tr.s.ajouter),
               ),
             ],
           ),
@@ -269,7 +270,7 @@ class _AddBoutiquePageState extends State<AddBoutiquePage> {
                 onFieldSubmitted();
               },
               decoration: InputDecoration(
-                hintText: 'Rechercher un gérant',
+                hintText: Tr.s.rechercherGerant,
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.clear),
                   onPressed: () {
@@ -330,16 +331,16 @@ class _AddBoutiquePageState extends State<AddBoutiquePage> {
         _captureGpsEnCours = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Position de la boutique enregistrée'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.positionBoutiqueEnregistree),
           backgroundColor: Colors.green,
         ));
       }
     } catch (e) {
       setState(() => _captureGpsEnCours = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Impossible de capter la position'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.impossibleCapterPosition),
           backgroundColor: Colors.red,
         ));
       }
@@ -393,15 +394,15 @@ class _AddBoutiquePageState extends State<AddBoutiquePage> {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: const Text('Erreur de chargement du logo'),
-              content: const Text(
-                  'Une erreur s\'est produite lors du chargement du logo. Veuillez réessayer.'),
+              title: Text(Tr.s.erreurChargementLogo),
+              content: Text(
+                  Tr.s.erreurSEstProduiteLors),
               actions: [
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
-                  child: const Text('Ok'),
+                  child: Text(Tr.s.ok),
                 ),
               ],
             );
@@ -418,15 +419,15 @@ class _AddBoutiquePageState extends State<AddBoutiquePage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('Boutique ajoutée'),
-            content: const Text('La boutique a été ajoutée avec succès.'),
+            title: Text(Tr.s.boutiqueAjoutee),
+            content: Text(Tr.s.boutiqueEteAjouteeAvecSucces),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                   Navigator.of(context).pop(); // Ferme la page d'ajout
                 },
-                child: const Text('Ok'),
+                child: Text(Tr.s.ok),
               ),
             ],
           );
@@ -438,15 +439,15 @@ class _AddBoutiquePageState extends State<AddBoutiquePage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('Erreur'),
-            content: const Text(
-                'Une erreur s\'est produite lors de l\'ajout de la boutique. Veuillez réessayer.'),
+            title: Text(Tr.s.erreur),
+            content: Text(
+                Tr.s.erreurSEstProduiteLors2),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: const Text('Ok'),
+                child: Text(Tr.s.ok),
               ),
             ],
           );

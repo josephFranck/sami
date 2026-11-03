@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sami/services/recu_service.dart';
 import 'package:sami/services/taxes_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SERVICE DE REVERSEMENT (admin)
@@ -79,7 +80,7 @@ class RepartitionPaiement {
       boutiqueId: d['boutiqueId'] as String?,
       livreurId: d['livreurId'] as String?,
       couturierId: d['couturierId'] as String?,
-      boutiqueNom: d['boutiqueNom'] as String? ?? 'Boutique',
+      boutiqueNom: d['boutiqueNom'] as String? ?? Tr.s.boutique,
       statut: d['statut'] as String? ?? '',
       boutiqueReversee: d['boutiqueReversee'] as bool? ?? false,
       livreurReverse: d['livreurReverse'] as bool? ?? false,
@@ -287,7 +288,7 @@ class ReversementService {
             await RecuService.creer(
               type: 'reversement', refId: r.commandeId,
               beneficiaireId: gerants.first,
-              beneficiaireNom: b.data()?['nom'] as String? ?? 'Boutique',
+              beneficiaireNom: b.data()?['nom'] as String? ?? Tr.s.boutique,
               montant: montant -
                   (await TaxesService.calculer(base: montant, cible: 'boutique')).$1,
               detail: 'Paiement pagne — commande couture ${r.commandeId.substring(0, r.commandeId.length.clamp(0, 8))}',

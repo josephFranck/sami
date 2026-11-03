@@ -20,6 +20,7 @@ import 'package:sami/widgets/connectivity_widgets.dart';
 import 'package:sami/models/commande_multi.dart';
 import 'package:sami/services/commande_multi_service.dart';
 import 'package:sami/pages/commandes/mes_commandes_page.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -208,7 +209,7 @@ class _PanierPageState extends State<PanierPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text('Panier (${_panier?.nombreArticles ?? 0})'),
+        title: Text(Tr.s.panier(_panier?.nombreArticles ?? 0)),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         actions: [
@@ -218,7 +219,7 @@ class _PanierPageState extends State<PanierPage> {
                 setState(() => _panier!.vider());
                 await _panier!.sauvegarder();
               },
-              child: const Text('Vider', style: TextStyle(color: Colors.white70)),
+              child: Text(Tr.s.vider, style: TextStyle(color: Colors.white70)),
             ),
         ],
       ),
@@ -239,15 +240,15 @@ class _PanierPageState extends State<PanierPage> {
       children: [
         Icon(Icons.shopping_bag_outlined, size: 80, color: Colors.grey.shade300),
         const SizedBox(height: 16),
-        const Text('Votre panier est vide', style: TextStyle(fontSize: 18, color: Colors.grey)),
+        Text(Tr.s.votrePanierEstVide, style: TextStyle(fontSize: 18, color: Colors.grey)),
         const SizedBox(height: 8),
-        const Text('Explorez nos pagnes et ajoutez vos favoris',
+        Text(Tr.s.explorezNosPagnesAjoutezVos,
             style: TextStyle(color: Colors.grey, fontSize: 13)),
         const SizedBox(height: 24),
         ElevatedButton(
           onPressed: () => Navigator.pushNamed(context, '/pagnepage'),
           style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
-          child: const Text('Voir les pagnes'),
+          child: Text(Tr.s.voirPagnes),
         ),
       ],
     ),
@@ -286,18 +287,18 @@ class _PanierPageState extends State<PanierPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Options de livraison',
+          Text(Tr.s.optionsLivraison,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 10),
           // Mode récupération
           DropdownButtonFormField<String>(
             value: _modeRecuperation,
-            decoration: _inputDeco('Mode de récupération'),
+            decoration: _inputDeco(Tr.s.modeRecuperation),
             items: [
-              const DropdownMenuItem(value: 'livreurVaBoutique', child: Text('Livraison à domicile')),
+              DropdownMenuItem(value: 'livreurVaBoutique', child: Text(Tr.s.livraisonDomicile)),
               if (_retraitPossible)
-                const DropdownMenuItem(value: 'retraitClient', child: Text('Retrait en boutique')),
-              const DropdownMenuItem(value: 'couturierLuiMeme', child: Text('Livraison couturier')),
+                DropdownMenuItem(value: 'retraitClient', child: Text(Tr.s.retraitBoutique)),
+              DropdownMenuItem(value: 'couturierLuiMeme', child: Text(Tr.s.livraisonCouturier)),
             ],
             onChanged: (v) => setState(() {
               _modeRecuperation = v!;
@@ -314,7 +315,7 @@ class _PanierPageState extends State<PanierPage> {
                 child: TextField(
                   controller: _adresseCtrl,
                   decoration: _inputDeco(
-                      'Adresse (quartier, repère, portail…)'),
+                      Tr.s.adresseQuartierReperePortail),
                   onChanged: (v) => _adresseLivraison = v,
                 ),
               ),
@@ -344,20 +345,20 @@ class _PanierPageState extends State<PanierPage> {
                         : Icons.where_to_vote,
                     size: 18,
                     color: _positionLivraison == null ? null : Colors.green),
-                label: Text(_positionLivraison == null ? '📍 Ma position sur la carte' : '✅ Position fixée',
+                label: Text(_positionLivraison == null ? Tr.s.maPositionSurCarte : Tr.s.positionFixee,
                     style: const TextStyle(fontSize: 12)),
               ),
             ]),
           ],
           const SizedBox(height: 12),
           // ═══ MODE DE PAIEMENT : explicite, avec le numéro qui paiera ═══
-          const Text('Mode de paiement',
+          Text(Tr.s.modePaiement,
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
           RadioListTile<String>(
             dense: true,
             value: 'mobile_money',
             groupValue: _methodePaiement,
-            title: const Text('📱 Mobile Money (Orange / MTN)',
+            title: Text(Tr.s.mobileMoneyOrangeMtn,
                 style: TextStyle(fontSize: 13.5)),
             onChanged: (v) => { setState(() => _methodePaiement = v!); _recalculerDevis(); },
           ),
@@ -368,7 +369,7 @@ class _PanierPageState extends State<PanierPage> {
                 controller: _numeroPaiementCtrl,
                 keyboardType: TextInputType.phone,
                 maxLength: 9,
-                decoration: _inputDeco('Numéro qui paiera (6XX XX XX XX)')
+                decoration: _inputDeco(Tr.s.numeroQuiPaiera6xxXx)
                     .copyWith(counterText: '', prefixText: '+237 '),
               ),
             ),
@@ -385,13 +386,13 @@ class _PanierPageState extends State<PanierPage> {
               groupValue: _methodePaiement,
               title: Text(
                   _modeRecuperation == 'retraitClient'
-                      ? '💵 Espèces au retrait en boutique'
-                      : '💵 Espèces à la livraison',
+                      ? Tr.s.especesRetraitBoutique
+                      : Tr.s.especesLivraison,
                   style: const TextStyle(fontSize: 13.5)),
               subtitle: _cashAutorise
                   ? null
                   : Text(
-                      "🔒 Réservé aux abonnés — souscrivez à un abonnement pour payer à la livraison. Sans abonnement, le paiement se fait à la validation.",
+                      Tr.s.reserveAbonnesSouscrivezAbonnementPour,
                       style: const TextStyle(fontSize: 11, color: Colors.orange)),
               onChanged: _cashAutorise
                   ? (v) => { setState(() => _methodePaiement = v!); _recalculerDevis(); }
@@ -402,10 +403,10 @@ class _PanierPageState extends State<PanierPage> {
               dense: true,
               value: 'momo_declare',
               groupValue: _methodePaiement,
-              title: const Text('📲 Transfert MoMo/OM (à déclarer)',
+              title: Text(Tr.s.transfertMomoOmDeclarer,
                   style: TextStyle(fontSize: 13.5)),
-              subtitle: const Text(
-                  '0 % de frais — vérifié par notre équipe avant préparation',
+              subtitle: Text(
+                  Tr.s.k0FraisVerifieParNotre,
                   style: TextStyle(fontSize: 11)),
               onChanged: (v) => { setState(() => _methodePaiement = v!); _recalculerDevis(); },
             ),
@@ -423,18 +424,14 @@ class _PanierPageState extends State<PanierPage> {
                     Text(
                         // montant du DEVIS (articles + livraison + supplément),
                         // pas le seul total des articles
-                        '1️⃣ Transférez ${PrixFCFA.formater(_totalAPayer)} à :'
-                        '${_numMtn.isNotEmpty ? '\n     MTN MoMo : $_numMtn' : ''}'
-                        '${_numOm.isNotEmpty ? '\n     Orange Money : $_numOm' : ''}'
-                        '${_titulaire.isNotEmpty ? '\n     (Titulaire : $_titulaire)' : ''}'
-                        '\n2️⃣ Collez la RÉFÉRENCE du SMS ci-dessous :',
+                        Tr.s.k1Transferez2CollezReference2(PrixFCFA.formater(_totalAPayer), _numMtn.isNotEmpty ? '\n     MTN MoMo : $_numMtn' : '', _numOm.isNotEmpty ? '\n     Orange Money : $_numOm' : '', _titulaire.isNotEmpty ? '\n     (Titulaire : $_titulaire)' : ''),
                         style: const TextStyle(fontSize: 12, height: 1.5)),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _refDeclCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Référence de la transaction *',
-                        hintText: 'Ex : 8123456789',
+                      decoration: InputDecoration(
+                        labelText: Tr.s.referenceTransaction,
+                        hintText: Tr.s.ex8123456789,
                         isDense: true,
                         border: OutlineInputBorder(),
                       ),
@@ -449,14 +446,14 @@ class _PanierPageState extends State<PanierPage> {
               dense: true,
               value: 'credits',
               groupValue: _methodePaiement,
-              title: Text('🪙 Mes avoirs (crédits)',
+              title: Text(Tr.s.mesAvoirsCredits,
                   style: TextStyle(
                       fontSize: 13.5,
                       color: suffisant ? null : Colors.grey)),
               subtitle: Text(
                   suffisant
-                      ? 'Avoir disponible : ${PrixFCFA.formater(_soldeCredits)} — sans frais Mobile Money'
-                      : 'Avoir insuffisant (${PrixFCFA.formater(_soldeCredits)}) — payez Mobile Money',
+                      ? Tr.s.avoirDisponibleSansFraisMobile(PrixFCFA.formater(_soldeCredits))
+                      : Tr.s.avoirInsuffisantPayezMobileMoney(PrixFCFA.formater(_soldeCredits)),
                   style: TextStyle(
                       fontSize: 11,
                       color: suffisant
@@ -483,22 +480,22 @@ class _PanierPageState extends State<PanierPage> {
       padding: const EdgeInsets.all(14),
       child: Column(
         children: [
-          _LigneRecap('Sous-total', PrixFCFA.formater(_devis?.totalArticles ?? _panier!.sousTotal)),
+          _LigneRecap(Tr.s.sousTotal, PrixFCFA.formater(_devis?.totalArticles ?? _panier!.sousTotal)),
           if (_devis != null) ...[
             _LigneRecap(
-                'Livraison (${_devis!.nombreBoutiques} boutique${_devis!.nombreBoutiques > 1 ? "s" : ""})',
+                Tr.s.livraisonBoutique(_devis!.nombreBoutiques, _devis!.nombreBoutiques > 1 ? "s" : ""),
                 PrixFCFA.formater(_devis!.totalLivraisonsBrut - _devis!.totalSupplementsHorsZone)),
             if (_devis!.aSupplementHorsZone)
-              _LigneRecap('Supplément hors zone (> ${_devis!.rayonZoneKm.toStringAsFixed(0)} km)',
+              _LigneRecap(Tr.s.supplementHorsZoneKm(_devis!.rayonZoneKm.toStringAsFixed(0)),
                   PrixFCFA.formater(_devis!.totalSupplementsHorsZone)),
             if (_devis!.totalReductionF > 0)
-              _LigneRecap('Réduction fidélité (-${_devis!.reductionLivraisonPct.toStringAsFixed(0)} %)',
+              _LigneRecap(Tr.s.reductionFidelite(_devis!.reductionLivraisonPct.toStringAsFixed(0)),
                   '- ${PrixFCFA.formater(_devis!.totalReductionF)}'),
             if (_devis!.totalFraisPaiement > 0)
-              _LigneRecap('Frais Mobile Money (${_devis!.fraisMoMoPct.toStringAsFixed(1)} %)',
+              _LigneRecap(Tr.s.fraisMobileMoney(_devis!.fraisMoMoPct.toStringAsFixed(1)),
                   PrixFCFA.formater(_devis!.totalFraisPaiement)),
           ] else
-            _LigneRecap('Livraison', _devisEnCours ? 'calcul…' : PrixFCFA.formater(_panier!.fraisLivraison)),
+            _LigneRecap(Tr.s.livraison2, _devisEnCours ? Tr.s.calcul : PrixFCFA.formater(_panier!.fraisLivraison)),
           const Divider(height: 16),
           // TAXES CLIENT (si l'admin en a activé pour la cible 'client')
           FutureBuilder<(double, List<Map<String, dynamic>>)>(
@@ -508,14 +505,14 @@ class _PanierPageState extends State<PanierPage> {
               final t = s2.data?.$1 ?? 0;
               if (t <= 0) return const SizedBox.shrink();
               return Column(children: [
-                _LigneRecap('Taxes', PrixFCFA.formater(t)),
-                _LigneRecap('Total TTC',
+                _LigneRecap(Tr.s.taxes, PrixFCFA.formater(t)),
+                _LigneRecap(Tr.s.totalTtc,
                     PrixFCFA.formater(_totalAPayer + t),
                     bold: true),
               ]);
             },
           ),
-          _LigneRecap('Total', PrixFCFA.formater(_totalAPayer), bold: true),
+          _LigneRecap(Tr.s.total, PrixFCFA.formater(_totalAPayer), bold: true),
           // FIDÉLITÉ : ce que cet achat rapporte (marketing léger)
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -523,7 +520,7 @@ class _PanierPageState extends State<PanierPage> {
               Icon(Icons.stars, size: 13, color: Colors.amber.shade700),
               const SizedBox(width: 4),
               Text(
-                  '≈ ${(_totalAPayer / 1000).floor()} points fidélité à gagner',
+                  Tr.s.pointsFideliteGagner((_totalAPayer / 1000).floor()),
                   style: TextStyle(
                       fontSize: 11, color: Colors.grey.shade600)),
             ]),
@@ -547,7 +544,7 @@ class _PanierPageState extends State<PanierPage> {
       child: _commande
           ? const SizedBox(width: 20, height: 20,
               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-          : Text('Commander · ${PrixFCFA.formater(_totalAPayer)} — ${List.of(_panier!.items).map((i) => i.boutiqueId).toSet().length} boutique(s)',
+          : Text(Tr.s.commanderBoutiqueS(PrixFCFA.formater(_totalAPayer), List.of(_panier!.items).map((i) => i.boutiqueId).toSet().length),
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
     ),
   );
@@ -555,8 +552,8 @@ class _PanierPageState extends State<PanierPage> {
   Future<void> _passerCommande() async {
     if (_methodePaiement == 'mobile_money' &&
         _numeroPaiementCtrl.text.trim().length < 9) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Précisez le numéro Mobile Money qui paiera (9 chiffres)'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.precisezNumeroMobileMoneyQui),
           backgroundColor: Colors.red));
       return;
     }
@@ -564,7 +561,7 @@ class _PanierPageState extends State<PanierPage> {
         _adresseLivraison.trim().isEmpty &&
         _positionLivraison == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Entrez une adresse OU posez le point sur la carte'), backgroundColor: Colors.red),
+        SnackBar(content: Text(Tr.s.entrezAdresseOuPosezPoint), backgroundColor: Colors.red),
       );
       return;
     }
@@ -573,9 +570,9 @@ class _PanierPageState extends State<PanierPage> {
     // en Dart, les variables d'un bloc try sont INVISIBLES de son catch.
     if (_methodePaiement == 'momo_declare' &&
         _refDeclCtrl.text.trim().length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
-              'Collez la référence du SMS de transfert (au moins 6 caractères).'),
+              Tr.s.collezReferenceSmsTransfertMoins),
           backgroundColor: Colors.orange));
       setState(() => _commande = false);
       return;
@@ -623,7 +620,7 @@ class _PanierPageState extends State<PanierPage> {
         } catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Paiement en crédits impossible : $e'),
+                content: Text(Tr.s.paiementCreditsImpossible(e)),
                 backgroundColor: Colors.red));
             setState(() => _commande = false);
           }
@@ -655,9 +652,9 @@ class _PanierPageState extends State<PanierPage> {
         );
         if (ok != true) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(
-                    'Paiement non confirmé — la commande n\'a pas été créée.'),
+                    Tr.s.paiementNonConfirmeCommandeN),
                 backgroundColor: Colors.orange));
             setState(() => _commande = false);
           }
@@ -669,8 +666,7 @@ class _PanierPageState extends State<PanierPage> {
         panier: _panier!,
         clientId: widget.utilisateur.id,
         adresseLivraison: _positionLivraison != null
-            ? '${_adresseLivraison.trim().isEmpty ? "Position GPS" : _adresseLivraison} '
-                '[GPS ${_positionLivraison!.latitude.toStringAsFixed(6)},${_positionLivraison!.longitude.toStringAsFixed(6)}]'
+            ? Tr.s.gps(_adresseLivraison.trim().isEmpty ? "Position GPS" : _adresseLivraison, _positionLivraison!.latitude.toStringAsFixed(6), _positionLivraison!.longitude.toStringAsFixed(6))
             : _adresseLivraison,
         refPaiement: _methodePaiement == 'momo_declare'
             ? _refDeclCtrl.text.trim()
@@ -694,13 +690,12 @@ class _PanierPageState extends State<PanierPage> {
           barrierDismissible: false,
           builder: (_) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Row(children: [
+            title: Row(children: [
               Icon(Icons.check_circle, color: Colors.green, size: 28),
               SizedBox(width: 8),
-              Text('Commande passée !'),
+              Text(Tr.s.commandePassee),
             ]),
-            content: Text('Commande #${session.id.substring(0,6).toUpperCase()} créée.\n${session.nombreBoutiques} boutique(s) notifiée(s) — livraison en cours de planification.\n\n'
-                'Ceci vaut accusé de réception. Droit de rétractation : 15 jours après réception pour les pagnes (hors couture sur mesure) — voir « Informations légales ».'),
+            content: Text(Tr.s.commandeCreeeBoutiqueSNotifiee(session.id.substring(0,6).toUpperCase(), session.nombreBoutiques)),
             actions: [
               ElevatedButton(
                 onPressed: () {
@@ -711,7 +706,7 @@ class _PanierPageState extends State<PanierPage> {
                   Navigator.of(context).pushNamed('/commandes');
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
-                child: const Text('Voir mes commandes'),
+                child: Text(Tr.s.voirMesCommandes),
               ),
             ],
           ),
@@ -751,8 +746,8 @@ class _PanierPageState extends State<PanierPage> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(creditsDebites > 0
-                ? 'Erreur : $e\nVos crédits (${PrixFCFA.formater(creditsDebites)}) seront re-crédités par notre équipe.'
-                : 'Erreur : $e'),
+                ? Tr.s.erreurVosCreditsSerontRe(e, PrixFCFA.formater(creditsDebites))
+                : Tr.s.erreur2(e)),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 10)),
       );
@@ -845,7 +840,7 @@ class _CarteItem extends StatelessWidget {
                           ),
                         ),
                         icon: const Icon(Icons.content_cut, size: 15),
-                        label: const Text('Faire coudre',
+                        label: Text(Tr.s.faireCoudre,
                             style: TextStyle(fontSize: 12)),
                         style: TextButton.styleFrom(
                           foregroundColor: const Color(0xFF6A1B9A),

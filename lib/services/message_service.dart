@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:sami/pages/chat/conversation_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SERVICE DE MESSAGERIE — Optimisé coûts Firestore
@@ -270,7 +271,7 @@ class ConversationLocale {
 
   String get moi => FirebaseAuth.instance.currentUser!.uid;
   String get autreUserId => participants.firstWhere((p) => p != moi, orElse: () => '');
-  String get autreNom => participantNoms[autreUserId] ?? 'Utilisateur';
+  String get autreNom => participantNoms[autreUserId] ?? Tr.s.utilisateur;
   String get autrePhoto => participantPhotos[autreUserId] ?? '';
   int get nonLusMoi => nonLus[moi] ?? 0;
   bool get aMessageNonLu => nonLusMoi > 0;

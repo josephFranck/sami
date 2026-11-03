@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sami/widgets/image_universelle.dart';
 import 'package:sami/models/avis.dart';
 import 'package:sami/services/notation_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kAccent  = Color(0xFFFF8F00);
@@ -79,14 +80,14 @@ class _WidgetSoumettreAvisState extends State<WidgetSoumettreAvis> {
           Icon(_icone(widget.cible), color: _kPrimary, size: 20),
           const SizedBox(width: 8),
           Expanded(child: Text(
-            'Évaluer ${widget.cibleNom}',
+            Tr.s.evaluer(widget.cibleNom),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           )),
         ]),
         const SizedBox(height: 16),
 
         // Étoiles principales
-        const Text('Note globale *', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(Tr.s.noteGlobale, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
         const SizedBox(height: 8),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           ...List.generate(5, (i) => GestureDetector(
@@ -112,7 +113,7 @@ class _WidgetSoumettreAvisState extends State<WidgetSoumettreAvis> {
         // Sous-critères
         if (_sousCriteres.isNotEmpty && _note > 0) ...[
           const SizedBox(height: 20),
-          const Text('Détail (optionnel)',
+          Text(Tr.s.detailOptionnel,
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey)),
           const SizedBox(height: 10),
           ..._sousCriteres.map((critere) => Padding(
@@ -177,16 +178,16 @@ class _WidgetSoumettreAvisState extends State<WidgetSoumettreAvis> {
             child: _enCours
                 ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
                 : Text(
-                    _note == 0 ? 'Sélectionnez une note' : 'Publier mon avis',
+                    _note == 0 ? Tr.s.selectionnezNote : Tr.s.publierMonAvis,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
           ),
         ),
         if (_note == 0)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 6),
             child: Center(child: Text(
-              'Appuyez sur les étoiles pour noter',
+              Tr.s.appuyezSurEtoilesPourNoter,
               style: TextStyle(fontSize: 11, color: Colors.grey),
             )),
           ),
@@ -204,10 +205,10 @@ class _WidgetSoumettreAvisState extends State<WidgetSoumettreAvis> {
     child: Column(children: [
       const Icon(Icons.check_circle, color: Colors.green, size: 48),
       const SizedBox(height: 12),
-      const Text('Merci pour votre avis !',
+      Text(Tr.s.merciPourVotreAvis,
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green)),
       const SizedBox(height: 6),
-      const Text('Il sera visible après vérification.',
+      Text(Tr.s.ilSeraVisibleApresVerification,
           style: TextStyle(fontSize: 12, color: Colors.grey)),
     ]),
   );
@@ -251,19 +252,19 @@ class _WidgetSoumettreAvisState extends State<WidgetSoumettreAvis> {
   };
 
   String _hintCommentaire(CibleAvis c) => switch (c) {
-    CibleAvis.pagne     => 'La qualité du tissu, les couleurs, la coupe...',
-    CibleAvis.boutique  => 'Le service, la réactivité, les produits...',
-    CibleAvis.couturier => 'La précision, le respect des délais, le résultat...',
-    CibleAvis.livreur   => 'La rapidité, le soin du colis, la politesse...',
-    CibleAvis.client    => 'La disponibilité, le sérieux...',
+    CibleAvis.pagne     => Tr.s.qualiteTissuCouleursCoupe,
+    CibleAvis.boutique  => Tr.s.serviceReactiviteProduits,
+    CibleAvis.couturier => Tr.s.precisionRespectDelaisResultat,
+    CibleAvis.livreur   => Tr.s.rapiditeSoinColisPolitesse,
+    CibleAvis.client    => Tr.s.disponibiliteSerieux,
   };
 
   String _labelNote(int n) => switch (n) {
-    1 => '😞 Très mauvais',
-    2 => '😐 Mauvais',
-    3 => '🙂 Correct',
-    4 => '😊 Bien',
-    5 => '🤩 Excellent !',
+    1 => Tr.s.tresMauvais,
+    2 => Tr.s.mauvais,
+    3 => Tr.s.correct,
+    4 => Tr.s.bien,
+    5 => Tr.s.excellent,
     _ => '',
   };
 }
@@ -295,7 +296,7 @@ class WidgetAffichageNotes extends StatelessWidget {
         final resume = snap.data!;
         if (!resume.aDesAvis) {
           return compact ? const SizedBox.shrink()
-              : const Text('Aucun avis pour le moment',
+              : Text(Tr.s.aucunAvisPourMoment,
                   style: TextStyle(color: Colors.grey, fontSize: 12));
         }
 
@@ -319,7 +320,7 @@ class WidgetAffichageNotes extends StatelessWidget {
             const SizedBox(width: 10),
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               _EtoilesRow(note: resume.moyenne),
-              Text('${resume.nombre} avis',
+              Text(Tr.s.avis(resume.nombre),
                   style: const TextStyle(fontSize: 12, color: Colors.grey)),
             ]),
           ]),
@@ -411,9 +412,9 @@ class WidgetListeAvis extends StatelessWidget {
         if (snap.connectionState == ConnectionState.waiting)
           return const Center(child: CircularProgressIndicator(color: _kPrimary));
         if (!snap.hasData || snap.data!.isEmpty)
-          return const Padding(
+          return Padding(
             padding: EdgeInsets.all(16),
-            child: Text('Aucun avis publié pour le moment.',
+            child: Text(Tr.s.aucunAvisPubliePourMoment,
                 style: TextStyle(color: Colors.grey, fontSize: 13)),
           );
 
@@ -467,7 +468,7 @@ class _CarteAvis extends StatelessWidget {
                   color: Colors.green.shade50,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text('✓ Achat vérifié',
+                child: Text(Tr.s.achatVerifie,
                     style: TextStyle(fontSize: 9, color: Colors.green.shade700,
                         fontWeight: FontWeight.bold)),
               ),
@@ -523,7 +524,7 @@ class _CarteAvis extends StatelessWidget {
           child: TextButton.icon(
             onPressed: () => _signaler(context),
             icon: const Icon(Icons.flag_outlined, size: 12, color: Colors.grey),
-            label: const Text('Signaler', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            label: Text(Tr.s.signaler, style: TextStyle(fontSize: 11, color: Colors.grey)),
             style: TextButton.styleFrom(
               padding: EdgeInsets.zero,
               minimumSize: Size.zero,
@@ -539,12 +540,12 @@ class _CarteAvis extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Signaler cet avis'),
-        content: const Text('Cet avis vous semble faux ou abusif ?'),
+        title: Text(Tr.s.signalerCetAvis),
+        content: Text(Tr.s.cetAvisVousSembleFaux),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(Tr.s.annuler),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -555,15 +556,15 @@ class _CarteAvis extends StatelessWidget {
               );
               if (context.mounted) {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Signalement envoyé — merci'),
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(Tr.s.signalementEnvoyeMerci),
                   backgroundColor: Colors.orange,
                 ));
               }
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange, foregroundColor: Colors.white),
-            child: const Text('Signaler'),
+            child: Text(Tr.s.signaler),
           ),
         ],
       ),

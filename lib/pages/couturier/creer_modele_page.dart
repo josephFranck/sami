@@ -8,10 +8,13 @@ import 'package:sami/widgets/image_universelle.dart';
 import 'package:sami/models/couture.dart';
 import 'package:sami/models/couture_options.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/services/langue_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kBg = Color(0xFFF7F5FA);
-const _lang = Langue.fr;
+// Langue des libellés de modèles/mesures (catalogues FR/EN) : celle de l'app.
+Langue get _lang => LangueService.instance.estAnglais ? Langue.en : Langue.fr;
 
 /// Création / édition d'un modèle de couture par le couturier.
 /// Supporte les DEUX modes : prix fixe OU sur devis (prix négocié après demande).
@@ -116,20 +119,20 @@ class _CreerModelePageState extends State<CreerModelePage> {
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
-        title: Text(edition ? 'Modifier le modèle' : 'Nouveau modèle'),
+        title: Text(edition ? Tr.s.modifierModele : Tr.s.nouveauModele),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _label('Nom du modèle'),
+          _label(Tr.s.nomModele),
           TextField(
             controller: _nomCtrl,
-            decoration: _deco('ex: Boubou brodé grand modèle'),
+            decoration: _deco(Tr.s.exBoubouBrodeGrandModele),
           ),
           const SizedBox(height: 16),
-          _label('Type de vêtement'),
+          _label(Tr.s.typeVetement),
           Wrap(
             spacing: 8,
             children: TypeVetement.values.map((t) {
@@ -143,11 +146,11 @@ class _CreerModelePageState extends State<CreerModelePage> {
             }).toList(),
           ),
           const SizedBox(height: 16),
-          _label('Description (optionnel)'),
+          _label(Tr.s.descriptionOptionnel),
           TextField(
             controller: _descCtrl,
             maxLines: 2,
-            decoration: _deco('Détails, finitions, tissus conseillés…'),
+            decoration: _deco(Tr.s.detailsFinitionsTissusConseilles),
           ),
           const SizedBox(height: 20),
 
@@ -166,7 +169,7 @@ class _CreerModelePageState extends State<CreerModelePage> {
                   contentPadding: EdgeInsets.zero,
                   title: Row(
                     children: [
-                      const Text('Sur devis'),
+                      Text(Tr.s.surDevis),
                       if (!_negociationAutorisee) ...[
                         const SizedBox(width: 6),
                         const Icon(Icons.lock_outline,
@@ -176,10 +179,10 @@ class _CreerModelePageState extends State<CreerModelePage> {
                   ),
                   subtitle: Text(
                       !_negociationAutorisee
-                          ? 'Réservé aux abonnements Professionnel et Expert'
+                          ? Tr.s.reserveAbonnementsProfessionnelExpert
                           : _surDevis
-                              ? 'Le prix sera négocié après la demande du client'
-                              : 'Prix fixe affiché au client',
+                              ? Tr.s.prixSeraNegocieApresDemande
+                              : Tr.s.prixFixeAfficheClient,
                       style: const TextStyle(fontSize: 12)),
                   onChanged: !_negociationAutorisee
                       ? null
@@ -193,32 +196,32 @@ class _CreerModelePageState extends State<CreerModelePage> {
                           Navigator.pushNamed(context, '/abonnements'),
                       icon: const Icon(Icons.workspace_premium,
                           size: 16, color: _kPrimary),
-                      label: const Text('Débloquer la négociation',
+                      label: Text(Tr.s.debloquerNegociation,
                           style: TextStyle(fontSize: 12, color: _kPrimary)),
                     ),
                   ),
                 const SizedBox(height: 8),
-                _label(_surDevis ? 'Prix indicatif (à partir de)' : 'Prix fixe'),
+                _label(_surDevis ? Tr.s.prixIndicatifPartir : Tr.s.prixFixe),
                 TextField(
                   controller: _prixCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: _deco('ex: 8000').copyWith(suffixText: 'FCFA'),
+                  decoration: _deco(Tr.s.ex8000).copyWith(suffixText: 'FCFA'),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
-          _label('Délai de confection (jours)'),
+          _label(Tr.s.delaiConfectionJours),
           TextField(
             controller: _delaiCtrl,
             keyboardType: TextInputType.number,
-            decoration: _deco('ex: 3'),
+            decoration: _deco(Tr.s.ex3),
           ),
           const SizedBox(height: 20),
 
-          _label('Photos du modèle (exemples)'),
-          const Text('Montrez vos réalisations pour attirer les clients.',
+          _label(Tr.s.photosModeleExemples),
+          Text(Tr.s.montrezVosRealisationsPourAttirer,
               style: TextStyle(fontSize: 12, color: Colors.grey)),
           const SizedBox(height: 8),
           SizedBox(
@@ -266,8 +269,8 @@ class _CreerModelePageState extends State<CreerModelePage> {
             ),
           const SizedBox(height: 20),
 
-          _label('Mesures nécessaires'),
-          const Text('Cochez les mesures dont vous avez besoin pour ce modèle.',
+          _label(Tr.s.mesuresNecessaires),
+          Text(Tr.s.cochezMesuresDontVousAvez,
               style: TextStyle(fontSize: 12, color: Colors.grey)),
           const SizedBox(height: 8),
           ...DefinitionMesure.catalogue.entries.map((e) {
@@ -289,7 +292,7 @@ class _CreerModelePageState extends State<CreerModelePage> {
           }),
           const SizedBox(height: 16),
 
-          _label('Comment prenez-vous les mesures ?'),
+          _label(Tr.s.commentPrenezVousMesures),
           ...ModeRencontre.values.map((m) {
             return CheckboxListTile(
               dense: true,
@@ -321,7 +324,7 @@ class _CreerModelePageState extends State<CreerModelePage> {
                     height: 20,
                     child: CircularProgressIndicator(
                         color: Colors.white, strokeWidth: 2))
-                : Text(edition ? 'Enregistrer' : 'Publier le modèle'),
+                : Text(edition ? Tr.s.enregistrer : Tr.s.publierModele),
           ),
         ],
       ),
@@ -344,20 +347,20 @@ class _CreerModelePageState extends State<CreerModelePage> {
   Future<void> _enregistrer() async {
     final nom = _nomCtrl.text.trim();
     if (nom.isEmpty) {
-      _snack('Donnez un nom au modèle');
+      _snack(Tr.s.donnezNomModele);
       return;
     }
     final prix = double.tryParse(_prixCtrl.text.replaceAll(',', '.')) ?? 0;
     if (!_surDevis && prix <= 0) {
-      _snack('Indiquez un prix (ou activez « Sur devis »)');
+      _snack(Tr.s.indiquezPrixOuActivezSur);
       return;
     }
     if (_mesures.isEmpty && !_modes.contains(ModeRencontre.clientVientCouturier)) {
-      _snack('Choisissez au moins une mesure, ou la prise de mesures en personne');
+      _snack(Tr.s.choisissezMoinsMesureOuPrise);
       return;
     }
     if (_modes.isEmpty) {
-      _snack('Choisissez au moins un mode de prise de mesures');
+      _snack(Tr.s.choisissezMoinsModePriseMesures);
       return;
     }
 
@@ -369,8 +372,7 @@ class _CreerModelePageState extends State<CreerModelePage> {
             .where('couturierId', isEqualTo: widget.couturierId)
             .get();
         if (q.docs.length >= _limiteModeles) {
-          _snack('Limite atteinte ($_limiteModeles modèles). '
-              'Passez à un abonnement supérieur pour en publier plus.');
+          _snack(Tr.s.limiteAtteinteModelesPassezAbonnement(_limiteModeles));
           if (mounted) {
             Navigator.pushNamed(context, '/abonnements');
           }
@@ -394,7 +396,7 @@ class _CreerModelePageState extends State<CreerModelePage> {
       } catch (e) {
         if (mounted) {
           setState(() => _enCours = false);
-          _snack('Erreur lors de l\'envoi des photos');
+          _snack(Tr.s.erreurLorsEnvoiPhotos);
         }
         return;
       }
@@ -422,14 +424,14 @@ class _CreerModelePageState extends State<CreerModelePage> {
           .set(modele.toMap(), SetOptions(merge: true));
       if (mounted) {
         _snack(widget.modeleExistant != null
-            ? 'Modèle mis à jour'
-            : 'Modèle publié');
+            ? Tr.s.modeleMisJour
+            : Tr.s.modelePublie);
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         setState(() => _enCours = false);
-        _snack('Erreur lors de l\'enregistrement');
+        _snack(Tr.s.erreurLorsEnregistrement);
       }
     }
   }
@@ -475,21 +477,21 @@ class _CreerModelePageState extends State<CreerModelePage> {
       );
 
   String _typeLabel(TypeVetement t) => switch (t) {
-        TypeVetement.boubou => 'Boubou',
-        TypeVetement.gandoura => 'Gandoura',
-        TypeVetement.robe => 'Robe',
-        TypeVetement.costume => 'Costume',
-        TypeVetement.chemise => 'Chemise',
-        TypeVetement.jupe => 'Jupe',
-        TypeVetement.pantalon => 'Pantalon',
-        TypeVetement.ensemble => 'Ensemble',
-        TypeVetement.autre => 'Autre',
+        TypeVetement.boubou => Tr.s.boubou,
+        TypeVetement.gandoura => Tr.s.gandoura,
+        TypeVetement.robe => Tr.s.robe,
+        TypeVetement.costume => Tr.s.costume,
+        TypeVetement.chemise => Tr.s.chemise,
+        TypeVetement.jupe => Tr.s.jupe,
+        TypeVetement.pantalon => Tr.s.pantalon,
+        TypeVetement.ensemble => Tr.s.ensemble,
+        TypeVetement.autre => Tr.s.autre,
       };
 
   String _modeLabel(ModeRencontre m) => switch (m) {
         ModeRencontre.clientVientCouturier =>
-          'Le client vient (je prends ses mesures)',
-        ModeRencontre.couturierVaClient => 'Je me déplace chez le client',
-        ModeRencontre.enLigne => 'Le client saisit ses mesures en ligne',
+          Tr.s.clientVientJePrendsSes,
+        ModeRencontre.couturierVaClient => Tr.s.jeMeDeplaceChezClient,
+        ModeRencontre.enLigne => Tr.s.clientSaisitSesMesuresLigne,
       };
 }

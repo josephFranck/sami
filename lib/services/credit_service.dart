@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SERVICE CENTRALISÉ CRÉDITS & ABONNEMENTS
@@ -119,7 +120,7 @@ class CreditService {
         soldeAvant: soldeAvant,
         soldeApres: soldeApres,
         description: montantTotal != montant
-            ? '$description (+${bonusPct.round()}% bonus)'
+            ? Tr.s.bonus(description, bonusPct.round())
             : description,
         referenceTransaction: referenceTransaction,
         date: DateTime.now(),

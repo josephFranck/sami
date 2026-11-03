@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sami/services/notification_service.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 /// PROMOTIONS : le boutiquier PROPOSE (sur un pagne, plusieurs, ou toute
 /// sa boutique), l'admin VALIDE — avec garde anti-perte : jamais sous le
@@ -97,9 +98,9 @@ class PromotionsService {
     for (final a in admins.docs) {
       await NotificationService.envoyer(
         destinataireId: a.id,
-        titre: 'Promotion à valider 🏷️',
+        titre: (t) => t.promotionValider,
         message:
-            '-${reductionPct.toStringAsFixed(0)} % sur ${cibles.length} pagne(s) — à examiner.',
+            (t) => t.surPagneSExaminer(reductionPct.toStringAsFixed(0), cibles.length),
         route: '/admin-promotions',
       );
     }
@@ -133,8 +134,8 @@ class PromotionsService {
     await batch.commit();
     await NotificationService.envoyer(
       destinataireId: data['proposePar'] as String? ?? '',
-      titre: 'Promotion validée ✅',
-      message: 'Votre promotion de -${pct.toStringAsFixed(0)} % est EN LIGNE.',
+      titre: (t) => t.promotionValidee,
+      message: (t) => t.votrePromotionEstLigne(pct.toStringAsFixed(0)),
       route: '/dashboard_boutiquier',
     );
   }
@@ -144,7 +145,7 @@ class PromotionsService {
     await collection.doc(promoId).update({'statut': 'refusee', 'motifRefus': motif});
     await NotificationService.envoyer(
       destinataireId: d.data()!['proposePar'] as String? ?? '',
-      titre: 'Promotion refusée',
+      titre: (t) => t.promotionRefusee,
       message: motif,
       route: '/dashboard_boutiquier',
     );

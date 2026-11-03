@@ -99,6 +99,15 @@
 
 **À décider par l'exploitant** : les prix des abonnements client et livreur (0 = non proposés) ; les avantages non codés des plans boutique/couturier (badge, boosts, analytics, support) ne sont plus affichés — à réintroduire quand ils existeront.
 
+### Lot E — Français / anglais — fait le 03/11/2026
+| Élément | Détail |
+|---|---|
+| Mécanisme | `LangueService` (fr/en, préférence `auth_lang`, recopiée sur `utilisateurs.langue`) ; `MaterialApp` se reconstruit au changement ; `flutter_localizations` pour les textes Material |
+| Textes | `scripts/i18n/chaines.json` → `lib/l10n/tr.dart` généré (`Tr.s.cle`) ; 1 009 textes, 1 225 sites dans 81 fichiers (écrans client, boutiquier, couturier, livreur, services) |
+| Sélecteur | Mon compte → « Langue / Language » ; écrans de connexion (🇫🇷/🇬🇧, Fulfulde retiré) |
+| Notifications | écrites en FR **et** EN à l'envoi, lues dans la langue du destinataire |
+| Hors périmètre | administration/staff, pages légales (traduction juridique → avocat), écrans couture non routés |
+
 ### Reste à faire
 - **Lot C** (Blaze) : voir §3 — les limites restantes (statut de sous-commande modifiable par le livreur/gérant, devis calculé côté client) ne se ferment qu'avec des Cloud Functions.
 - **Exploitant** : publier `firestore.rules` (console → Règles → coller → Publier) et créer l'index `mouvements_credits` via le lien du log, ou le fichier `firestore.indexes.json`.

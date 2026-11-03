@@ -18,6 +18,7 @@ import 'package:sami/utils/droits.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 import 'package:sami/utils/config_paiement.dart';
 import 'package:sami/services/fidelite_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kAccent  = Color(0xFFFF8F00);
@@ -46,7 +47,7 @@ class _MesCommandesPageState extends State<MesCommandesPage> with PageProtegee {
     builder: (u) => Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Mes commandes'),
+        title: Text(Tr.s.mesCommandes),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -76,14 +77,14 @@ class _MesCommandesPageState extends State<MesCommandesPage> with PageProtegee {
     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       Icon(Icons.receipt_long_outlined, size: 72, color: Colors.grey.shade300),
       const SizedBox(height: 16),
-      const Text('Aucune commande', style: TextStyle(fontSize: 16, color: Colors.grey)),
+      Text(Tr.s.aucuneCommande, style: TextStyle(fontSize: 16, color: Colors.grey)),
       const SizedBox(height: 8),
-      const Text('Vos commandes apparaîtront ici', style: TextStyle(color: Colors.grey, fontSize: 13)),
+      Text(Tr.s.vosCommandesApparaitrontIci, style: TextStyle(color: Colors.grey, fontSize: 13)),
       const SizedBox(height: 24),
       ElevatedButton.icon(
         onPressed: () => Navigator.pushNamed(context, '/pagnepage'),
         icon: const Icon(Icons.shopping_bag_outlined),
-        label: const Text('Explorer les pagnes'),
+        label: Text(Tr.s.explorerPagnes),
         style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
       ),
     ]),
@@ -111,7 +112,7 @@ class _CarteSession extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text('Commande #${session.id.substring(0,6).toUpperCase()}',
+              Text(Tr.s.commande(session.id.substring(0,6).toUpperCase()),
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
               const Spacer(),
               Container(
@@ -130,7 +131,7 @@ class _CarteSession extends StatelessWidget {
             Row(children: [
               Icon(Icons.store_outlined, size: 14, color: Colors.grey.shade500),
               const SizedBox(width: 4),
-              Text('${session.nombreBoutiques} boutique${session.nombreBoutiques > 1 ? "s" : ""}',
+              Text(Tr.s.boutique2(session.nombreBoutiques, session.nombreBoutiques > 1 ? "s" : ""),
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
               const SizedBox(width: 16),
               Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey.shade500),
@@ -197,7 +198,7 @@ class _BarreProgression extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text('$terminees/$total boutiques livrées',
+          Text(Tr.s.boutiquesLivrees(terminees, total),
               style: const TextStyle(fontSize: 11, color: Colors.grey)),
         ]);
       },
@@ -231,14 +232,14 @@ class _DetailSessionPageState extends State<DetailSessionPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text('Commande #${widget.sessionId.substring(0,6).toUpperCase()}'),
+        title: Text(Tr.s.commande(widget.sessionId.substring(0,6).toUpperCase())),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
       body: _chargement
           ? const Center(child: CircularProgressIndicator(color: _kPrimary))
           : _session == null
-              ? const Center(child: Text('Commande introuvable'))
+              ? Center(child: Text(Tr.s.commandeIntrouvable))
               : RefreshIndicator(
                   onRefresh: _charger,
                   child: ListView(
@@ -272,8 +273,8 @@ class _DetailSessionPageState extends State<DetailSessionPage> {
         .get();
     if (!mounted) return;
     if (ql.docs.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Livraison introuvable — réessayez dans un instant.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.livraisonIntrouvableReessayezDansInstant)));
       return;
     }
     Navigator.push(
@@ -300,12 +301,12 @@ class _ResumePaiement extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Récapitulatif', style: TextStyle(color: Colors.white70, fontSize: 12)),
+      Text(Tr.s.recapitulatif, style: TextStyle(color: Colors.white70, fontSize: 12)),
       const SizedBox(height: 8),
-      _ligne('Articles', PrixFCFA.formater(session.totalArticles)),
-      _ligne('Livraisons', PrixFCFA.formater(session.totalLivraisons)),
+      _ligne(Tr.s.articles, PrixFCFA.formater(session.totalArticles)),
+      _ligne(Tr.s.livraisons, PrixFCFA.formater(session.totalLivraisons)),
       const Divider(color: Colors.white24, height: 16),
-      _ligne('Total payé', PrixFCFA.formater(session.totalPayeClient), bold: true),
+      _ligne(Tr.s.totalPaye, PrixFCFA.formater(session.totalPayeClient), bold: true),
       const SizedBox(height: 6),
       Row(children: [
         Icon(
@@ -315,7 +316,7 @@ class _ResumePaiement extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         Text(
-          session.paiementConfirme ? 'Paiement confirmé' : 'En attente de confirmation paiement',
+          session.paiementConfirme ? Tr.s.paiementConfirme : Tr.s.attenteConfirmationPaiement,
           style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
       ]),
@@ -406,7 +407,7 @@ class _CarteSousCommande extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                     decoration: BoxDecoration(color: Colors.teal.shade50,
                         borderRadius: BorderRadius.circular(4)),
-                    child: const Text('✂️ couture', style: TextStyle(fontSize: 10, color: Colors.teal)),
+                    child: Text(Tr.s.couture, style: TextStyle(fontSize: 10, color: Colors.teal)),
                   ),
                 ],
               ]),
@@ -432,7 +433,7 @@ class _CarteSousCommande extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _suivreLivraison(context, sc.id),
                 icon: const Icon(Icons.location_on_outlined, size: 18),
-                label: const Text('Suivre ma livraison'),
+                label: Text(Tr.s.suivreMaLivraison),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _kPrimary,
                   side: const BorderSide(color: _kPrimary),
@@ -447,7 +448,7 @@ class _CarteSousCommande extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Row(children: [
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('${PrixFCFA.formater(sc.sousTotal)} articles',
+              Text(Tr.s.articles2(PrixFCFA.formater(sc.sousTotal)),
                   style: const TextStyle(fontSize: 12, color: Colors.grey)),
               Text(PrixFCFA.formater(sc.totalClient),
                   style: const TextStyle(fontWeight: FontWeight.bold, color: _kPrimary, fontSize: 15)),
@@ -456,7 +457,7 @@ class _CarteSousCommande extends StatelessWidget {
             if (sc.statut == StatutSousCommande.livree ||
                 sc.statut == StatutSousCommande.terminee)
               IconButton(
-                tooltip: 'Noter cet achat',
+                tooltip: Tr.s.noterCetAchat,
                 icon: const Icon(Icons.star_border, color: Colors.amber),
                 onPressed: () {
                   if (sc.articles.isEmpty) return;
@@ -476,7 +477,7 @@ class _CarteSousCommande extends StatelessWidget {
                         auteurRole: 'client',
                         auteurNom: FirebaseAuth
                                 .instance.currentUser?.displayName ??
-                            'Client',
+                            Tr.s.client,
                         sousCommandeId: sc.id,
                         livraisonId: sc.livraisonId,
                       ),
@@ -488,14 +489,14 @@ class _CarteSousCommande extends StatelessWidget {
             if (sc.statut == StatutSousCommande.livree ||
                 sc.statut == StatutSousCommande.terminee)
               IconButton(
-                tooltip: 'Demander un retour',
+                tooltip: Tr.s.demanderRetour,
                 icon: const Icon(Icons.assignment_return_outlined,
                     color: Colors.orange),
                 onPressed: () async {
                   final motif = await showDialog<MotifRetour>(
                     context: context,
                     builder: (ctx) => SimpleDialog(
-                      title: const Text('Motif du retour',
+                      title: Text(Tr.s.motifRetour,
                           style: TextStyle(fontSize: 16)),
                       children: [
                         for (final (m, l) in [
@@ -525,9 +526,9 @@ class _CarteSousCommande extends StatelessWidget {
                     fraisLivraisonPaye: 0,
                   );
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                         content: Text(
-                            'Demande envoyée — un agent va analyser votre dossier'),
+                            Tr.s.demandeEnvoyeeAgentVaAnalyser),
                         backgroundColor: Colors.orange));
                   }
                 },
@@ -538,7 +539,7 @@ class _CarteSousCommande extends StatelessWidget {
                 sc.statut == StatutSousCommande.enPreparation ||
                 sc.statut == StatutSousCommande.prete)
               IconButton(
-                tooltip: "Modifier l'adresse de livraison",
+                tooltip: Tr.s.modifierAdresseLivraison,
                 icon: const Icon(Icons.edit_location_alt_outlined,
                     color: Colors.teal),
                 onPressed: () => _modifierAdresseSc(context, sc),
@@ -548,7 +549,7 @@ class _CarteSousCommande extends StatelessWidget {
                 sc.statut != StatutSousCommande.livree &&
                 sc.statut != StatutSousCommande.annulee)
               IconButton(
-                tooltip: 'Suivre la livraison',
+                tooltip: Tr.s.suivreLivraison,
                 icon: const Icon(Icons.local_shipping_outlined,
                     color: _kPrimary),
                 onPressed: () async {
@@ -574,7 +575,7 @@ class _CarteSousCommande extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 ),
-                child: const Text('📱 Mon code de réception', style: TextStyle(fontSize: 12)),
+                child: Text(Tr.s.monCodeReception, style: TextStyle(fontSize: 12)),
               ),
           ]),
         ),
@@ -627,8 +628,8 @@ class _EtapesDepuisRacine extends StatelessWidget {
               final livree = st == 'livre' || st == 'livree';
               final type = d['typeLivraison'] as String? ?? '';
               final label = livs.length > 1
-                  ? (e.key == 0 ? 'Tissu → atelier' : 'Livraison finale → client')
-                  : (type == 'confection' ? 'Livraison du vêtement' : 'Livraison → client');
+                  ? (e.key == 0 ? Tr.s.tissuAtelier : Tr.s.livraisonFinaleClient)
+                  : (type == 'confection' ? Tr.s.livraisonVetement : Tr.s.livraisonClient);
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(children: [
@@ -661,13 +662,13 @@ class _EtapesDepuisRacine extends StatelessWidget {
       );
 
   static String _libelleStatutLivraison(String st) => switch (st) {
-        'enAttente' || 'rechercheLibreur' => 'Recherche livreur',
-        'livreurAssigne' || 'enRouteOrigine' => 'Livreur en route',
-        'articleRecupere' || 'enLivraison' => 'En livraison',
-        'pretRetrait' => 'Prêt au retrait',
-        'echec' => 'Échec',
-        'annule' || 'annulee' => 'Annulée',
-        _ => 'En cours',
+        'enAttente' || 'rechercheLibreur' => Tr.s.rechercheLivreur,
+        'livreurAssigne' || 'enRouteOrigine' => Tr.s.livreurRoute,
+        'articleRecupere' || 'enLivraison' => Tr.s.livraison,
+        'pretRetrait' => Tr.s.pretRetrait,
+        'echec' => Tr.s.echec,
+        'annule' || 'annulee' => Tr.s.annulee,
+        _ => Tr.s.cours,
       };
 }
 
@@ -681,8 +682,8 @@ Future<void> _suivreLivraison(BuildContext context, String sousCommandeId) async
         .get();
     if (snap.docs.isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Livraison pas encore disponible'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.livraisonPasEncoreDisponible),
         ));
       }
       return;
@@ -695,8 +696,8 @@ Future<void> _suivreLivraison(BuildContext context, String sousCommandeId) async
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Erreur de chargement du suivi'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(Tr.s.erreurChargementSuivi),
       ));
     }
   }
@@ -707,21 +708,21 @@ Future<void> _modifierAdresseSc(BuildContext context, SousCommande sc) async {
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Nouvelle adresse de livraison'),
+      title: Text(Tr.s.nouvelleAdresseLivraison),
       content: TextField(
         controller: ctrl,
         maxLines: 2,
-        decoration: const InputDecoration(
-            hintText: 'Quartier, repère, précisions…',
+        decoration: InputDecoration(
+            hintText: Tr.s.quartierReperePrecisions,
             border: OutlineInputBorder()),
       ),
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler')),
+            child: Text(Tr.s.annuler)),
         ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Mettre à jour')),
+            child: Text(Tr.s.mettreJour)),
       ],
     ),
   );
@@ -745,8 +746,8 @@ Future<void> _modifierAdresseSc(BuildContext context, SousCommande sc) async {
     if (livreurId != null && livreurId.isNotEmpty) {
       await NotificationService.envoyer(
         destinataireId: livreurId,
-        titre: 'Adresse modifiée 📍',
-        message: 'Nouvelle destination : ' + adresse,
+        titre: (t) => t.adresseModifiee,
+        message: (t) => t.nouvelleDestination + adresse,
         route: '/mes-livraisons',
       );
     }
@@ -754,8 +755,8 @@ Future<void> _modifierAdresseSc(BuildContext context, SousCommande sc) async {
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
     content: Text(maj > 0
-        ? 'Adresse mise à jour ✅ (le livreur est prévenu)'
-        : 'Trop tard : le colis est déjà en route — contactez le livreur.'),
+        ? Tr.s.adresseMiseJourLivreurEst
+        : Tr.s.tropTardColisEstDeja),
     backgroundColor: maj > 0 ? Colors.green : Colors.orange,
   ));
 }

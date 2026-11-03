@@ -6,6 +6,7 @@ import 'package:sami/pages/livraison/livraison_securisee_page.dart';
 import 'package:sami/models/livraison_v2.dart';
 import 'package:sami/services/livraison_service.dart';
 import 'package:sami/services/qr_crypto_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -81,16 +82,13 @@ class _ScanRapidePageState extends State<ScanRapidePage> {
       await showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Colis déjà pris en charge ✅'),
-          content: const Text(
-              'Ce QR est celui du DÉPART (boutique) — cette étape est '
-              'déjà validée.\n\nPour la remise : ouvrez la course et '
-              'touchez « Confirmer la remise » — c\'est le CLIENT qui '
-              'présente SON code.'),
+          title: Text(Tr.s.colisDejaPrisCharge),
+          content: Text(
+              Tr.s.ceQrEstCeluiDepart),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Compris')),
+                child: Text(Tr.s.compris)),
           ],
         ),
       );
@@ -103,27 +101,27 @@ class _ScanRapidePageState extends State<ScanRapidePage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Course trouvée'),
+        title: Text(Tr.s.courseTrouvee),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Destination : ${liv.destinationAdresse}'),
+            Text(Tr.s.destination3(liv.destinationAdresse)),
             const SizedBox(height: 6),
             Text(estDepart
-                ? 'Action : prise en charge du colis'
-                : 'Action : remise au destinataire'),
+                ? Tr.s.actionPriseChargeColis
+                : Tr.s.actionRemiseDestinataire),
           ],
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Annuler')),
+              child: Text(Tr.s.annuler)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: _kPrimary, foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirmer'),
+            child: Text(Tr.s.confirmer),
           ),
         ],
       ),
@@ -171,7 +169,7 @@ class _ScanRapidePageState extends State<ScanRapidePage> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(valide ? 'Validation réussie' : 'Échec de la validation'),
+      content: Text(valide ? Tr.s.validationReussie2 : Tr.s.echecValidation),
       backgroundColor: valide ? Colors.green : Colors.red,
     ));
     if (valide) {
@@ -198,7 +196,7 @@ class _ScanRapidePageState extends State<ScanRapidePage> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Scan rapide'),
+        title: Text(Tr.s.scanRapide),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -224,7 +222,7 @@ class _ScanRapidePageState extends State<ScanRapidePage> {
               padding: const EdgeInsets.all(20),
               child: Text(
                 _message ??
-                    'Scannez le QR — la course sera retrouvée automatiquement',
+                    Tr.s.scannezQrCourseSeraRetrouvee,
                 style: const TextStyle(color: Colors.white, fontSize: 14),
                 textAlign: TextAlign.center,
               ),

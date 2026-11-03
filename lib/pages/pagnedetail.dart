@@ -14,6 +14,7 @@ import 'package:sami/widgets/image_universelle.dart';
 import 'package:sami/services/favoris_service.dart';
 import 'package:sami/pages/couturier/commander_couture_page.dart';
 import 'package:sami/widgets/widgets_notation.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kBg = Color(0xFFF7F5FA);
@@ -64,7 +65,7 @@ class _PagneDetailPageState extends State<PagneDetailPage> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            tooltip: 'Partager (WhatsApp…)',
+            tooltip: Tr.s.partagerWhatsapp,
             icon: const Icon(Icons.share_outlined),
             onPressed: () => PartageService.partagerPagne(widget.pagne),
           ),
@@ -149,7 +150,7 @@ class _PagneDetailPageState extends State<PagneDetailPage> {
                         },
                         child: Padding(
                           padding: const EdgeInsets.only(top: 2),
-                          child: Text('🏬 Vendu par $nom  ›',
+                          child: Text(Tr.s.venduPar(nom),
                               style: const TextStyle(
                                   fontSize: 12.5,
                                   color: _kPrimary,
@@ -159,7 +160,7 @@ class _PagneDetailPageState extends State<PagneDetailPage> {
                     },
                   ),
                   const SizedBox(height: 4),
-                  Text('Prix tout compris · livraison en sus',
+                  Text(Tr.s.prixToutComprisLivraisonSus,
                       style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                   const SizedBox(height: 16),
                   Text(pagne.description,
@@ -168,17 +169,17 @@ class _PagneDetailPageState extends State<PagneDetailPage> {
                   _ligneStock(),
                   const Divider(height: 28),
                   if (pagne.categories.isNotEmpty)
-                    _infoRow('Catégories', pagne.categories.join(', ')),
+                    _infoRow(Tr.s.categories, pagne.categories.join(', ')),
                   if (pagne.tailles.isNotEmpty)
-                    _infoRow('Tailles', pagne.tailles.join(', ')),
+                    _infoRow(Tr.s.tailles, pagne.tailles.join(', ')),
                   if (pagne.couleurs.isNotEmpty)
-                    _infoRow('Couleurs', pagne.couleurs.join(', ')),
+                    _infoRow(Tr.s.couleurs, pagne.couleurs.join(', ')),
                   if (pagne.matiere.isNotEmpty)
-                    _infoRow('Matière', pagne.matiere),
+                    _infoRow(Tr.s.matiere, pagne.matiere),
                   if (pagne.origine.isNotEmpty)
-                    _infoRow('Origine', pagne.origine),
+                    _infoRow(Tr.s.origine, pagne.origine),
                   if (pagne.nomArtisan != null && pagne.nomArtisan!.isNotEmpty)
-                    _infoRow('Artisan', pagne.nomArtisan!),
+                    _infoRow(Tr.s.artisan, pagne.nomArtisan!),
                   const SizedBox(height: 20),
                   _selecteurQuantite(),
                   const SizedBox(height: 16),
@@ -191,7 +192,7 @@ class _PagneDetailPageState extends State<PagneDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Avis clients',
+                  Text(Tr.s.avisClients,
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   WidgetListeAvis(cible: CibleAvis.pagne, cibleId: pagne.id),
@@ -282,8 +283,8 @@ class _PagneDetailPageState extends State<PagneDetailPage> {
       const SizedBox(width: 6),
       Text(
         enStock
-            ? 'En stock (${pagne.quantiteDisponible} disponibles)'
-            : 'Rupture de stock',
+            ? Tr.s.stockDisponibles(pagne.quantiteDisponible)
+            : Tr.s.ruptureStock2,
         style: TextStyle(
             fontSize: 13,
             color: enStock ? Colors.green.shade700 : Colors.red),
@@ -308,7 +309,7 @@ class _PagneDetailPageState extends State<PagneDetailPage> {
 
   Widget _selecteurQuantite() {
     return Row(children: [
-      const Text('Quantité', style: TextStyle(fontWeight: FontWeight.w600)),
+      Text(Tr.s.quantite, style: TextStyle(fontWeight: FontWeight.w600)),
       const Spacer(),
       IconButton(
         onPressed: _quantite > 1 ? () => setState(() => _quantite--) : null,
@@ -338,7 +339,7 @@ class _PagneDetailPageState extends State<PagneDetailPage> {
             child: ElevatedButton.icon(
               onPressed: indisponible ? null : _ajouterAuPanier,
               icon: const Icon(Icons.add_shopping_cart_outlined),
-              label: Text(indisponible ? 'Indisponible' : 'Ajouter au panier'),
+              label: Text(indisponible ? Tr.s.indisponible : Tr.s.ajouterPanier),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kPrimary,
                 foregroundColor: Colors.white,
@@ -361,7 +362,7 @@ class _PagneDetailPageState extends State<PagneDetailPage> {
                         ),
                       ),
               icon: const Icon(Icons.content_cut),
-              label: const Text('Faire coudre ce pagne'),
+              label: Text(Tr.s.faireCoudreCePagne),
               style: OutlinedButton.styleFrom(
                 foregroundColor: _kPrimary,
                 side: const BorderSide(color: _kPrimary),
@@ -395,18 +396,18 @@ class _PagneDetailPageState extends State<PagneDetailPage> {
       await panier.sauvegarder();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('$_quantite × ${pagne.nom} ajouté au panier'),
+        content: Text(Tr.s.ajoutePanier(_quantite, pagne.nom)),
         backgroundColor: Colors.green,
         action: SnackBarAction(
-          label: 'Voir',
+          label: Tr.s.voir,
           textColor: Colors.white,
           onPressed: () => Navigator.pushNamed(context, '/panier'),
         ),
       ));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Erreur lors de l\'ajout au panier'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(Tr.s.erreurLorsAjoutPanier),
         backgroundColor: Colors.red,
       ));
     }
@@ -416,9 +417,9 @@ class _PagneDetailPageState extends State<PagneDetailPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text('Pagnes similaires',
+          child: Text(Tr.s.pagnesSimilaires,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ),
         const SizedBox(height: 10),
@@ -444,7 +445,7 @@ class _PagneDetailPageState extends State<PagneDetailPage> {
                   .toList();
               if (similaires.isEmpty) {
                 return Center(
-                    child: Text('Aucun pagne similaire',
+                    child: Text(Tr.s.aucunPagneSimilaire,
                         style: TextStyle(
                             color: Colors.grey.shade500, fontSize: 13)));
               }

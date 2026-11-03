@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:sami/services/qr_crypto_service.dart';
 import 'package:sami/services/sms_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -82,8 +83,8 @@ class _CodeReceptionPageState extends State<CodeReceptionPage> {
       setState(() => _envoiSms = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(ok
-            ? 'Code envoyé par SMS'
-            : 'SMS indisponible (le code reste affiché ici)'),
+            ? Tr.s.codeEnvoyeParSms
+            : Tr.s.smsIndisponibleCodeResteAffiche),
         backgroundColor: ok ? Colors.green : Colors.orange,
       ));
     }
@@ -94,7 +95,7 @@ class _CodeReceptionPageState extends State<CodeReceptionPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Mon code de réception'),
+        title: Text(Tr.s.monCodeReception2),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -104,11 +105,11 @@ class _CodeReceptionPageState extends State<CodeReceptionPage> {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  const Text('Présentez ce code au livreur',
+                  Text(Tr.s.presentezCeCodeLivreur,
                       style: TextStyle(
                           fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text('À la réception de votre colis.',
+                  Text(Tr.s.receptionVotreColis,
                       style: TextStyle(
                           color: Colors.grey.shade600, fontSize: 13)),
                   const SizedBox(height: 24),
@@ -143,7 +144,7 @@ class _CodeReceptionPageState extends State<CodeReceptionPage> {
                       ),
                       child: Column(
                         children: [
-                          Text('Code de secours',
+                          Text(Tr.s.codeSecours,
                               style: TextStyle(
                                   fontSize: 12, color: Colors.grey.shade600)),
                           const SizedBox(height: 4),
@@ -158,8 +159,7 @@ class _CodeReceptionPageState extends State<CodeReceptionPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                        'Si votre téléphone est éteint à la livraison, '
-                        'communiquez simplement ce code au livreur.',
+                        Tr.s.siVotreTelephoneEstEteint,
                         style: TextStyle(
                             color: Colors.grey.shade500, fontSize: 12),
                         textAlign: TextAlign.center),
@@ -174,7 +174,7 @@ class _CodeReceptionPageState extends State<CodeReceptionPage> {
                                 child: CircularProgressIndicator(
                                     strokeWidth: 2, color: _kPrimary))
                             : const Icon(Icons.sms_outlined, size: 16),
-                        label: const Text('Recevoir le code par SMS'),
+                        label: Text(Tr.s.recevoirCodeParSms),
                         style: OutlinedButton.styleFrom(
                             foregroundColor: _kPrimary,
                             side: const BorderSide(color: _kPrimary)),

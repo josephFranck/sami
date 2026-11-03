@@ -6,6 +6,7 @@ import 'package:sami/models/utilisateur.dart';
 import 'package:sami/pages/addboutique.dart';
 import 'package:sami/pages/editboutique.dart';
 import 'package:sami/utils/droits.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -24,7 +25,7 @@ class _BoutiqueListPageState extends State<BoutiqueListPage> with PageProtegee {
     builder: (u) => Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Boutiques'),
+        title: Text(Tr.s.boutiques),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         actions: [
@@ -34,7 +35,7 @@ class _BoutiqueListPageState extends State<BoutiqueListPage> with PageProtegee {
       ),
       floatingActionButton: Droits.fab(
         condition: Droits.peutAjouterBoutique(u),
-        tooltip: 'Ajouter une boutique',
+        tooltip: Tr.s.ajouterBoutique,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddBoutiquePage())),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -68,12 +69,12 @@ class _BoutiqueListPageState extends State<BoutiqueListPage> with PageProtegee {
     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       Icon(Icons.store_outlined, size: 64, color: Colors.grey.shade300),
       const SizedBox(height: 12),
-      const Text('Aucune boutique', style: TextStyle(color: Colors.grey, fontSize: 16)),
+      Text(Tr.s.aucuneBoutique, style: TextStyle(color: Colors.grey, fontSize: 16)),
       if (Droits.peutAjouterBoutique(u)) ...[
         const SizedBox(height: 16),
         ElevatedButton.icon(
           onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddBoutiquePage())),
-          icon: const Icon(Icons.add), label: const Text('Ajouter la première boutique'),
+          icon: const Icon(Icons.add), label: Text(Tr.s.ajouterPremiereBoutique),
           style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
         ),
       ],
@@ -83,11 +84,11 @@ class _BoutiqueListPageState extends State<BoutiqueListPage> with PageProtegee {
   Future<void> _supprimer(Boutique b, Utilisateur u) async {
     if (!Droits.peutSupprimerBoutique(u)) { Droits.accesRefuse(context); return; }
     final ok = await Droits.confirmerSuppression(context, nom: b.nom,
-        message: 'La boutique et tous ses pagnes seront désactivés.');
+        message: Tr.s.boutiqueTousSesPagnesSeront);
     if (!ok) return;
     await Boutique.boutiqueCollection.doc(b.id).update({'estActif': false});
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('"${b.nom}" désactivée'), backgroundColor: Colors.orange));
+      SnackBar(content: Text(Tr.s.desactivee(b.nom)), backgroundColor: Colors.orange));
   }
 }
 
@@ -129,10 +130,10 @@ class _CarteBoutique extends StatelessWidget {
         trailing: peutModifier || peutSupprimer ? PopupMenuButton<String>(
           onSelected: (v) { if (v == 'edit') onModifier(); else onSupprimer(); },
           itemBuilder: (_) => [
-            if (peutModifier) const PopupMenuItem(value: 'edit', child: Row(children: [
-              Icon(Icons.edit_outlined, size: 16, color: Color(0xFF6A1B9A)), SizedBox(width: 8), Text('Modifier')])),
-            if (peutSupprimer) const PopupMenuItem(value: 'del', child: Row(children: [
-              Icon(Icons.delete_outline, size: 16, color: Colors.red), SizedBox(width: 8), Text('Désactiver', style: TextStyle(color: Colors.red))])),
+            if (peutModifier) PopupMenuItem(value: 'edit', child: Row(children: [
+              Icon(Icons.edit_outlined, size: 16, color: Color(0xFF6A1B9A)), SizedBox(width: 8), Text(Tr.s.modifier)])),
+            if (peutSupprimer) PopupMenuItem(value: 'del', child: Row(children: [
+              Icon(Icons.delete_outline, size: 16, color: Colors.red), SizedBox(width: 8), Text(Tr.s.desactiver, style: TextStyle(color: Colors.red))])),
           ],
         ) : null,
         onTap: () {},

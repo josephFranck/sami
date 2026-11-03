@@ -10,6 +10,7 @@ import 'package:sami/widgets/image_universelle.dart';
 import 'package:sami/services/parametres_service.dart';
 import 'package:sami/services/message_service.dart';
 import 'package:sami/services/partage_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kBg = Color(0xFFF7F5FA);
@@ -24,7 +25,7 @@ class BoutiquesListePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
-        title: const Text('Les boutiques'),
+        title: Text(Tr.s.boutiques2),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -43,7 +44,7 @@ class BoutiquesListePage extends StatelessWidget {
               .toList()
             ..sort((a, b) => a.nom.compareTo(b.nom));
           if (boutiques.isEmpty) {
-            return const Center(child: Text('Aucune boutique pour le moment'));
+            return Center(child: Text(Tr.s.aucuneBoutiquePourMoment));
           }
           return ListView.builder(
             padding: const EdgeInsets.all(12),
@@ -99,7 +100,7 @@ class BoutiqueDetailPage extends StatelessWidget {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            tooltip: 'Partager la boutique',
+            tooltip: Tr.s.partagerBoutique,
             icon: const Icon(Icons.share_outlined),
             onPressed: () => PartageService.partagerBoutique(
                 id: boutique.id, nom: boutique.nom, logo: boutique.logo),
@@ -126,7 +127,7 @@ class BoutiqueDetailPage extends StatelessWidget {
                   ),
                 ),
                 icon: const Icon(Icons.inventory_2_outlined, size: 18),
-                label: const Text('Gérer les pagnes de cette boutique'),
+                label: Text(Tr.s.gererPagnesCetteBoutique),
               ),
             );
           }),
@@ -180,7 +181,7 @@ class BoutiqueDetailPage extends StatelessWidget {
                                     : '',
                                 autreNom: boutique.nom,
                                 contexte: 'Boutique ${boutique.nom}'),
-                            child: const Text('💬 Contacter via SAMI',
+                            child: Text(Tr.s.contacterViaSami,
                                 style: TextStyle(
                                     fontSize: 12, color: _kPrimary,
                                     fontWeight: FontWeight.w600)),
@@ -222,8 +223,8 @@ class BoutiqueDetailPage extends StatelessWidget {
                 }).toList();
 
                 if (pagnes.isEmpty) {
-                  return const Center(
-                      child: Text('Aucun pagne disponible dans cette boutique',
+                  return Center(
+                      child: Text(Tr.s.aucunPagneDisponibleDansCette,
                           style: TextStyle(color: Colors.grey)));
                 }
                 return GridView.builder(

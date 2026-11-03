@@ -7,6 +7,7 @@ import 'package:location/location.dart';
 import 'package:sami/services/qr_crypto_service.dart';
 import 'package:sami/services/resilience_service.dart';
 import 'package:sami/widgets/widgets_resilients.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kSuccess = Color(0xFF1D9E75);
@@ -83,8 +84,8 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
         foregroundColor: Colors.white,
         title: Text(
           widget.typeAttendu == TypeQR.depart
-              ? 'Scanner en boutique'
-              : 'Scanner pour confirmer',
+              ? Tr.s.scannerBoutique
+              : Tr.s.scannerPourConfirmer,
         ),
         actions: [
           // Indicateur offline
@@ -139,8 +140,8 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
               children: [
                 Text(
                   widget.typeAttendu == TypeQR.depart
-                      ? 'Scannez le QR code affiché en boutique'
-                      : 'Scannez le CODE DU CLIENT (sur son téléphone)',
+                      ? Tr.s.scannezQrCodeAfficheBoutique
+                      : Tr.s.scannezCodeClientSurSon,
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   textAlign: TextAlign.center,
                 ),
@@ -159,13 +160,13 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.orange.withOpacity(0.5)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.wifi_off, color: Colors.orange, size: 14),
                           SizedBox(width: 8),
                           Text(
-                            'Mode hors ligne — validation locale active',
+                            Tr.s.modeHorsLigneValidationLocale,
                             style: TextStyle(color: Colors.orange, fontSize: 12),
                           ),
                         ],
@@ -178,8 +179,8 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
                 TextButton.icon(
                   onPressed: _afficherSaisieManuelle,
                   icon: const Icon(Icons.keyboard, color: Colors.white60, size: 16),
-                  label: const Text(
-                    'Saisir le code manuellement',
+                  label: Text(
+                    Tr.s.saisirCodeManuellement,
                     style: TextStyle(color: Colors.white60, fontSize: 12),
                   ),
                 ),
@@ -189,8 +190,8 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
                     onPressed: _afficherSignature,
                     icon: const Icon(Icons.draw_outlined,
                         color: Colors.white60, size: 16),
-                    label: const Text(
-                      'Faire signer le client',
+                    label: Text(
+                      Tr.s.faireSignerClient,
                       style: TextStyle(color: Colors.white60, fontSize: 12),
                     ),
                   ),
@@ -313,8 +314,8 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
             child: const Icon(Icons.check_circle, color: Colors.white, size: 100),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Validation réussie ✓',
+          Text(
+            Tr.s.validationReussie,
             style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
@@ -325,7 +326,7 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
             builder: (_, snap) {
               final connecte = snap.data ?? ConnectiviteService.instance.estConnecte;
               return Text(
-                connecte ? 'Synchronisé avec le serveur' : 'Enregistré localement — sync en attente',
+                connecte ? Tr.s.synchroniseAvecServeur : Tr.s.enregistreLocalementSyncAttente,
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.8),
                   fontSize: 13,
@@ -345,7 +346,7 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
             ),
-            child: const Text('Continuer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: Text(Tr.s.continuer, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -382,13 +383,13 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
                   _scannerCtrl.start();
                 },
                 icon: const Icon(Icons.refresh, color: Colors.white),
-                label: const Text('Réessayer', style: TextStyle(color: Colors.white)),
+                label: Text(Tr.s.reessayer, style: TextStyle(color: Colors.white)),
               ),
               const SizedBox(width: 16),
               TextButton.icon(
                 onPressed: _afficherSaisieManuelle,
                 icon: const Icon(Icons.keyboard, color: Colors.orange),
-                label: const Text('Code manuel', style: TextStyle(color: Colors.orange)),
+                label: Text(Tr.s.codeManuel, style: TextStyle(color: Colors.orange)),
               ),
             ],
           ),
@@ -398,13 +399,13 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
   );
 
   String _conseilSelon(RaisonEchec? raison) => switch (raison) {
-    RaisonEchec.mauvaiseLivraison => 'Ce QR appartient à une autre livraison.',
+    RaisonEchec.mauvaiseLivraison => Tr.s.ceQrAppartientAutreLivraison,
     RaisonEchec.mauvaistType => widget.typeAttendu == TypeQR.depart
-        ? 'Demandez à la boutique d\'afficher le bon QR.'
-        : 'Demandez au livreur d\'afficher le QR de livraison.',
-    RaisonEchec.expire => 'Contactez le support — la livraison a peut-être expiré.',
-    RaisonEchec.signatureInvalide => 'QR falsifié ou corrompu. Contactez le support.',
-    _ => 'Assurez-vous que la caméra lit bien le code.',
+        ? Tr.s.demandezBoutiqueAfficherBonQr
+        : Tr.s.demandezLivreurAfficherQrLivraison,
+    RaisonEchec.expire => Tr.s.contactezSupportLivraisonPeutEtre,
+    RaisonEchec.signatureInvalide => Tr.s.qrFalsifieOuCorrompuContactez,
+    _ => Tr.s.assurezVousQueCameraLit,
   };
 
   // ── Mode dégradé : clé absente ─────────────────────────────────────────
@@ -416,16 +417,16 @@ class _PageScanQRState extends State<PageScanQR> with ActionResiliante {
       children: [
         const Icon(Icons.lock_outline, color: Colors.white60, size: 64),
         const SizedBox(height: 20),
-        const Text(
-          'Données de livraison non trouvées',
+        Text(
+          Tr.s.donneesLivraisonNonTrouvees,
           style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 10),
         Text(
           ConnectiviteService.instance.estConnecte
-              ? 'Rechargez la page pour récupérer les données.'
-              : 'Pas de connexion — utilisez le code SMS reçu.',
+              ? Tr.s.rechargezPagePourRecupererDonnees
+              : Tr.s.pasConnexionUtilisezCodeSms,
           style: const TextStyle(color: Colors.white60, fontSize: 13),
           textAlign: TextAlign.center,
         ),
@@ -554,13 +555,13 @@ class _SaisieCodeManuelState extends State<_SaisieCodeManuel> with ActionResilia
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text('Saisir le code de réception',
+      Text(Tr.s.saisirCodeReception,
           style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
       const SizedBox(height: 6),
       Text(
         widget.typeAttendu == TypeQR.depart
-            ? 'Code à 6 chiffres affiché en boutique'
-            : 'Code à 6 chiffres communiqué par le client',
+            ? Tr.s.code6ChiffresAfficheBoutique
+            : Tr.s.code6ChiffresCommuniquePar,
         style: const TextStyle(color: Colors.white60, fontSize: 13),
       ),
       const SizedBox(height: 16),
@@ -602,7 +603,7 @@ class _SaisieCodeManuelState extends State<_SaisieCodeManuel> with ActionResilia
           ),
           child: _enCours
               ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-              : const Text('Valider', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              : Text(Tr.s.valider, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         ),
       ),
     ],
@@ -768,10 +769,10 @@ class _CaptureSignatureState extends State<_CaptureSignature> {
       );
       if (!okSig) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               backgroundColor: Colors.orange,
               content: Text(
-                  'La signature seule est refusée : faites scanner le CODE DU CLIENT d\'abord — la signature s\'ajoute ensuite comme preuve.')));
+                  Tr.s.signatureSeuleEstRefuseeFaites)));
         }
         return;
       }
@@ -788,13 +789,13 @@ class _CaptureSignatureState extends State<_CaptureSignature> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Signature du client',
+          Text(Tr.s.signatureClient,
               style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          const Text('Dernier recours si le client n\'a pas son code.',
+          Text(Tr.s.dernierRecoursSiClientN,
               style: TextStyle(color: Colors.white60, fontSize: 12)),
           const SizedBox(height: 16),
           Container(
@@ -813,7 +814,7 @@ class _CaptureSignatureState extends State<_CaptureSignature> {
             children: [
               TextButton(
                 onPressed: () => _ctrl.clear(),
-                child: const Text('Effacer',
+                child: Text(Tr.s.effacer,
                     style: TextStyle(color: Colors.white60)),
               ),
               const Spacer(),
@@ -831,7 +832,7 @@ class _CaptureSignatureState extends State<_CaptureSignature> {
                         height: 18,
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2))
-                    : const Text('Valider la signature'),
+                    : Text(Tr.s.validerSignature),
               ),
             ],
           ),

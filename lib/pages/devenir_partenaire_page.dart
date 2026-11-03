@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:location/location.dart';
 import 'package:sami/services/candidature_service.dart';
 import 'package:sami/services/stockage_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kBg = Color(0xFFF7F5FA);
@@ -41,7 +42,7 @@ class _DevenirPartenairePageState extends State<DevenirPartenairePage> {
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
-        title: const Text('Devenir partenaire'),
+        title: Text(Tr.s.devenirPartenaire),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -57,7 +58,7 @@ class _DevenirPartenairePageState extends State<DevenirPartenairePage> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Mes candidatures',
+                  Text(Tr.s.mesCandidatures,
                       style: TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 14)),
                   const SizedBox(height: 8),
@@ -86,16 +87,16 @@ class _DevenirPartenairePageState extends State<DevenirPartenairePage> {
             },
           ),
 
-          const Text('Je veux devenir :',
+          Text(Tr.s.jeVeuxDevenir,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           const SizedBox(height: 10),
           Row(
             children: [
-              _choixRole('boutiquier', Icons.storefront, 'Boutiquier'),
+              _choixRole('boutiquier', Icons.storefront, Tr.s.boutiquier),
               const SizedBox(width: 8),
-              _choixRole('couturier', Icons.content_cut, 'Couturier'),
+              _choixRole('couturier', Icons.content_cut, Tr.s.couturier),
               const SizedBox(width: 8),
-              _choixRole('livreur', Icons.delivery_dining, 'Livreur'),
+              _choixRole('livreur', Icons.delivery_dining, Tr.s.livreur),
             ],
           ),
           const SizedBox(height: 20),
@@ -158,7 +159,7 @@ class _DevenirPartenairePageState extends State<DevenirPartenairePage> {
     };
 
     return [
-      Text('Dossier ${_typeLabel(_type!)}',
+      Text(Tr.s.dossier(_typeLabel(_type!)),
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
       const SizedBox(height: 10),
       ...champs.map((ch) => Padding(
@@ -192,11 +193,11 @@ class _DevenirPartenairePageState extends State<DevenirPartenairePage> {
               color: _pieceIdentite != null ? Colors.green : _kPrimary),
           title: Text(
               _type == 'boutiquier'
-                  ? 'Photo CNI du gérant (obligatoire)'
-                  : 'Photo de votre CNI (obligatoire)',
+                  ? Tr.s.photoCniGerantObligatoire
+                  : Tr.s.photoVotreCniObligatoire,
               style: const TextStyle(fontSize: 13)),
           subtitle: Text(
-              _pieceIdentite != null ? 'Photo ajoutée ✓' : 'Appuyez pour photographier',
+              _pieceIdentite != null ? Tr.s.photoAjoutee : Tr.s.appuyezPourPhotographier,
               style: const TextStyle(fontSize: 11)),
           onTap: () async {
             final x = await ImagePicker()
@@ -216,13 +217,13 @@ class _DevenirPartenairePageState extends State<DevenirPartenairePage> {
                 color: _lat != null ? Colors.green : _kPrimary),
             title: Text(
                 _type == 'couturier'
-                    ? 'Position GPS de l\'atelier (obligatoire)'
-                    : 'Position GPS de la boutique (obligatoire)',
+                    ? Tr.s.positionGpsAtelierObligatoire
+                    : Tr.s.positionGpsBoutiqueObligatoire,
                 style: const TextStyle(fontSize: 13)),
             subtitle: Text(
                 _lat != null
-                    ? 'Position capturée ✓'
-                    : 'Soyez sur place, puis appuyez',
+                    ? Tr.s.positionCapturee
+                    : Tr.s.soyezSurPlacePuisAppuyez,
                 style: const TextStyle(fontSize: 11)),
             onTap: () async {
               try {
@@ -235,8 +236,8 @@ class _DevenirPartenairePageState extends State<DevenirPartenairePage> {
                 }
               } catch (_) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Activez la localisation et réessayez')));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(Tr.s.activezLocalisationReessayez)));
                 }
               }
             },
@@ -256,12 +257,11 @@ class _DevenirPartenairePageState extends State<DevenirPartenairePage> {
                 height: 20,
                 child: CircularProgressIndicator(
                     color: Colors.white, strokeWidth: 2))
-            : const Text('Envoyer ma candidature'),
+            : Text(Tr.s.envoyerMaCandidature),
       ),
       const SizedBox(height: 8),
       Text(
-          'Un administrateur examinera votre dossier. Vous verrez le statut '
-          'ici, et votre compte sera activé dès validation.',
+          Tr.s.administrateurExamineraVotreDossierVous,
           style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
           textAlign: TextAlign.center),
     ];
@@ -271,17 +271,17 @@ class _DevenirPartenairePageState extends State<DevenirPartenairePage> {
   Widget _menuVehicule() => DropdownButtonFormField<String>(
         value: _vehicule,
         decoration: InputDecoration(
-          labelText: 'Type de véhicule',
+          labelText: Tr.s.typeVehicule,
           filled: true,
           fillColor: Colors.white,
           isDense: true,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         ),
-        items: const [
-          DropdownMenuItem(value: 'moto', child: Text('Moto')),
-          DropdownMenuItem(value: 'tricycle', child: Text('Tricycle')),
-          DropdownMenuItem(value: 'velo', child: Text('Vélo')),
-          DropdownMenuItem(value: 'apied', child: Text('À pied')),
+        items: [
+          DropdownMenuItem(value: 'moto', child: Text(Tr.s.moto)),
+          DropdownMenuItem(value: 'tricycle', child: Text(Tr.s.tricycle)),
+          DropdownMenuItem(value: 'velo', child: Text(Tr.s.velo)),
+          DropdownMenuItem(value: 'apied', child: Text(Tr.s.pied)),
         ],
         onChanged: (v) => setState(() => _vehicule = v ?? 'moto'),
       );
@@ -296,19 +296,19 @@ class _DevenirPartenairePageState extends State<DevenirPartenairePage> {
     for (final k in obligatoires) {
       if (_ctrl(k).text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Remplissez tous les champs')));
+            SnackBar(content: Text(Tr.s.remplissezTousChamps)));
         return;
       }
     }
 
     if (_pieceIdentite == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('La photo de la pièce d\'identité est obligatoire')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.photoPieceIdentiteEstObligatoire)));
       return;
     }
     if (_type != 'livreur' && _lat == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Capturez la position GPS sur place')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.capturezPositionGpsSurPlace)));
       return;
     }
 
@@ -332,8 +332,8 @@ class _DevenirPartenairePageState extends State<DevenirPartenairePage> {
           _envoi = false;
           _type = null;
         });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Candidature envoyée — en attente de validation'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(Tr.s.candidatureEnvoyeeAttenteValidation),
           backgroundColor: Colors.green,
         ));
       }
@@ -349,9 +349,9 @@ class _DevenirPartenairePageState extends State<DevenirPartenairePage> {
   }
 
   String _typeLabel(String t) => switch (t) {
-        'boutiquier' => 'Boutiquier',
-        'couturier' => 'Couturier',
-        'livreur' => 'Livreur',
+        'boutiquier' => Tr.s.boutiquier,
+        'couturier' => Tr.s.couturier,
+        'livreur' => Tr.s.livreur,
         _ => t,
       };
 }

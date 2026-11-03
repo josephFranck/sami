@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sami/l10n/tr.dart';
 // ═══════════════════════════════════════════════════════════════════════════
 // CONFIGURATION DES PAIEMENTS — SAMI
 //
@@ -122,11 +123,11 @@ class ConfigPaiement {
   //    (panierpage.dart) et leur libellé client. 'interne' = écritures
   //    comptables (remboursements, commissions), jamais choisi par un client.
   static String libelleMethode(String? methode) => switch (methode) {
-        'cash' => 'Espèces à la livraison',
-        'mobile_money' => 'Mobile Money',
-        'momo_declare' => 'Transfert MoMo/OM déclaré',
-        'credits' => 'Avoirs (crédits)',
-        'interne' => 'Écriture interne',
+        'cash' => Tr.s.especesLivraison2,
+        'mobile_money' => Tr.s.mobileMoney,
+        'momo_declare' => Tr.s.transfertMomoOmDeclare,
+        'credits' => Tr.s.avoirsCredits,
+        'interne' => Tr.s.ecritureInterne,
         _ => methode ?? '—',
       };
 }

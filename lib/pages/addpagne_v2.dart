@@ -12,6 +12,7 @@ import 'package:sami/services/commission_boutique_service.dart';
 import 'package:sami/models/pagne.dart';
 import 'package:sami/models/categorie.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ─── Alias : on utilise DecompositionFCFA de prix_fcfa.dart ─────────────────
 // PrixFCFA.decomposer() gère l'arrondi au pas de 50 FCFA automatiquement
@@ -130,7 +131,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
     if (!mounted) return;
     setState(() {
       _mesBoutiques = q.docs
-          .map((d) => (id: d.id, nom: d.data()['nom'] as String? ?? 'Boutique'))
+          .map((d) => (id: d.id, nom: d.data()['nom'] as String? ?? Tr.s.boutique))
           .toList();
       if (_mesBoutiques.length == 1) _boutiqueChoisie = _mesBoutiques.first.id;
     });
@@ -263,11 +264,11 @@ class _AddPagnePageState extends State<AddPagnePage> {
   Future<void> _sauvegarder() async {
     if (!_formKey.currentState!.validate()) return;
     if (_imageFiles.isEmpty && _uploadedImageUrls.isEmpty) {
-      _showSnack('Ajoutez au moins une image', isError: true);
+      _showSnack(Tr.s.ajoutezMoinsImage, isError: true);
       return;
     }
     if ((_prixCalc?.coutAchat ?? 0) <= 0) {
-      _showSnack('Le coût d\'achat doit être supérieur à 0', isError: true);
+      _showSnack(Tr.s.coutAchatDoitEtreSuperieur, isError: true);
       return;
     }
 
@@ -277,8 +278,8 @@ class _AddPagnePageState extends State<AddPagnePage> {
     if (boutiqueCible == null) {
       _showSnack(
           _mesBoutiques.isEmpty
-              ? 'Créez d\'abord votre boutique (candidature partenaire) avant de publier un pagne'
-              : 'Choisissez la boutique de ce pagne',
+              ? Tr.s.creezAbordVotreBoutiqueCandidature
+              : Tr.s.choisissezBoutiqueCePagne,
           isError: true);
       return;
     }
@@ -286,7 +287,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
     {
       final verif = await CommissionBoutiqueService.peutPublier(boutiqueCible);
       if (!verif.autorise) {
-        _showSnack(verif.raison ?? 'Crédit insuffisant pour publier', isError: true);
+        _showSnack(verif.raison ?? Tr.s.creditInsuffisantPourPublier, isError: true);
         return;
       }
     }
@@ -343,10 +344,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
             imageUrls.fold<int>(0, (somme, u) => somme + u.length);
         if (tailleImages > 850 * 1024) {
           _showSnack(
-              'Poids total des photos : ${(tailleImages / 1024).round()} Ko '
-              '(limite ${'≈'}850 Ko en stockage local — c\'est le POIDS qui '
-              'compte, pas le nombre). Retirez une photo ou activez '
-              'Cloudflare R2 dans Mon compte (admin) pour lever la limite.',
+              Tr.s.poidsTotalPhotosKoLimite((tailleImages / 1024).round(), '≈'),
               isError: true);
           setState(() => _isSaving = false);
           return;
@@ -410,7 +408,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
       }
     } catch (e) {
       if (mounted) {
-        _showSnack('Erreur : $e', isError: true);
+        _showSnack(Tr.s.erreur2(e), isError: true);
       }
     } finally {
       setState(() {
@@ -430,7 +428,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Ajouter un pagne'),
+        title: Text(Tr.s.ajouterPagne),
         backgroundColor: const Color(0xFF6A1B9A),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -451,7 +449,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
             TextButton.icon(
               onPressed: _sauvegarder,
               icon: const Icon(Icons.check, color: Colors.white, size: 18),
-              label: const Text('Publier',
+              label: Text(Tr.s.publier,
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
             ),
         ],
@@ -465,8 +463,8 @@ class _AddPagnePageState extends State<AddPagnePage> {
             if (widget.boutiqueId == null && _mesBoutiques.length > 1) ...[
               DropdownButtonFormField<String>(
                 value: _boutiqueChoisie,
-                decoration: const InputDecoration(
-                    labelText: 'Boutique du pagne *',
+                decoration: InputDecoration(
+                    labelText: Tr.s.boutiquePagne,
                     border: OutlineInputBorder(), isDense: true),
                 items: [
                   for (final b in _mesBoutiques)
@@ -478,7 +476,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
             ],
             // ── Section images ──────────────────────────────────────────
             _SectionCard(
-              titre: 'Photos',
+              titre: Tr.s.photos,
               icone: Icons.photo_library_outlined,
               child: Column(
                 children: [
@@ -494,7 +492,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                         child: OutlinedButton.icon(
                           onPressed: _selectionnerImages,
                           icon: const Icon(Icons.photo_library, size: 18),
-                          label: const Text('Galerie'),
+                          label: Text(Tr.s.galerie),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF6A1B9A),
                             side: const BorderSide(color: Color(0xFF6A1B9A)),
@@ -506,7 +504,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                         child: OutlinedButton.icon(
                           onPressed: _prendrePhoto,
                           icon: const Icon(Icons.camera_alt, size: 18),
-                          label: const Text('Caméra'),
+                          label: Text(Tr.s.camera),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF6A1B9A),
                             side: const BorderSide(color: Color(0xFF6A1B9A)),
@@ -519,7 +517,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        'Au moins 1 photo requise',
+                        Tr.s.moins1PhotoRequise,
                         style: TextStyle(
                             fontSize: 12, color: Colors.orange.shade700),
                       ),
@@ -530,21 +528,21 @@ class _AddPagnePageState extends State<AddPagnePage> {
 
             // ── Section infos générales ─────────────────────────────────
             _SectionCard(
-              titre: 'Informations générales',
+              titre: Tr.s.informationsGenerales,
               icone: Icons.info_outline,
               child: Column(
                 children: [
                   _Champ(
                     controller: _nomController,
-                    label: 'Nom du pagne *',
+                    label: Tr.s.nomPagne,
                     hint: 'Ex : Bazin riche brodé',
                     validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'Nom requis' : null,
+                        v == null || v.trim().isEmpty ? Tr.s.nomRequis : null,
                   ),
                   const SizedBox(height: 12),
                   _Champ(
                     controller: _descriptionController,
-                    label: 'Description',
+                    label: Tr.s.description,
                     hint: 'Décrivez le pagne, sa qualité, son histoire...',
                     maxLines: 3,
                   ),
@@ -554,7 +552,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                       Expanded(
                         child: _Champ(
                           controller: _matiereController,
-                          label: 'Matière',
+                          label: Tr.s.matiere,
                           hint: 'Bazin, Coton...',
                         ),
                       ),
@@ -562,7 +560,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                       Expanded(
                         child: _Champ(
                           controller: _origineController,
-                          label: 'Origine',
+                          label: Tr.s.origine,
                           hint: 'Garoua, Guinée...',
                         ),
                       ),
@@ -574,7 +572,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                       Expanded(
                         child: _Champ(
                           controller: _delaiController,
-                          label: 'Délai livraison (j)',
+                          label: Tr.s.delaiLivraisonJ,
                           hint: '1',
                           keyboardType: TextInputType.number,
                           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -584,7 +582,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                       Expanded(
                         child: _Champ(
                           controller: _stockController,
-                          label: 'Stock disponible',
+                          label: Tr.s.stockDisponible,
                           hint: 'ex: 10',
                           keyboardType: TextInputType.number,
                           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -598,7 +596,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                       Expanded(
                         child: _Champ(
                           controller: _quantiteController,
-                          label: 'Quantité min. commande',
+                          label: Tr.s.quantiteMinCommande,
                           hint: '1',
                           keyboardType: TextInputType.number,
                           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -612,15 +610,15 @@ class _AddPagnePageState extends State<AddPagnePage> {
 
             // ── Section PRIX (cœur du formulaire) ──────────────────────
             _SectionCard(
-              titre: 'Prix & rentabilité',
+              titre: Tr.s.prixRentabilite,
               icone: Icons.calculate_outlined,
               couleurAccent: const Color(0xFF1B5E20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Coût d'achat
-                  const Text(
-                    'Coût d\'achat du pagne *',
+                  Text(
+                    Tr.s.coutAchatPagne,
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 6),
@@ -630,16 +628,16 @@ class _AddPagnePageState extends State<AddPagnePage> {
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: _inputDeco('0').copyWith(
                       prefixText: 'FCFA  ',
-                      hintText: 'Ex : 5000',
+                      hintText: Tr.s.ex5000,
                     ),
                     validator: (v) {
                       final val = double.tryParse(v ?? '0') ?? 0;
-                      return val <= 0 ? 'Entrez un coût valide' : null;
+                      return val <= 0 ? Tr.s.entrezCoutValide : null;
                     },
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Prix plancher promo (optionnel)',
+                  Text(
+                    Tr.s.prixPlancherPromoOptionnel,
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 6),
@@ -649,10 +647,9 @@ class _AddPagnePageState extends State<AddPagnePage> {
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: _inputDeco('0').copyWith(
                       prefixText: 'FCFA  ',
-                      hintText: 'Votre minimum vital — vide = seuil auto',
+                      hintText: Tr.s.votreMinimumVitalVideSeuil,
                       helperText:
-                          'Si vide : plancher automatique = coût d\'achat + '
-                          'commission (jamais de vente à perte par accident).',
+                          Tr.s.siVidePlancherAutomatiqueCout,
                       helperMaxLines: 2,
                     ),
                   ),
@@ -671,13 +668,13 @@ class _AddPagnePageState extends State<AddPagnePage> {
                         activeColor: const Color(0xFF1B5E20),
                       ),
                       const SizedBox(width: 6),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Bénéfice souhaité',
+                            Text(Tr.s.beneficeSouhaite,
                                 style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
-                            Text('Optionnel — sans bénéfice, vous récupérez le coût',
+                            Text(Tr.s.optionnelSansBeneficeVousRecuperez,
                                 style: TextStyle(fontSize: 11, color: Colors.grey)),
                           ],
                         ),
@@ -692,7 +689,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                     Row(
                       children: [
                         _ChipMode(
-                          label: 'En %',
+                          label: Tr.s.enPourcent,
                           actif: _modeBenefice == 'pct',
                           onTap: () {
                             setState(() => _modeBenefice = 'pct');
@@ -701,7 +698,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                         ),
                         const SizedBox(width: 8),
                         _ChipMode(
-                          label: 'En FCFA',
+                          label: Tr.s.fcfa,
                           actif: _modeBenefice == 'fcfa',
                           onTap: () {
                             setState(() => _modeBenefice = 'fcfa');
@@ -751,8 +748,8 @@ class _AddPagnePageState extends State<AddPagnePage> {
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         decoration: _inputDeco('0').copyWith(
                           prefixText: 'FCFA  ',
-                          hintText: 'Ex : 2000',
-                          labelText: 'Bénéfice en FCFA',
+                          hintText: Tr.s.ex2000,
+                          labelText: Tr.s.beneficeFcfa,
                         ),
                       ),
                     ],
@@ -768,13 +765,13 @@ class _AddPagnePageState extends State<AddPagnePage> {
 
             // ── Section catégories & caractéristiques ───────────────────
             _SectionCard(
-              titre: 'Catégories & caractéristiques',
+              titre: Tr.s.categoriesCaracteristiques,
               icone: Icons.label_outline,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Catégories
-                  const Text('Catégories',
+                  Text(Tr.s.categories,
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 8),
                   _isLoadingCategories
@@ -791,7 +788,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                   const SizedBox(height: 16),
 
                   // Tailles
-                  const Text('Tailles disponibles',
+                  Text(Tr.s.taillesDisponibles,
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 8),
                   Wrap(
@@ -813,7 +810,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                   const SizedBox(height: 16),
 
                   // Couleurs
-                  const Text('Couleurs disponibles',
+                  Text(Tr.s.couleursDisponibles,
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 8),
                   Wrap(
@@ -838,17 +835,17 @@ class _AddPagnePageState extends State<AddPagnePage> {
 
             // ── Section mention & tags ──────────────────────────────────
             _SectionCard(
-              titre: 'Mise en avant',
+              titre: Tr.s.miseAvant,
               icone: Icons.star_outline,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Mention spéciale',
+                  Text(Tr.s.mentionSpeciale,
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<Mention>(
                     value: _mention,
-                    decoration: _inputDeco('').copyWith(labelText: 'Mention'),
+                    decoration: _inputDeco('').copyWith(labelText: Tr.s.mention),
                     items: Mention.values
                         .map((m) => DropdownMenuItem(
                               value: m,
@@ -861,7 +858,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                   const SizedBox(height: 16),
 
                   // Tags
-                  const Text('Tags',
+                  Text(Tr.s.tags,
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 8),
                   Row(
@@ -870,7 +867,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                         child: TextField(
                           controller: _tagController,
                           decoration: _inputDeco('').copyWith(
-                            hintText: 'Ajouter un tag...',
+                            hintText: Tr.s.ajouterTag,
                             suffixIcon: IconButton(
                               icon: const Icon(Icons.add, size: 18),
                               onPressed: _ajouterTag,
@@ -902,7 +899,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
                   // Vidéo
                   _Champ(
                     controller: _videoController,
-                    label: 'Lien vidéo (optionnel)',
+                    label: Tr.s.lienVideoOptionnel,
                     hint: 'https://youtube.com/...',
                     prefixIcon: Icons.play_circle_outline,
                   ),
@@ -928,9 +925,9 @@ class _AddPagnePageState extends State<AddPagnePage> {
                 label: Text(
                   _isSaving
                       ? _isUploadingImages
-                          ? 'Upload images...'
-                          : 'Enregistrement...'
-                      : 'Publier le pagne',
+                          ? Tr.s.uploadImages
+                          : Tr.s.enregistrement
+                      : Tr.s.publierPagne,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -971,21 +968,21 @@ class _AddPagnePageState extends State<AddPagnePage> {
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.check_circle, color: Colors.green, size: 28),
             SizedBox(width: 8),
-            Text('Pagne publié !', style: TextStyle(fontSize: 18)),
+            Text(Tr.s.pagnePublie, style: TextStyle(fontSize: 18)),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _LigneResume('Prix affiché', prix.prixFinalFmt, bold: true),
-            _LigneResume('Votre net', prix.netBoutiqueFmt),
+            _LigneResume(Tr.s.prixAffiche, prix.prixFinalFmt, bold: true),
+            _LigneResume(Tr.s.votreNet, prix.netBoutiqueFmt),
             _LigneResume(
-                'Votre marge', prix.margeReelleFmt),
+                Tr.s.votreMarge, prix.margeReelleFmt),
           ],
         ),
         actions: [
@@ -994,7 +991,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
               Navigator.of(context).pop();
               Navigator.of(context).pop();
             },
-            child: const Text('Voir mes pagnes'),
+            child: Text(Tr.s.voirMesPagnes),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1018,7 +1015,7 @@ class _AddPagnePageState extends State<AddPagnePage> {
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6A1B9A),
                 foregroundColor: Colors.white),
-            child: const Text('Ajouter un autre'),
+            child: Text(Tr.s.ajouterAutre),
           ),
         ],
       ),
@@ -1027,17 +1024,17 @@ class _AddPagnePageState extends State<AddPagnePage> {
 
   String _mentionLabel(Mention m) {
     return switch (m) {
-      Mention.aucun => 'Aucune',
-      Mention.coupDeCoeur => '❤️ Coup de cœur',
-      Mention.meilleureVente => '🏆 Meilleure vente',
-      Mention.nouveaute => '🆕 Nouveauté',
-      Mention.exclusivite => '⭐ Exclusivité',
-      Mention.premium => '💎 Premium',
-      Mention.artisanatLocal => '🤝 Artisanat local',
-      Mention.editionLimitee => '🔥 Édition limitée',
-      Mention.enPromotion => '🏷️ En promotion',
-      Mention.bientotDisponible => '⏳ Bientôt dispo.',
-      Mention.ruptureDeStock => '❌ Rupture de stock',
+      Mention.aucun => Tr.s.aucune,
+      Mention.coupDeCoeur => Tr.s.coupCUr,
+      Mention.meilleureVente => Tr.s.meilleureVente,
+      Mention.nouveaute => Tr.s.nouveaute,
+      Mention.exclusivite => Tr.s.exclusivite,
+      Mention.premium => Tr.s.premium,
+      Mention.artisanatLocal => Tr.s.artisanatLocal,
+      Mention.editionLimitee => Tr.s.editionLimitee,
+      Mention.enPromotion => Tr.s.promotion,
+      Mention.bientotDisponible => Tr.s.bientotDispo,
+      Mention.ruptureDeStock => Tr.s.ruptureStock,
     };
   }
 
@@ -1088,7 +1085,7 @@ class _CarteResultatPrix extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Prix affiché au client',
+              Text(Tr.s.prixAfficheClient,
                   style: TextStyle(fontSize: 13, color: Colors.black54)),
               Text(
                 prix.prixFinalFmt,
@@ -1104,17 +1101,17 @@ class _CarteResultatPrix extends StatelessWidget {
           const Divider(height: 20),
 
           // Décomposition
-          _LigneDecomp('Coût d\'achat', PrixFCFA.formater(prix.coutAchat)),
+          _LigneDecomp(Tr.s.coutAchat, PrixFCFA.formater(prix.coutAchat)),
           if (prix.beneficeSouhaite > 0)
             _LigneDecomp(
-              'Votre bénéfice',
+              Tr.s.votreBenefice,
               PrixFCFA.formater(prix.beneficeSouhaite),
               couleur: Colors.green.shade700,
             ),
-          _LigneDecomp('Livraison incluse', PrixFCFA.formater(prix.fraisLivraison),
+          _LigneDecomp(Tr.s.livraisonIncluse, PrixFCFA.formater(prix.fraisLivraison),
               muted: true),
           _LigneDecomp(
-              'Commission plateforme (${prix.tauxCommission.round()}%)',
+              Tr.s.commissionPlateforme(prix.tauxCommission.round()),
               PrixFCFA.formater(prix.commission),
               muted: true),
 
@@ -1124,7 +1121,7 @@ class _CarteResultatPrix extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Vous recevez',
+              Text(Tr.s.vousRecevez,
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
               Text(
                 prix.netBoutiqueFmt,
@@ -1140,7 +1137,7 @@ class _CarteResultatPrix extends StatelessWidget {
           if (prix.margeReelle > 0) ...[
             const SizedBox(height: 4),
             Text(
-              'Marge réelle : ${prix.margeReelleFmt} sur votre coût',
+              Tr.s.margeReelleSurVotreCout(prix.margeReelleFmt),
               style: TextStyle(fontSize: 11, color: Colors.green.shade700),
             ),
           ],
@@ -1349,7 +1346,7 @@ class _BuildChipsSelection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (options.isEmpty) {
-      return const Text('Aucune catégorie disponible',
+      return Text(Tr.s.aucuneCategorieDisponible,
           style: TextStyle(color: Colors.grey, fontSize: 12));
     }
     return Wrap(
@@ -1422,7 +1419,7 @@ class _GrilleImages extends StatelessWidget {
                     color: Colors.black54,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text('Principale',
+                  child: Text(Tr.s.principale,
                       style:
                           TextStyle(color: Colors.white, fontSize: 9)),
                 ),
@@ -1471,5 +1468,5 @@ class _LigneResume extends StatelessWidget {
 // Extension privée pour formatage
 extension on _PrixPagne {
   String _fmt(double v) =>
-      '${v.round().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]} ')} FCFA';
+      Tr.s.fcfa2(v.round().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]} '));
 }

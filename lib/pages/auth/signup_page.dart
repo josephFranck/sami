@@ -9,7 +9,9 @@ import 'package:sami/models/utilisateur.dart';
 import 'package:sami/pages/accueil_pagneshop.dart';
 import 'package:sami/pages/auth/login_page.dart';
 import 'package:sami/utils/auth_i18n.dart';
+import 'package:sami/services/langue_service.dart';
 import 'package:uuid/uuid.dart';
+import 'package:sami/l10n/tr.dart';
 
 class SignupPage extends StatefulWidget {
   final AuthLang lang;
@@ -51,7 +53,10 @@ class _SignupPageState extends State<SignupPage> {
     _i18n = AuthI18n(_lang);
   }
 
-  void _changerLang(AuthLang l) => setState(() { _lang = l; _i18n = AuthI18n(l); });
+  void _changerLang(AuthLang l) {
+    setState(() { _lang = l; _i18n = AuthI18n(l); });
+    LangueService.instance.changer(l.name); // langue de toute l'app
+  }
 
   @override
   void dispose() {
@@ -203,13 +208,13 @@ class _SignupPageState extends State<SignupPage> {
                           valeur: _accepteCgu,
                           onChanged: (v) => setState(() => _accepteCgu = v),
                           enfant: Wrap(children: [
-                            const Text("J'ai lu et j'accepte les ",
+                            Text(Tr.s.jAiLuJAccepte,
                                 style: TextStyle(fontSize: 12.5)),
-                            _Lien('conditions générales',
+                            _Lien(Tr.s.conditionsGenerales,
                                 () => _ouvrirLegal(context, 1)),
-                            const Text(' et la ',
+                            Text(Tr.s.etLa,
                                 style: TextStyle(fontSize: 12.5)),
-                            _Lien('politique de confidentialité',
+                            _Lien(Tr.s.politiqueConfidentialite,
                                 () => _ouvrirLegal(context, 2)),
                             const Text('. *', style: TextStyle(fontSize: 12.5)),
                           ]),
@@ -217,17 +222,16 @@ class _SignupPageState extends State<SignupPage> {
                         _CaseConsentement(
                           valeur: _majeur,
                           onChanged: (v) => setState(() => _majeur = v),
-                          enfant: const Text(
-                              'Je certifie avoir 18 ans ou plus. *',
+                          enfant: Text(
+                              Tr.s.jeCertifieAvoir18Ans,
                               style: TextStyle(fontSize: 12.5)),
                         ),
                         _CaseConsentement(
                           valeur: _consentMarketing,
                           onChanged: (v) =>
                               setState(() => _consentMarketing = v),
-                          enfant: const Text(
-                              'Je souhaite recevoir les offres et promotions '
-                              '(facultatif, modifiable à tout moment).',
+                          enfant: Text(
+                              Tr.s.jeSouhaiteRecevoirOffresPromotions,
                               style: TextStyle(fontSize: 12.5)),
                         ),
                       ],
@@ -324,9 +328,8 @@ class _SignupPageState extends State<SignupPage> {
     // Étape finale → consentements OBLIGATOIRES d'abord
     if (!_accepteCgu || !_majeur) {
       setState(() => _erreur = !_accepteCgu
-          ? 'Vous devez accepter les conditions générales et la politique '
-              'de confidentialité pour créer un compte.'
-          : 'Le service est réservé aux personnes majeures (18 ans ou plus).');
+          ? Tr.s.vousDevezAccepterConditionsGenerales
+          : Tr.s.serviceEstReservePersonnesMajeures);
       return;
     }
     setState(() => _enCours = true);
@@ -569,7 +572,7 @@ class _SelecteurLang extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
-    child: Row(mainAxisSize: MainAxisSize.min, children: AuthLang.values.map((l) {
+    child: Row(mainAxisSize: MainAxisSize.min, children: AuthLang.values.where((l) => l != AuthLang.ff).map((l) {
       final actif = l == lang;
       return GestureDetector(
         onTap: () => onChange(l),

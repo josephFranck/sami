@@ -11,6 +11,7 @@ import 'package:sami/services/recu_service.dart';
 import 'package:sami/pages/recus_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kBg = Color(0xFFF7F5FA);
@@ -25,7 +26,7 @@ class MesCoutureClientPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
-        title: const Text('Mes coutures'),
+        title: Text(Tr.s.mesCoutures),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -45,7 +46,7 @@ class MesCoutureClientPage extends StatelessWidget {
                   Icon(Icons.content_cut,
                       size: 56, color: Colors.grey.shade300),
                   const SizedBox(height: 12),
-                  const Text('Aucune commande de couture',
+                  Text(Tr.s.aucuneCommandeCouture,
                       style: TextStyle(color: Colors.grey)),
                 ],
               ),
@@ -113,14 +114,14 @@ class MesCoutureClientPage extends StatelessWidget {
                         auteurRole: 'client',
                         auteurNom: FirebaseAuth
                                 .instance.currentUser?.displayName ??
-                            'Client',
+                            Tr.s.client,
                         livraisonId: cmd.livraisonRetourId,
                       ),
                     ),
                   ),
                   icon: const Icon(Icons.star_border,
                       size: 15, color: Colors.amber),
-                  label: const Text('Noter le couturier',
+                  label: Text(Tr.s.noterCouturier,
                       style: TextStyle(fontSize: 12)),
                   style:
                       TextButton.styleFrom(foregroundColor: Colors.amber),
@@ -145,7 +146,7 @@ class MesCoutureClientPage extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => RecuPage(recu: recu)));
                   },
                   icon: const Icon(Icons.receipt_long_outlined, size: 15),
-                  label: const Text('Reçu authentifié',
+                  label: Text(Tr.s.recuAuthentifie,
                       style: TextStyle(fontSize: 12)),
                   style: TextButton.styleFrom(foregroundColor: Colors.green),
                 ),
@@ -164,12 +165,12 @@ class MesCoutureClientPage extends StatelessWidget {
                       autreUserId: cmd.couturierId,
                       autreNom: d != null
                           ? '${d['prenom'] ?? ''} ${d['nom'] ?? 'Couturier'}'.trim()
-                          : 'Couturier',
+                          : Tr.s.couturier,
                       contexte: 'Commande couture',
                       contexteId: cmd.id);
                 },
                 icon: const Icon(Icons.chat_bubble_outline, size: 15),
-                label: const Text('Écrire au couturier',
+                label: Text(Tr.s.ecrireCouturier,
                     style: TextStyle(fontSize: 12)),
                 style: TextButton.styleFrom(foregroundColor: _kPrimary),
               ),
@@ -187,7 +188,7 @@ class MesCoutureClientPage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Votre vêtement est prêt :',
+                        Text(Tr.s.votreVetementEstPret,
                             style: TextStyle(
                                 fontSize: 12, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 6),
@@ -215,17 +216,17 @@ class MesCoutureClientPage extends StatelessWidget {
                     final ok = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('Contre-proposition'),
+                        title: Text(Tr.s.contreProposition),
                         content: TextField(
                           controller: ctrl,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                              labelText: 'Votre prix (FCFA)',
+                          decoration: InputDecoration(
+                              labelText: Tr.s.votrePrixFcfa,
                               border: OutlineInputBorder(), isDense: true),
                         ),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-                          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Envoyer')),
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(Tr.s.annuler)),
+                          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(Tr.s.envoyer)),
                         ],
                       ),
                     );
@@ -239,16 +240,16 @@ class MesCoutureClientPage extends StatelessWidget {
                       // Le couturier doit le SAVOIR, pas le découvrir
                       await NotificationService.envoyer(
                         destinataireId: cmd.couturierId,
-                        titre: 'Contre-proposition reçue 💬',
+                        titre: (t) => t.contrePropositionRecue,
                         message:
-                            'Le client propose ${PrixFCFA.formater(montant)}. Vous pouvez accepter ce prix ou re-proposer.',
+                            (t) => t.clientProposeVousPouvezAccepter(PrixFCFA.formater(montant)),
                         route: '/dashboard_couturier',
                         refId: cmd.id,
                       );
                     }
                   },
                   icon: const Icon(Icons.gavel_outlined, size: 15),
-                  label: const Text('Contre-proposer', style: TextStyle(fontSize: 12)),
+                  label: Text(Tr.s.contreProposer, style: TextStyle(fontSize: 12)),
                   style: TextButton.styleFrom(foregroundColor: Colors.deepOrange),
                 ),
               ),
@@ -262,7 +263,7 @@ class MesCoutureClientPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Le couturier propose un prix :',
+                    Text(Tr.s.couturierProposePrix,
                         style: TextStyle(fontSize: 12, color: Colors.black87)),
                     const SizedBox(height: 4),
                     Text(PrixFCFA.formater(cmd.prixPropose ?? 0),
@@ -282,7 +283,7 @@ class MesCoutureClientPage extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red,
                           side: const BorderSide(color: Colors.red)),
-                      child: const Text('Refuser'),
+                      child: Text(Tr.s.refuser),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -292,7 +293,7 @@ class MesCoutureClientPage extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white),
-                      child: const Text('Accepter'),
+                      child: Text(Tr.s.accepter),
                     ),
                   ),
                 ],
@@ -307,8 +308,8 @@ class MesCoutureClientPage extends StatelessWidget {
   Future<void> _accepter(BuildContext ctx, CommandeCouturier cmd) async {
     await CoutureService.accepterDevis(cmd.id);
     if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-        content: Text('Devis accepté — la confection peut commencer'),
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+        content: Text(Tr.s.devisAccepteConfectionPeutCommencer),
         backgroundColor: Colors.green,
       ));
     }
@@ -317,8 +318,8 @@ class MesCoutureClientPage extends StatelessWidget {
   Future<void> _refuser(BuildContext ctx, CommandeCouturier cmd) async {
     await CoutureService.refuserDevis(cmd.id);
     if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-        content: Text('Devis refusé — commande annulée'),
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+        content: Text(Tr.s.devisRefuseCommandeAnnulee),
         backgroundColor: Colors.orange,
       ));
     }

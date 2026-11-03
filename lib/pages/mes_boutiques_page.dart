@@ -6,6 +6,7 @@ import 'package:sami/models/boutique.dart';
 import 'package:sami/pages/editboutique.dart';
 import 'package:sami/pages/pagnepage.dart';
 import 'package:sami/widgets/image_universelle.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -25,16 +26,16 @@ class MesBoutiquesPage extends StatelessWidget {
             context,
             MaterialPageRoute(builder: (_) => const AddBoutiquePage())),
         icon: const Icon(Icons.add_business),
-        label: const Text('Créer une boutique'),
+        label: Text(Tr.s.creerBoutique),
       ),
       backgroundColor: const Color(0xFFF7F5FA),
       appBar: AppBar(
-        title: const Text('Mes boutiques'),
+        title: Text(Tr.s.mesBoutiques),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
       body: uid == null
-          ? const Center(child: Text('Connectez-vous'))
+          ? Center(child: Text(Tr.s.connectezVous))
           : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: FirebaseFirestore.instance
                   .collection('boutiques')
@@ -43,7 +44,7 @@ class MesBoutiquesPage extends StatelessWidget {
               builder: (context, snap) {
                 if (snap.hasError) {
                   return Center(
-                      child: Text('Erreur : ${snap.error}',
+                      child: Text(Tr.s.erreur3(snap.error),
                           style: const TextStyle(color: Colors.red)));
                 }
                 if (!snap.hasData) {
@@ -52,11 +53,11 @@ class MesBoutiquesPage extends StatelessWidget {
                 }
                 final docs = snap.data!.docs;
                 if (docs.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Padding(
                       padding: EdgeInsets.all(24),
                       child: Text(
-                        'Aucune boutique à votre nom.\nDéposez une candidature « Devenir partenaire » : sa validation crée votre boutique.',
+                        Tr.s.aucuneBoutiqueVotreNomDeposez,
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.grey),
                       ),
@@ -101,8 +102,8 @@ class MesBoutiquesPage extends StatelessWidget {
                                             fontSize: 15)),
                                     Text(
                                         b.estActif
-                                            ? '🟢 Active (visible des clients)'
-                                            : '⛔ Désactivée',
+                                            ? Tr.s.activeVisibleClients
+                                            : Tr.s.desactivee2,
                                         style: TextStyle(
                                             fontSize: 12,
                                             color: b.estActif
@@ -123,7 +124,7 @@ class MesBoutiquesPage extends StatelessWidget {
                                               EditBoutiquePage(boutique: b))),
                                   icon: const Icon(Icons.edit_outlined,
                                       size: 16),
-                                  label: const Text('Modifier',
+                                  label: Text(Tr.s.modifier,
                                       style: TextStyle(fontSize: 12.5)),
                                 ),
                               ),
@@ -138,7 +139,7 @@ class MesBoutiquesPage extends StatelessWidget {
                                               boutiqueNom: b.nom))),
                                   icon: const Icon(Icons.inventory_2_outlined,
                                       size: 16),
-                                  label: const Text('Ses pagnes',
+                                  label: Text(Tr.s.sesPagnes,
                                       style: TextStyle(fontSize: 12.5)),
                                 ),
                               ),

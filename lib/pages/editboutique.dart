@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:sami/widgets/image_universelle.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sami/services/stockage_service.dart';
+import 'package:sami/l10n/tr.dart';
 import 'package:sami/models/boutique.dart'; // Importez le modèle Boutique
 
 class EditBoutiquePage extends StatefulWidget {
@@ -45,7 +46,7 @@ class _EditBoutiquePageState extends State<EditBoutiquePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Modifier une boutique'),
+        title: Text(Tr.s.modifierBoutique),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -55,30 +56,30 @@ class _EditBoutiquePageState extends State<EditBoutiquePage> {
             children: [
               TextField(
                 controller: _nomController,
-                decoration: const InputDecoration(labelText: 'Nom'),
+                decoration: InputDecoration(labelText: Tr.s.nom),
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _adresseController,
-                decoration: const InputDecoration(labelText: 'Adresse'),
+                decoration: InputDecoration(labelText: Tr.s.adresse),
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _telephoneController,
-                decoration: const InputDecoration(labelText: 'Téléphone'),
+                decoration: InputDecoration(labelText: Tr.s.telephone),
                 keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
+                decoration: InputDecoration(labelText: Tr.s.description),
                 maxLines: 3,
               ),
               const SizedBox(height: 16.0),
 
-              const Text("Méthodes de paiement :"),
+              Text(Tr.s.methodesPaiement),
               CheckboxListTile(
-                title: const Text("Carte de crédit"),
+                title: Text(Tr.s.carteCredit),
                 value: _methodesPaiement.contains("carte"),
                 onChanged: (bool? value) {
                   setState(() {
@@ -91,7 +92,7 @@ class _EditBoutiquePageState extends State<EditBoutiquePage> {
                 },
               ),
               CheckboxListTile(
-                title: const Text("Espèces"),
+                title: Text(Tr.s.especes),
                 value: _methodesPaiement.contains("especes"),
                 onChanged: (bool? value) {
                   setState(() {
@@ -111,10 +112,10 @@ class _EditBoutiquePageState extends State<EditBoutiquePage> {
                 onPressed: () {
                   _selectImage();
                 },
-                child: const Text('Sélectionner un logo'),
+                child: Text(Tr.s.selectionnerLogo),
               ),
               const SizedBox(height: 16.0),
-              const Text('Logo sélectionné :'),
+              Text(Tr.s.logoSelectionne),
               const SizedBox(height: 8.0),
               _imageFile != null
                   ? ImageXFile(
@@ -139,13 +140,13 @@ class _EditBoutiquePageState extends State<EditBoutiquePage> {
                 onPressed: () {
                   _showConfirmationDialog();
                 },
-                child: const Text('Enregistrer les modifications'),
+                child: Text(Tr.s.enregistrerModifications),
               ),
               SwitchListTile(
-                title: const Text('Retrait en boutique',
+                title: Text(Tr.s.retraitBoutique,
                     style: TextStyle(fontSize: 14)),
-                subtitle: const Text(
-                    'Vos clients peuvent venir chercher et payer en espèces sur place.',
+                subtitle: Text(
+                    Tr.s.vosClientsPeuventVenirChercher,
                     style: TextStyle(fontSize: 11.5)),
                 value: widget.boutique.retraitEnBoutique,
                 activeColor: Colors.green,
@@ -162,10 +163,10 @@ class _EditBoutiquePageState extends State<EditBoutiquePage> {
               // reçus et comptabilité y sont liés) — on la DÉSACTIVE :
               // masquée du catalogue, réactivable à tout moment.
               SwitchListTile(
-                title: const Text('Boutique active (visible des clients)',
+                title: Text(Tr.s.boutiqueActiveVisibleClients,
                     style: TextStyle(fontSize: 14)),
-                subtitle: const Text(
-                    'Désactiver masque la boutique ET met tous ses pagnes hors vente.',
+                subtitle: Text(
+                    Tr.s.desactiverMasqueBoutiqueMetTous,
                     style: TextStyle(fontSize: 11.5)),
                 value: widget.boutique.estActif,
                 activeColor: Colors.green,
@@ -190,8 +191,8 @@ class _EditBoutiquePageState extends State<EditBoutiquePage> {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                         content: Text(v
-                            ? 'Boutique réactivée — remettez vos pagnes en vente depuis « Gérer mes pagnes »'
-                            : 'Boutique désactivée et pagnes retirés du catalogue'),
+                            ? Tr.s.boutiqueReactiveeRemettezVosPagnes
+                            : Tr.s.boutiqueDesactiveePagnesRetiresCatalogue),
                         backgroundColor: v ? Colors.green : Colors.orange));
                     Navigator.pop(context);
                   }
@@ -220,17 +221,17 @@ class _EditBoutiquePageState extends State<EditBoutiquePage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Confirmer la modification'),
-          content: const Text(
-              'Êtes-vous sûr de vouloir enregistrer les modifications ?'),
+          title: Text(Tr.s.confirmerModification),
+          content: Text(
+              Tr.s.etesVousSurVouloirEnregistrer),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Annuler'),
+              child: Text(Tr.s.annuler),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Confirmer'),
+              child: Text(Tr.s.confirmer),
             ),
           ],
         );
@@ -297,15 +298,15 @@ class _EditBoutiquePageState extends State<EditBoutiquePage> {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: const Text('Erreur de chargement du logo'),
-              content: const Text(
-                  'Une erreur s\'est produite lors du chargement du logo. Veuillez réessayer.'),
+              title: Text(Tr.s.erreurChargementLogo),
+              content: Text(
+                  Tr.s.erreurSEstProduiteLors),
               actions: [
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
-                  child: const Text('Ok'),
+                  child: Text(Tr.s.ok),
                 ),
               ],
             );
@@ -324,15 +325,15 @@ class _EditBoutiquePageState extends State<EditBoutiquePage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('Boutique modifiée'),
-            content: const Text('La boutique a été modifiée avec succès.'),
+            title: Text(Tr.s.boutiqueModifiee),
+            content: Text(Tr.s.boutiqueEteModifieeAvecSucces),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                   Navigator.of(context).pop();
                 },
-                child: const Text('Ok'),
+                child: Text(Tr.s.ok),
               ),
             ],
           );
@@ -343,15 +344,15 @@ class _EditBoutiquePageState extends State<EditBoutiquePage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('Erreur'),
-            content: const Text(
-                'Une erreur s\'est produite lors de la modification de la boutique. Veuillez réessayer.'),
+            title: Text(Tr.s.erreur),
+            content: Text(
+                Tr.s.erreurSEstProduiteLors3),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: const Text('Ok'),
+                child: Text(Tr.s.ok),
               ),
             ],
           );

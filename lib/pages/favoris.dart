@@ -6,6 +6,7 @@ import 'package:sami/services/favoris_service.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 import 'package:sami/widgets/image_universelle.dart';
 import 'package:sami/pages/pagnedetail.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kBg = Color(0xFFF7F5FA);
@@ -19,7 +20,7 @@ class FavorisPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
-        title: const Text('Mes favoris'),
+        title: Text(Tr.s.mesFavoris),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -121,8 +122,8 @@ class FavorisPage extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                         pagne.quantiteDisponible > 0
-                            ? 'En stock'
-                            : 'Rupture',
+                            ? Tr.s.stock
+                            : Tr.s.rupture,
                         style: TextStyle(
                             fontSize: 12,
                             color: pagne.quantiteDisponible > 0
@@ -149,10 +150,10 @@ class FavorisPage extends StatelessWidget {
         children: [
           Icon(Icons.favorite_border, size: 56, color: Colors.grey.shade300),
           const SizedBox(height: 12),
-          Text('Aucun favori pour le moment',
+          Text(Tr.s.aucunFavoriPourMoment,
               style: TextStyle(color: Colors.grey.shade500)),
           const SizedBox(height: 4),
-          Text('Touchez le cœur sur un pagne pour l\'ajouter ici',
+          Text(Tr.s.touchezCUrSurPagne,
               style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
         ],
       ),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:sami/widgets/image_universelle.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sami/services/stockage_service.dart';
+import 'package:sami/l10n/tr.dart';
 import 'package:sami/models/pagne.dart'; // Importez le modèle Pagne
 
 class EditPagnePage extends StatefulWidget {
@@ -68,7 +69,7 @@ class _EditPagnePageState extends State<EditPagnePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Modifier un pagne'),
+        title: Text(Tr.s.modifierPagne),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -78,76 +79,76 @@ class _EditPagnePageState extends State<EditPagnePage> {
             children: [
               TextField(
                 controller: _nomController,
-                decoration: const InputDecoration(labelText: 'Nom'),
+                decoration: InputDecoration(labelText: Tr.s.nom),
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
+                decoration: InputDecoration(labelText: Tr.s.description),
                 maxLines: 3,
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _prixController,
-                decoration: const InputDecoration(labelText: 'Prix'),
+                decoration: InputDecoration(labelText: Tr.s.prix),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _matiereController,
-                decoration: const InputDecoration(labelText: 'Matière'),
+                decoration: InputDecoration(labelText: Tr.s.matiere),
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _createurController,
-                decoration: const InputDecoration(labelText: 'Créateur'),
+                decoration: InputDecoration(labelText: Tr.s.createur),
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _origineController,
-                decoration: const InputDecoration(labelText: 'Origine'),
+                decoration: InputDecoration(labelText: Tr.s.origine),
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _delaiController,
-                decoration: const InputDecoration(labelText: 'Délai de livraison (jours)'),
+                decoration: InputDecoration(labelText: Tr.s.delaiLivraisonJours),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _quantiteController,
-                decoration: const InputDecoration(labelText: 'Quantité minimale de commande'),
+                decoration: InputDecoration(labelText: Tr.s.quantiteMinimaleCommande),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _stockController,
-                decoration: const InputDecoration(labelText: 'Stock disponible'),
+                decoration: InputDecoration(labelText: Tr.s.stockDisponible),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _coutAchatController,
-                decoration: const InputDecoration(
-                  labelText: 'Coût d\'achat (FCFA)',
-                  helperText: 'Sert au calcul du prix et de votre marge',
+                decoration: InputDecoration(
+                  labelText: Tr.s.coutAchatFcfa,
+                  helperText: Tr.s.sertCalculPrixVotreMarge,
                 ),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16.0),
               TextField(
                 controller: _videoController,
-                decoration: const InputDecoration(labelText: 'Lien vidéo de présentation'),
+                decoration: InputDecoration(labelText: Tr.s.lienVideoPresentation),
               ),
               const SizedBox(height: 16.0),
               ElevatedButton(
                 onPressed: () {
                   _selectImages();
                 },
-                child: const Text('Sélectionner des images'),
+                child: Text(Tr.s.selectionnerImages),
               ),
               const SizedBox(height: 16.0),
-              const Text('Images sélectionnées :'),
+              Text(Tr.s.imagesSelectionnees),
               const SizedBox(height: 8.0),
               _buildImagePreview(),
               const SizedBox(height: 16.0),
@@ -155,7 +156,7 @@ class _EditPagnePageState extends State<EditPagnePage> {
                 onPressed: () {
                   _showConfirmationDialog();
                 },
-                child: const Text('Enregistrer les modifications'),
+                child: Text(Tr.s.enregistrerModifications),
               ),
             ],
           ),
@@ -208,17 +209,17 @@ class _EditPagnePageState extends State<EditPagnePage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Confirmer la modification'),
-          content: const Text(
-              'Êtes-vous sûr de vouloir enregistrer les modifications ?'),
+          title: Text(Tr.s.confirmerModification),
+          content: Text(
+              Tr.s.etesVousSurVouloirEnregistrer),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Annuler'),
+              child: Text(Tr.s.annuler),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Confirmer'),
+              child: Text(Tr.s.confirmer),
             ),
           ],
         );
@@ -259,15 +260,15 @@ class _EditPagnePageState extends State<EditPagnePage> {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: const Text('Erreur de chargement des images'),
-              content: const Text(
-                  'Une erreur s\'est produite lors du chargement des images. Veuillez réessayer.'),
+              title: Text(Tr.s.erreurChargementImages),
+              content: Text(
+                  Tr.s.erreurSEstProduiteLors4),
               actions: [
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
-                  child: const Text('Ok'),
+                  child: Text(Tr.s.ok),
                 ),
               ],
             );
@@ -316,15 +317,15 @@ class _EditPagnePageState extends State<EditPagnePage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('Pagne modifié'),
-            content: const Text('Le pagne a été modifié avec succès.'),
+            title: Text(Tr.s.pagneModifie),
+            content: Text(Tr.s.pagneEteModifieAvecSucces),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                   Navigator.of(context).pop();
                 },
-                child: const Text('Ok'),
+                child: Text(Tr.s.ok),
               ),
             ],
           );
@@ -335,15 +336,15 @@ class _EditPagnePageState extends State<EditPagnePage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('Erreur'),
-            content: const Text(
-                'Une erreur s\'est produite lors de la modification du pagne. Veuillez réessayer.'),
+            title: Text(Tr.s.erreur),
+            content: Text(
+                Tr.s.erreurSEstProduiteLors5),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: const Text('Ok'),
+                child: Text(Tr.s.ok),
               ),
             ],
           );

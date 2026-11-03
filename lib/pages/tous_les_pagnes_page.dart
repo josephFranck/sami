@@ -4,6 +4,7 @@ import 'package:sami/models/pagne.dart';
 import 'package:sami/pages/pagnedetail.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 import 'package:sami/widgets/image_universelle.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -56,7 +57,7 @@ class _TousLesPagnesPageState extends State<TousLesPagnesPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F5FA),
       appBar: AppBar(
-        title: const Text('Tous les pagnes'),
+        title: Text(Tr.s.tousPagnes),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -79,7 +80,7 @@ class _TousLesPagnesPageState extends State<TousLesPagnesPage> {
                         : OutlinedButton.icon(
                             onPressed: _chargerPlus,
                             icon: const Icon(Icons.expand_more),
-                            label: const Text('Charger plus'),
+                            label: Text(Tr.s.chargerPlus),
                           ),
                   );
                 }

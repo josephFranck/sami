@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:sami/services/parametres_service.dart';
 import 'package:sami/utils/dates_fr.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kP = Color(0xFF6A1B9A);
 
@@ -29,7 +30,7 @@ class _DashboardLivreurPageState extends State<DashboardLivreurPage> {
         setState(() {
           _pct = r.pct;
           _detailPart = r.bonusFidelite + r.bonusAbo > 0
-              ? '(base ${r.base.toStringAsFixed(0)} + fidélité +${r.bonusFidelite.toStringAsFixed(0)} + abo +${r.bonusAbo.toStringAsFixed(0)})'
+              ? Tr.s.baseFideliteAbo(r.base.toStringAsFixed(0), r.bonusFidelite.toStringAsFixed(0), r.bonusAbo.toStringAsFixed(0))
               : '';
         });
       }
@@ -49,7 +50,7 @@ class _DashboardLivreurPageState extends State<DashboardLivreurPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-          title: const Text('Mon tableau de bord'),
+          title: Text(Tr.s.monTableauBord),
           backgroundColor: _kP,
           foregroundColor: Colors.white),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -61,7 +62,7 @@ class _DashboardLivreurPageState extends State<DashboardLivreurPage> {
         builder: (context, snap) {
           if (snap.hasError) {
             return Center(
-                child: Text('Erreur : ${snap.error}',
+                child: Text(Tr.s.erreur3(snap.error),
                     style: const TextStyle(fontSize: 12)));
           }
           if (!snap.hasData) {
@@ -144,7 +145,7 @@ class _DashboardLivreurPageState extends State<DashboardLivreurPage> {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Aujourd'hui",
+                      Text(Tr.s.aujourdHui,
                           style: TextStyle(
                               color: Colors.white70, fontSize: 12)),
                       Text(PrixFCFA.formater(gJour),
@@ -156,16 +157,16 @@ class _DashboardLivreurPageState extends State<DashboardLivreurPage> {
                       Row(children: [
                         Expanded(
                             child: Text(
-                                'Semaine : ${PrixFCFA.formater(gSemaine)}',
+                                Tr.s.semaine(PrixFCFA.formater(gSemaine)),
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 12.5))),
-                        Text('Total : ${PrixFCFA.formater(gTotal)}',
+                        Text(Tr.s.total2(PrixFCFA.formater(gTotal)),
                             style: const TextStyle(
                                 color: Colors.white70, fontSize: 12.5)),
                       ]),
                       const SizedBox(height: 4),
-                      Text('Votre part : ${_pct.toStringAsFixed(0)} % des frais $_detailPart',
+                      Text(Tr.s.votrePartFrais(_pct.toStringAsFixed(0), _detailPart),
                           style: const TextStyle(
                               color: Colors.white54, fontSize: 10.5)),
                     ]),
@@ -179,16 +180,16 @@ class _DashboardLivreurPageState extends State<DashboardLivreurPage> {
                     Icons.delivery_dining, Colors.orange),
               ]),
               const SizedBox(height: 18),
-              const Text('  Dernières livraisons',
+              Text(Tr.s.dernieresLivraisons,
                   style: TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 14)),
               const SizedBox(height: 6),
               if (livrees.isEmpty)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.all(24),
                   child: Center(
                       child: Text(
-                          'Aucune livraison terminée pour le moment.\nVos gains apparaîtront ici.',
+                          Tr.s.aucuneLivraisonTermineePourMoment,
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Colors.grey))),
                 ),
@@ -213,7 +214,7 @@ class _DashboardLivreurPageState extends State<DashboardLivreurPage> {
                                 d['adresseArrivee'] as String? ??
                                     d['destinationQuartier']
                                         as String? ??
-                                    'Livraison',
+                                    Tr.s.livraison2,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 import 'package:sami/utils/config_paiement.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SERVICE DE PAIEMENT — Monetbil + CinetPay
@@ -217,7 +218,7 @@ class PaiementService {
         } else {
           final erreur = data['message'] as String?
               ?? data['error'] as String?
-              ?? 'Erreur Monetbil inconnue';
+              ?? Tr.s.erreurMonetbilInconnue;
 
           await _marquerEchoue(transactionId, erreur);
 
@@ -246,8 +247,8 @@ class PaiementService {
         succes: false,
         transactionId: transactionId,
         erreur: _estErreurReseau(e)
-            ? 'Pas de connexion. Vérifiez votre réseau.'
-            : 'Erreur technique. Réessayez.',
+            ? Tr.s.pasConnexionVerifiezVotreReseau
+            : Tr.s.erreurTechniqueReessayez,
         fournisseur: FournisseurPaiement.monetbil,
       );
     }
@@ -313,7 +314,7 @@ class PaiementService {
             fournisseur: FournisseurPaiement.cinetpay,
           );
         } else {
-          final msg = data['message'] as String? ?? 'Erreur CinetPay';
+          final msg = data['message'] as String? ?? Tr.s.erreurCinetpay;
           await _marquerEchoue(transactionId, msg);
           return ResultatInitiation(
             succes: false,
@@ -335,7 +336,7 @@ class PaiementService {
       return ResultatInitiation(
         succes: false,
         transactionId: transactionId,
-        erreur: _estErreurReseau(e) ? 'Pas de connexion.' : 'Erreur : $e',
+        erreur: _estErreurReseau(e) ? Tr.s.pasConnexion : Tr.s.erreur2(e),
         fournisseur: FournisseurPaiement.cinetpay,
       );
     }
@@ -521,7 +522,7 @@ class _PagePaiementMoMoState extends State<PagePaiementMoMo> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Paiement Mobile Money'),
+        title: Text(Tr.s.paiementMobileMoney),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -542,7 +543,7 @@ class _PagePaiementMoMoState extends State<PagePaiementMoMo> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(color: _kPrimary, borderRadius: BorderRadius.circular(16)),
         child: Column(children: [
-          const Text('Montant à payer', style: TextStyle(color: Colors.white70, fontSize: 13)),
+          Text(Tr.s.montantPayer, style: TextStyle(color: Colors.white70, fontSize: 13)),
           const SizedBox(height: 6),
           Text(PrixFCFA.formater(widget.montant),
               style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
@@ -553,7 +554,7 @@ class _PagePaiementMoMoState extends State<PagePaiementMoMo> {
       const SizedBox(height: 24),
 
       // Opérateur
-      const Align(alignment: Alignment.centerLeft, child: Text('Choisir l\'opérateur',
+      Align(alignment: Alignment.centerLeft, child: Text(Tr.s.choisirOperateur,
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
       const SizedBox(height: 10),
       Row(children: [
@@ -576,7 +577,7 @@ class _PagePaiementMoMoState extends State<PagePaiementMoMo> {
         controller: _telCtrl,
         keyboardType: TextInputType.phone,
         decoration: InputDecoration(
-          labelText: 'Numéro Mobile Money',
+          labelText: Tr.s.numeroMobileMoney,
           hintText: '6XXXXXXXX',
           prefixText: '+237 ',
           prefixIcon: Icon(Icons.phone_outlined, color: Colors.grey.shade500, size: 20),
@@ -620,7 +621,7 @@ class _PagePaiementMoMoState extends State<PagePaiementMoMo> {
               : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   const Icon(Icons.lock_outline, size: 18),
                   const SizedBox(width: 10),
-                  Text('Payer ${PrixFCFA.formater(widget.montant)}',
+                  Text(Tr.s.payer(PrixFCFA.formater(widget.montant)),
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ]),
         ),
@@ -630,7 +631,7 @@ class _PagePaiementMoMoState extends State<PagePaiementMoMo> {
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(Icons.security, size: 14, color: Colors.grey.shade400),
         const SizedBox(width: 6),
-        Text('Paiement sécurisé via Monetbil',
+        Text(Tr.s.paiementSecuriseViaMonetbil,
             style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
       ]),
     ]),
@@ -680,11 +681,11 @@ class _PagePaiementMoMoState extends State<PagePaiementMoMo> {
 
               Text(
                 switch (statut) {
-                  StatutPaiement.enAttente => 'En attente de confirmation…',
-                  StatutPaiement.confirme  => 'Paiement confirmé ✓',
-                  StatutPaiement.echoue    => 'Paiement refusé',
-                  StatutPaiement.annule    => 'Paiement annulé',
-                  StatutPaiement.expire    => 'Délai dépassé',
+                  StatutPaiement.enAttente => Tr.s.attenteConfirmation,
+                  StatutPaiement.confirme  => Tr.s.paiementConfirme2,
+                  StatutPaiement.echoue    => Tr.s.paiementRefuse,
+                  StatutPaiement.annule    => Tr.s.paiementAnnule,
+                  StatutPaiement.expire    => Tr.s.delaiDepasse,
                 },
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
@@ -703,20 +704,20 @@ class _PagePaiementMoMoState extends State<PagePaiementMoMo> {
                     const SizedBox(height: 10),
                     Text(
                       _operateur == 'orange'
-                          ? 'Vérifiez votre téléphone.\nOrange va vous appeler pour confirmer.'
-                          : 'Validez la notification MTN\nMoMo sur votre téléphone.',
+                          ? Tr.s.verifiezVotreTelephoneOrangeVa
+                          : Tr.s.validezNotificationMtnMomoSur,
                       style: const TextStyle(color: Colors.blue, fontSize: 14, height: 1.5),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
-                    const Text('Ne quittez pas cette page.',
+                    Text(Tr.s.neQuittezPasCettePage,
                         style: TextStyle(color: Colors.blue, fontSize: 12, fontStyle: FontStyle.italic)),
                   ]),
                 ),
                 const SizedBox(height: 20),
                 TextButton(
                   onPressed: _verifierManuellement,
-                  child: const Text('Vérifier manuellement', style: TextStyle(color: _kPrimary)),
+                  child: Text(Tr.s.verifierManuellement, style: TextStyle(color: _kPrimary)),
                 ),
               ],
 
@@ -725,7 +726,7 @@ class _PagePaiementMoMoState extends State<PagePaiementMoMo> {
                 ElevatedButton(
                   onPressed: () => setState(() { _attente = false; _erreur = null; }),
                   style: ElevatedButton.styleFrom(backgroundColor: _kPrimary, foregroundColor: Colors.white),
-                  child: const Text('Réessayer'),
+                  child: Text(Tr.s.reessayer),
                 ),
               ],
             ]),

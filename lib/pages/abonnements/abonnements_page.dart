@@ -5,6 +5,7 @@ import 'package:sami/services/abonnement_service.dart';
 import 'package:sami/services/credit_service.dart';
 import 'package:sami/services/parametres_service.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kAccent  = Color(0xFFFF8F00);
@@ -43,7 +44,7 @@ class PageAbonnements extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.grey.shade50,
         appBar: AppBar(
-          title: const Text('Abonnements'),
+          title: Text(Tr.s.abonnements),
           backgroundColor: _kPrimary,
           foregroundColor: Colors.white,
           bottom: TabBar(
@@ -141,20 +142,20 @@ class _PageSouscriptionState extends State<PageSouscription> {
                   icone: Icons.info_outline,
                   texte: switch (widget.profil) {
                     ProfilAbonnement.boutique =>
-                      'Aucune boutique dont vous êtes gérant. Déposez une candidature (menu « Devenir partenaire »).',
+                      Tr.s.aucuneBoutiqueDontVousEtes,
                     ProfilAbonnement.couturier =>
-                      'Aucune fiche couturier validée. Déposez une candidature (menu « Devenir partenaire »).',
+                      Tr.s.aucuneFicheCouturierValideeDeposez,
                     ProfilAbonnement.livreur =>
-                      'Aucune fiche livreur validée. Déposez une candidature (menu « Devenir partenaire »).',
-                    ProfilAbonnement.client => 'Compte introuvable.',
+                      Tr.s.aucuneFicheLivreurValideeDeposez,
+                    ProfilAbonnement.client => Tr.s.compteIntrouvable,
                   },
                 )
               else ...[
                 if (_fiches.length > 1) ...[
                   DropdownButtonFormField<String>(
                     value: _ficheId,
-                    decoration: const InputDecoration(
-                        labelText: 'Boutique', isDense: true, border: OutlineInputBorder()),
+                    decoration: InputDecoration(
+                        labelText: Tr.s.boutique, isDense: true, border: OutlineInputBorder()),
                     items: [
                       for (final f in _fiches)
                         DropdownMenuItem(value: f.$1, child: Text(f.$2, style: const TextStyle(fontSize: 13))),
@@ -169,10 +170,10 @@ class _PageSouscriptionState extends State<PageSouscription> {
                   _Info(
                     couleur: Colors.grey,
                     icone: Icons.hourglass_empty,
-                    texte: 'Aucune offre d\'abonnement ${widget.profil.libelle.toLowerCase()} pour le moment.',
+                    texte: Tr.s.aucuneOffreAbonnementPourMoment(widget.profil.libelle.toLowerCase()),
                   )
                 else ...[
-                  _SectionTitre('Choisir un plan', Icons.workspace_premium, _kPrimary),
+                  _SectionTitre(Tr.s.choisirPlan, Icons.workspace_premium, _kPrimary),
                   const SizedBox(height: 10),
                   for (final p in _plans)
                     Padding(
@@ -180,7 +181,7 @@ class _PageSouscriptionState extends State<PageSouscription> {
                       child: _CarteAbonnement(
                         nom: p.nom,
                         prix: p.prixFmt,
-                        commission: p.gratuit ? 'Sans engagement' : '${p.dureeJours} jours',
+                        commission: p.gratuit ? Tr.s.sansEngagement : Tr.s.jours(p.dureeJours),
                         avantages: p.avantages,
                         couleur: p.couleur,
                         icone: p.icone,
@@ -195,7 +196,7 @@ class _PageSouscriptionState extends State<PageSouscription> {
                   if (_choisi != null) _buildDemande(_choisi!),
                 ],
                 const SizedBox(height: 18),
-                _SectionTitre('Mes demandes', Icons.receipt_long, _kAccent),
+                _SectionTitre(Tr.s.mesDemandes, Icons.receipt_long, _kAccent),
                 const SizedBox(height: 8),
                 _MesDemandes(utilisateurId: widget.utilisateur.id, profil: widget.profil),
               ],
@@ -206,7 +207,7 @@ class _PageSouscriptionState extends State<PageSouscription> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text('Abonnement ${widget.profil.libelle.toLowerCase()}'),
+        title: Text(Tr.s.abonnement(widget.profil.libelle.toLowerCase())),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -219,10 +220,10 @@ class _PageSouscriptionState extends State<PageSouscription> {
   Widget _buildDemande(PlanAbonnement p) {
     final renouvellement = _actuel.actif && _actuel.planId == p.id;
     if (!p.gratuit && !_momoOk) {
-      return const _Info(
+      return _Info(
         couleur: Colors.orange,
         icone: Icons.info_outline,
-        texte: 'Le paiement par transfert déclaré n\'est pas encore activé par PagneShop. Réessayez plus tard.',
+        texte: Tr.s.paiementParTransfertDeclareN,
       );
     }
     return Container(
@@ -235,7 +236,7 @@ class _PageSouscriptionState extends State<PageSouscription> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(
           p.gratuit
-              ? 'Plan ${p.nom} : la demande est validée par notre équipe (aucun paiement).'
+              ? Tr.s.planDemandeEstValideePar(p.nom)
               : '${renouvellement ? "Renouvellement" : "Souscription"} ${p.nom} — ${p.prixFmt}'
                   '${renouvellement ? "\nLa nouvelle période s\'ajoute à la fin de l\'actuelle (${_actuel.finFmt})." : ""}',
           style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
@@ -243,18 +244,14 @@ class _PageSouscriptionState extends State<PageSouscription> {
         if (!p.gratuit) ...[
           const SizedBox(height: 8),
           Text(
-              '1️⃣ Transférez ${PrixFCFA.formater(p.prix)} à :'
-              '${_numMtn.isNotEmpty ? '\n     MTN MoMo : $_numMtn' : ''}'
-              '${_numOm.isNotEmpty ? '\n     Orange Money : $_numOm' : ''}'
-              '${_titulaire.isNotEmpty ? '\n     (Titulaire : $_titulaire)' : ''}'
-              '\n2️⃣ Collez la RÉFÉRENCE du SMS et le numéro utilisé :',
+              Tr.s.k1Transferez2CollezReference(PrixFCFA.formater(p.prix), _numMtn.isNotEmpty ? '\n     MTN MoMo : $_numMtn' : '', _numOm.isNotEmpty ? '\n     Orange Money : $_numOm' : '', _titulaire.isNotEmpty ? '\n     (Titulaire : $_titulaire)' : ''),
               style: const TextStyle(fontSize: 12, height: 1.5)),
           const SizedBox(height: 8),
           TextField(
             controller: _refCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Référence de la transaction *',
-              hintText: 'Ex : 8123456789',
+            decoration: InputDecoration(
+              labelText: Tr.s.referenceTransaction,
+              hintText: Tr.s.ex8123456789,
               isDense: true, border: OutlineInputBorder(),
             ),
           ),
@@ -262,14 +259,14 @@ class _PageSouscriptionState extends State<PageSouscription> {
           TextField(
             controller: _numCtrl,
             keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: 'Numéro MoMo/OM utilisé *',
+            decoration: InputDecoration(
+              labelText: Tr.s.numeroMomoOmUtilise,
               prefixText: '+237 ',
               isDense: true, border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 4),
-          const Text('Notre équipe vérifie le SMS reçu, puis active votre abonnement.',
+          Text(Tr.s.notreEquipeVerifieSmsRecu,
               style: TextStyle(fontSize: 11, color: Colors.grey)),
         ],
         const SizedBox(height: 10),
@@ -281,7 +278,7 @@ class _PageSouscriptionState extends State<PageSouscription> {
             icon: _envoi
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.send, size: 16),
-            label: Text(p.gratuit ? 'Demander ce plan' : 'J\'ai transféré — envoyer ma demande'),
+            label: Text(p.gratuit ? Tr.s.demanderCePlan : Tr.s.jAiTransfereEnvoyerMa),
           ),
         ),
       ]),
@@ -292,8 +289,8 @@ class _PageSouscriptionState extends State<PageSouscription> {
     final id = _ficheId;
     if (id == null) return;
     if (!p.gratuit) {
-      if (_refCtrl.text.trim().length < 4) { _snack('Entrez la référence du SMS de transfert', Colors.red); return; }
-      if (_numCtrl.text.trim().length < 9) { _snack('Entrez le numéro utilisé pour le transfert', Colors.red); return; }
+      if (_refCtrl.text.trim().length < 4) { _snack(Tr.s.entrezReferenceSmsTransfert, Colors.red); return; }
+      if (_numCtrl.text.trim().length < 9) { _snack(Tr.s.entrezNumeroUtilisePourTransfert, Colors.red); return; }
     }
     setState(() => _envoi = true);
     try {
@@ -308,9 +305,9 @@ class _PageSouscriptionState extends State<PageSouscription> {
       if (!mounted) return;
       _refCtrl.clear();
       setState(() => _choisi = null);
-      _snack('✅ Demande envoyée — activation après vérification du transfert.', Colors.green);
+      _snack(Tr.s.demandeEnvoyeeActivationApresVerification, Colors.green);
     } catch (e) {
-      if (mounted) _snack('❌ Envoi impossible : $e', Colors.red);
+      if (mounted) _snack(Tr.s.envoiImpossible(e), Colors.red);
     } finally {
       if (mounted) setState(() => _envoi = false);
     }
@@ -332,8 +329,8 @@ class _CardPlanActuel extends StatelessWidget {
     final nom = actuel.actif
         ? (plan?.nom ?? actuel.planId)
         : (profil == ProfilAbonnement.client || profil == ProfilAbonnement.livreur
-            ? 'Aucun abonnement'
-            : (plans.where((p) => p.gratuit).firstOrNull?.nom ?? 'Gratuit'));
+            ? Tr.s.aucunAbonnement
+            : (plans.where((p) => p.gratuit).firstOrNull?.nom ?? Tr.s.gratuit));
     final couleur = actuel.actif ? (plan?.couleur ?? _kPrimary) : Colors.grey.shade700;
     final expire = actuel.planId != 'gratuit' && actuel.planId != 'aucun' &&
         actuel.finLe != null && !actuel.actif;
@@ -350,17 +347,17 @@ class _CardPlanActuel extends StatelessWidget {
           child: Icon(plan?.icone ?? Icons.workspace_premium_outlined, color: couleur, size: 22)),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Plan actuel — ${profil.libelle.toLowerCase()}', style: TextStyle(color: couleur.withOpacity(0.8), fontSize: 11)),
+          Text(Tr.s.planActuel(profil.libelle.toLowerCase()), style: TextStyle(color: couleur.withOpacity(0.8), fontSize: 11)),
           Text(nom, style: TextStyle(fontWeight: FontWeight.bold, color: couleur, fontSize: 16)),
           if (actuel.actif && actuel.finLe != null)
-            Text('Jusqu\'au ${actuel.finFmt}', style: TextStyle(fontSize: 12, color: couleur.withOpacity(0.8))),
+            Text(Tr.s.jusqu(actuel.finFmt), style: TextStyle(fontSize: 12, color: couleur.withOpacity(0.8))),
           if (expire)
-            Text('Expiré le ${actuel.finFmt} — retour au plan de base', style: const TextStyle(fontSize: 12, color: Colors.red)),
+            Text(Tr.s.expireRetourPlanBase(actuel.finFmt), style: const TextStyle(fontSize: 12, color: Colors.red)),
         ])),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(color: couleur, borderRadius: BorderRadius.circular(8)),
-          child: Text(actuel.actif ? 'Actif' : 'Base', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+          child: Text(actuel.actif ? Tr.s.actif : Tr.s.planBase, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
         ),
       ]),
     );
@@ -381,7 +378,7 @@ class _MesDemandes extends StatelessWidget {
               .take(10)
               .toList();
           if (l.isEmpty) {
-            return Text('Aucune demande.', style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600));
+            return Text(Tr.s.aucuneDemande, style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600));
           }
           return Column(children: [
             for (final d in l)
@@ -409,9 +406,9 @@ class _MesDemandes extends StatelessWidget {
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                   subtitle: Text(
                     switch (d.statut) {
-                      'validee' => 'Activé',
+                      'validee' => Tr.s.active,
                       'refusee' => 'Refusé${(d.motifRefus ?? '').isNotEmpty ? " : ${d.motifRefus}" : ""}',
-                      _ => 'En attente de vérification du transfert (réf. ${d.refPaiement})',
+                      _ => Tr.s.attenteVerificationTransfertRef(d.refPaiement),
                     },
                     style: const TextStyle(fontSize: 11),
                   ),
@@ -460,7 +457,7 @@ class PageAvoirsClient extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Mes avoirs'),
+        title: Text(Tr.s.mesAvoirs),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         actions: [
@@ -468,7 +465,7 @@ class PageAvoirsClient extends StatelessWidget {
             onPressed: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => PageHistoriqueCredits(utilisateurId: utilisateur.id))),
             icon: const Icon(Icons.history, color: Colors.white70, size: 18),
-            label: const Text('Historique', style: TextStyle(color: Colors.white70, fontSize: 12)),
+            label: Text(Tr.s.historique, style: TextStyle(color: Colors.white70, fontSize: 12)),
           ),
         ],
       ),
@@ -477,11 +474,11 @@ class PageAvoirsClient extends StatelessWidget {
         children: [
           _CardSoldeClient(utilisateur: utilisateur),
           const SizedBox(height: 20),
-          _SectionTitre('D\'où viennent mes avoirs ?', Icons.info_outline, Colors.teal),
+          _SectionTitre(Tr.s.ouViennentMesAvoirs, Icons.info_outline, Colors.teal),
           const SizedBox(height: 10),
           const _CardAvantagesCredits(),
           const SizedBox(height: 20),
-          _SectionTitre('Avoirs en cours de validation', Icons.hourglass_top, _kAccent),
+          _SectionTitre(Tr.s.avoirsCoursValidation, Icons.hourglass_top, _kAccent),
           const SizedBox(height: 10),
           _AvoirsEnAttente(utilisateurId: utilisateur.id),
           const SizedBox(height: 32),
@@ -498,13 +495,13 @@ class _AvoirsEnAttente extends StatelessWidget {
   const _AvoirsEnAttente({required this.utilisateurId});
 
   static String _libelle(String? type, String? motif) => switch (type) {
-        'parrainage' => 'Prime de parrainage',
-        'cashback' => 'Cashback fidélité',
+        'parrainage' => Tr.s.primeParrainage,
+        'cashback' => Tr.s.cashbackFidelite,
         'credits' => motif == 'commande_echouee_apres_debit'
-            ? 'Commande échouée — avoir restitué'
-            : 'Remboursement en avoir',
-        'mobile_money' => 'Remboursement Mobile Money',
-        _ => 'Avoir',
+            ? Tr.s.commandeEchoueeAvoirRestitue
+            : Tr.s.remboursementAvoir,
+        'mobile_money' => Tr.s.remboursementMobileMoney,
+        _ => Tr.s.avoir,
       };
 
   @override
@@ -518,7 +515,7 @@ class _AvoirsEnAttente extends StatelessWidget {
         builder: (_, snap) {
           final docs = snap.data?.docs ?? const [];
           if (docs.isEmpty) {
-            return Text('Aucun avoir en attente.',
+            return Text(Tr.s.aucunAvoirAttente,
                 style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600));
           }
           return Column(
@@ -536,7 +533,7 @@ class _AvoirsEnAttente extends StatelessWidget {
                   leading: const Icon(Icons.hourglass_top, color: _kAccent),
                   title: Text(_libelle(r['type'] as String?, r['motif'] as String?),
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                  subtitle: const Text('En attente de validation par PagneShop',
+                  subtitle: Text(Tr.s.attenteValidationParPagneshop,
                       style: TextStyle(fontSize: 11)),
                   trailing: Text('+${PrixFCFA.formater(montant)}',
                       style: const TextStyle(fontWeight: FontWeight.bold, color: _kAccent)),
@@ -561,7 +558,7 @@ class PageHistoriqueCredits extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Historique des crédits'),
+        title: Text(Tr.s.historiqueCredits),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -571,7 +568,7 @@ class PageHistoriqueCredits extends StatelessWidget {
           if (snap.connectionState == ConnectionState.waiting)
             return const Center(child: CircularProgressIndicator(color: _kPrimary));
           if (!snap.hasData || snap.data!.docs.isEmpty)
-            return const Center(child: Text('Aucun mouvement', style: TextStyle(color: Colors.grey)));
+            return Center(child: Text(Tr.s.aucunMouvement, style: TextStyle(color: Colors.grey)));
 
           return ListView.separated(
             padding: const EdgeInsets.all(12),
@@ -642,11 +639,11 @@ class _CardSoldeClient extends StatelessWidget {
         ),
         child: Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Avoirs disponibles', style: TextStyle(color: Colors.white70, fontSize: 12)),
+            Text(Tr.s.avoirsDisponibles, style: TextStyle(color: Colors.white70, fontSize: 12)),
             const SizedBox(height: 4),
             Text(PrixFCFA.formater(solde),
                 style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-            const Text('Utilisable pour vos commandes', style: TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(Tr.s.utilisablePourVosCommandes, style: TextStyle(color: Colors.white54, fontSize: 11)),
           ])),
           const Icon(Icons.account_balance_wallet, color: Colors.white30, size: 48),
         ]),
@@ -704,7 +701,7 @@ class _CarteAbonnement extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(color: couleur, borderRadius: BorderRadius.circular(6)),
-                  child: const Text('Actuel', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  child: Text(Tr.s.actuel, style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
               ] else if (selectionne) ...[
                 const SizedBox(width: 8),
@@ -759,11 +756,11 @@ class _CardAvantagesCredits extends StatelessWidget {
       border: Border.all(color: Colors.teal.shade200),
     ),
     child: Column(children: [
-      _Avantage(Icons.replay, 'Remboursement d\'une commande annulée ou d\'un retour accepté', Colors.teal),
-      _Avantage(Icons.card_giftcard, 'Prime de parrainage (à la première livraison du filleul)', Colors.teal),
-      _Avantage(Icons.stars, 'Cashback selon votre palier de fidélité', Colors.teal),
-      _Avantage(Icons.shopping_bag_outlined, 'Se dépensent au panier, sans frais Mobile Money', Colors.teal),
-      _Avantage(Icons.block, 'Ni rechargeables en argent, ni retirables', Colors.teal),
+      _Avantage(Icons.replay, Tr.s.remboursementCommandeAnnuleeOuRetour, Colors.teal),
+      _Avantage(Icons.card_giftcard, Tr.s.primeParrainagePremiereLivraisonFilleul, Colors.teal),
+      _Avantage(Icons.stars, Tr.s.cashbackSelonVotrePalierFidelite, Colors.teal),
+      _Avantage(Icons.shopping_bag_outlined, Tr.s.seDepensentPanierSansFrais, Colors.teal),
+      _Avantage(Icons.block, Tr.s.niRechargeablesArgentNiRetirables, Colors.teal),
     ]),
   );
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
+import 'package:sami/l10n/tr.dart';
 
 // MapScreen — carte GPS temps réel avec OSM — GRATUIT
 // Centre de Garoua : 9.3017°N, 13.3984°E
@@ -61,7 +62,7 @@ class _MapScreenState extends State<MapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ma carte GPS'),
+        title: Text(Tr.s.maCarteGps),
         backgroundColor: const Color(0xFF6A1B9A),
         foregroundColor: Colors.white,
       ),
@@ -97,8 +98,8 @@ class _MapScreenState extends State<MapScreen> {
                   ],
                 ),
               // Attribution obligatoire OSM
-              const SimpleAttributionWidget(
-                source: Text('© OpenStreetMap contributors'),
+              SimpleAttributionWidget(
+                source: Text(Tr.s.openstreetmapContributors),
               ),
             ],
           ),

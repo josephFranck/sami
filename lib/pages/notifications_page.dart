@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sami/services/notification_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -11,13 +12,13 @@ class NotificationsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F5FA),
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text(Tr.s.notifications),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         actions: [
           TextButton(
             onPressed: NotificationService.toutMarquerLues,
-            child: const Text('Tout lire',
+            child: Text(Tr.s.toutLire,
                 style: TextStyle(color: Colors.white70, fontSize: 12)),
           ),
         ],
@@ -31,8 +32,8 @@ class NotificationsPage extends StatelessWidget {
           }
           final docs = snap.data!;
           if (docs.isEmpty) {
-            return const Center(
-                child: Text('Aucune notification',
+            return Center(
+                child: Text(Tr.s.aucuneNotification,
                     style: TextStyle(color: Colors.grey)));
           }
           return ListView.builder(
@@ -50,12 +51,12 @@ class NotificationsPage extends StatelessWidget {
                           ? Icons.notifications_none
                           : Icons.notifications_active,
                       color: lue ? Colors.grey : _kPrimary),
-                  title: Text(d['titre'] as String? ?? '',
+                  title: Text(NotificationService.texte(d, 'titre'),
                       style: TextStyle(
                           fontSize: 13,
                           fontWeight:
                               lue ? FontWeight.normal : FontWeight.bold)),
-                  subtitle: Text(d['message'] as String? ?? '',
+                  subtitle: Text(NotificationService.texte(d, 'message'),
                       style: const TextStyle(fontSize: 12)),
                   onTap: () {
                     NotificationService.marquerLue(docs[i].id);

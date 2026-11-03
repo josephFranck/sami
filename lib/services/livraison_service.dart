@@ -8,6 +8,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sami/models/livraison_v2.dart';
 import 'package:sami/models/transaction_financiere.dart';
+import 'package:sami/l10n/tr.dart';
 
 /// Service gérant tout le cycle de vie d'une livraison
 /// Coordonne QR Code, paiement, validation, comptabilité
@@ -183,9 +184,9 @@ class LivraisonService {
     if (livraison.clientId.isNotEmpty) {
       await NotificationService.envoyer(
         destinataireId: livraison.clientId,
-        titre: 'Colis pris en charge 🛵',
+        titre: (t) => t.colisPrisCharge,
         message:
-            'Le livreur a récupéré votre commande — elle est en route !',
+            (t) => t.livreurRecupereVotreCommandeElle,
         route: '/commandes',
         refId: livraison.commandeId,
       );
@@ -215,17 +216,17 @@ class LivraisonService {
         .get();
 
     if (!doc.exists) {
-      return ResultatValidation(succes: false, message: 'Livraison introuvable');
+      return ResultatValidation(succes: false, message: Tr.s.livraisonIntrouvable);
     }
 
     final livraison = Livraison.fromFirebaseDocument(doc);
 
     // Vérifications
     if (livraison.qrCode.codeDestination != codeScanne) {
-      return ResultatValidation(succes: false, message: 'QR Code invalide');
+      return ResultatValidation(succes: false, message: Tr.s.qrCodeInvalide);
     }
     if (livraison.qrCode.estExpire) {
-      return ResultatValidation(succes: false, message: 'QR Code expiré');
+      return ResultatValidation(succes: false, message: Tr.s.qrCodeExpire);
     }
 
     final preuveLivraison = PreuveLivraison(
@@ -352,7 +353,7 @@ class LivraisonService {
 
     return ResultatValidation(
       succes: true,
-      message: 'Livraison confirmée !',
+      message: Tr.s.livraisonConfirmee,
       gainLivreur: livraison.decompositionFinanciere.gainLivreur,
       netBoutique: livraison.decompositionFinanciere.netBoutique,
     );
@@ -438,9 +439,9 @@ class LivraisonService {
         // c'est maintenant que l'expérience est chaude.
         await NotificationService.envoyer(
           destinataireId: l.clientId,
-          titre: 'Commande livrée 🎉',
+          titre: (t) => t.commandeLivree,
           message:
-              'Votre colis est arrivé. Donnez votre avis sur la boutique et le livreur !',
+              (t) => t.votreColisEstArriveDonnez,
           route: '/commandes',
           refId: l.commandeId,
         );
@@ -470,8 +471,8 @@ class LivraisonService {
         // (fidélité : réclamée par le client — FideliteService)
         await NotificationService.envoyer(
           destinataireId: d['clientId'] as String? ?? '',
-          titre: 'Vêtement livré 🎉',
-          message: 'Votre confection est arrivée. Votre reçu est disponible.',
+          titre: (t) => t.vetementLivre,
+          message: (t) => t.votreConfectionEstArriveeVotre,
           route: '/mes-recus',
           refId: l.commandeId,
         );
@@ -479,9 +480,9 @@ class LivraisonService {
         await cc.reference.update({'statut': 'enConfection'});
         await NotificationService.envoyer(
           destinataireId: d['couturierId'] as String? ?? '',
-          titre: 'Tissu reçu ✂️',
+          titre: (t) => t.tissuRecu,
           route: '/dashboard_couturier',
-          message: 'Le pagne est arrivé à votre atelier. La confection peut commencer.',
+          message: (t) => t.pagneEstArriveVotreAtelier,
           refId: l.commandeId,
         );
       }

@@ -9,6 +9,7 @@ import 'package:location/location.dart';
 import 'package:sami/models/livraison_v2.dart';
 import 'package:sami/models/livreur.dart';
 import 'package:sami/models/couturier.dart';
+import 'package:sami/l10n/tr.dart';
 
 // Coordonnées centre de Garoua
 const LatLng GAROUA_CENTER = LatLng(9.3017, 13.3984);
@@ -157,8 +158,8 @@ class _CarteOSMState extends State<CarteOSM> {
           child: Container(
             color: Colors.white.withOpacity(0.7),
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            child: const Text(
-              '© OpenStreetMap contributors',
+            child: Text(
+              Tr.s.openstreetmapContributors,
               style: TextStyle(fontSize: 9),
             ),
           ),
@@ -369,7 +370,7 @@ class PageSuiviLivraison extends StatelessWidget {
         id: 'destination',
         latitude: livraison.destinationLat,
         longitude: livraison.destinationLng,
-        label: 'Ma position',
+        label: Tr.s.maPosition,
         type: TypeMarqueur.destination,
       ),
       if (livraison.livreurLatActuelle != null && livraison.livreurLngActuelle != null)
@@ -377,20 +378,20 @@ class PageSuiviLivraison extends StatelessWidget {
           id: 'livreur',
           latitude: livraison.livreurLatActuelle!,
           longitude: livraison.livreurLngActuelle!,
-          label: 'Livreur',
+          label: Tr.s.livreur,
           type: TypeMarqueur.livreur,
         ),
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Suivi de livraison'),
+        title: Text(Tr.s.suiviLivraison),
         backgroundColor: Color(0xFF6A1B9A),
         foregroundColor: Colors.white,
         actions: [
           if (livraison.livreurId != null)
             IconButton(
-              tooltip: 'Écrire au livreur',
+              tooltip: Tr.s.ecrireLivreur,
               icon: const Icon(Icons.chat_bubble_outline),
               onPressed: () async {
                 // Résoudre l'utilisateur derrière la fiche livreur
@@ -406,7 +407,7 @@ class PageSuiviLivraison extends StatelessWidget {
               },
             ),
           IconButton(
-            tooltip: 'Mon code de réception',
+            tooltip: Tr.s.monCodeReception2,
             icon: const Icon(Icons.qr_code_2),
             onPressed: () => Navigator.push(
               context,
@@ -512,12 +513,12 @@ class _PanneauInfoLivraison extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Frais : ${livraison.decompositionFinanciere.fraisLivraisonIsole.toStringAsFixed(0)} FCFA',
+                Tr.s.fraisFcfa(livraison.decompositionFinanciere.fraisLivraisonIsole.toStringAsFixed(0)),
                 style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange),
               ),
               if (livraison.dateLivraisonPrevue != null)
                 Text(
-                  'Prévu : ${_formatHeure(livraison.dateLivraisonPrevue!)}',
+                  Tr.s.prevu(_formatHeure(livraison.dateLivraisonPrevue!)),
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
             ],

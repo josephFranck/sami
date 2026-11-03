@@ -9,6 +9,7 @@ import 'package:sami/services/qr_crypto_service.dart';
 import 'package:sami/services/livraison_service.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 import 'package:sami/pages/livraison/livraison_securisee_page.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kBg = Color(0xFFF7F5FA);
@@ -21,20 +22,20 @@ class MesLivraisonsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
-      return const Scaffold(
-        body: Center(child: Text('Veuillez vous connecter')),
+      return Scaffold(
+        body: Center(child: Text(Tr.s.veuillezVousConnecter)),
       );
     }
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
-        title: const Text('Mes livraisons'),
+        title: Text(Tr.s.mesLivraisons),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         actions: [
           Builder(
             builder: (context) => IconButton(
-              tooltip: 'Scan rapide',
+              tooltip: Tr.s.scanRapide,
               icon: const Icon(Icons.qr_code_scanner),
               onPressed: () => Navigator.push(
                 context,
@@ -67,7 +68,7 @@ class MesLivraisonsPage extends StatelessWidget {
             .snapshots(),
         builder: (context, snap) {
           if (snap.hasError) {
-            return const Center(child: Text('Erreur de chargement'));
+            return Center(child: Text(Tr.s.erreurChargement));
           }
           if (!snap.hasData) {
             return const Center(
@@ -107,12 +108,12 @@ class MesLivraisonsPage extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             children: [
               if (actives.isNotEmpty) ...[
-                _entete('À livrer', actives.length),
+                _entete(Tr.s.livrer, actives.length),
                 ...actives.map((l) => _carte(context, l, uid)),
               ],
               if (terminees.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                _entete('Historique', terminees.length),
+                _entete(Tr.s.historique, terminees.length),
                 ...terminees.map((l) => _carte(context, l, uid)),
               ],
             ],
@@ -240,11 +241,11 @@ class MesLivraisonsPage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            _ligne(Icons.store_outlined, 'Retrait : ${l.origineAdresse}'),
+            _ligne(Icons.store_outlined, Tr.s.retrait(l.origineAdresse)),
             _ligne(Icons.location_on_outlined,
-                'Livraison : ${l.destinationAdresse}'),
+                Tr.s.livraison3(l.destinationAdresse)),
             _ligne(Icons.payments_outlined,
-                'Montant : ${PrixFCFA.formater(l.decompositionFinanciere.prixClient)}'),
+                Tr.s.montant(PrixFCFA.formater(l.decompositionFinanciere.prixClient))),
             if (active) ...[
               const SizedBox(height: 12),
               SizedBox(
@@ -344,10 +345,10 @@ class MesLivraisonsPage extends StatelessWidget {
             Icon(Icons.local_shipping_outlined,
                 size: 56, color: Colors.grey.shade300),
             const SizedBox(height: 12),
-            Text('Aucune livraison assignée',
+            Text(Tr.s.aucuneLivraisonAssignee,
                 style: TextStyle(color: Colors.grey.shade500)),
             const SizedBox(height: 4),
-            Text('Les nouvelles courses apparaîtront ici',
+            Text(Tr.s.nouvellesCoursesApparaitrontIci,
                 style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
           ],
         ),

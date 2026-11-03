@@ -15,6 +15,7 @@ import 'package:location/location.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 import 'package:sami/pages/livraison/scan_qr_page.dart';
 import 'package:sami/services/qr_crypto_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 const _kSuccess = Color(0xFF1D9E75);
@@ -124,12 +125,12 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
   @override
   Widget build(BuildContext context) {
     if (_chargement) return const Scaffold(body: Center(child: CircularProgressIndicator(color: _kPrimary)));
-    if (_sc == null) return const Scaffold(body: Center(child: Text('Livraison introuvable')));
+    if (_sc == null) return Scaffold(body: Center(child: Text(Tr.s.livraisonIntrouvable)));
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Livraison sécurisée'),
+        title: Text(Tr.s.livraisonSecurisee),
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
       ),
@@ -143,13 +144,13 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
           // Étape 1 : Prise en charge en boutique
           _EtapeCard(
             numero: 1,
-            titre: 'Prise en charge en boutique',
-            sousTitre: 'Scannez le QR et prenez les photos requises',
+            titre: Tr.s.priseChargeBoutique,
+            sousTitre: Tr.s.scannezQrPrenezPhotosRequises,
             terminee: _etape1OK,
             child: Column(children: [
               // Photo du colis reçu
               _BoutonPhoto(
-                label: 'Photo du colis reçu',
+                label: Tr.s.photoColisRecu,
                 obligatoire: true,
                 photo: _photoColisRecu,
                 icone: Icons.inventory_2_outlined,
@@ -158,7 +159,7 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
               const SizedBox(height: 10),
               // Photo du scellé
               _BoutonPhoto(
-                label: 'Photo du scellé intact',
+                label: Tr.s.photoScelleIntact,
                 obligatoire: true,
                 photo: _photoColisScelle,
                 icone: Icons.lock_outline,
@@ -172,7 +173,7 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
                     ? _confirmerPriseEnCharge
                     : null,
                 icon: const Icon(Icons.qr_code_scanner, size: 18),
-                label: const Text('Confirmer la prise en charge'),
+                label: Text(Tr.s.confirmerPriseCharge),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kPrimary, foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 48),
@@ -180,9 +181,9 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
                 ),
               ),
               if (_photoColisRecu == null || _photoColisScelle == null)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(top: 8),
-                  child: Text('Les 2 photos sont obligatoires avant confirmation',
+                  child: Text(Tr.s.k2PhotosSontObligatoiresAvant,
                       style: TextStyle(color: Colors.orange, fontSize: 12),
                       textAlign: TextAlign.center),
                 ),
@@ -199,7 +200,7 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
                 child: OutlinedButton.icon(
                   onPressed: _ouvrirItineraire,
                   icon: const Icon(Icons.map_outlined),
-                  label: const Text("Ouvrir l'itinéraire vers le client"),
+                  label: Text(Tr.s.ouvrirItineraireVersClient),
                   style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF6A1B9A),
                       side: const BorderSide(color: Color(0xFF6A1B9A)),
@@ -211,8 +212,8 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
           // Étape 2 : Remise au client
           _EtapeCard(
             numero: 2,
-            titre: 'Remise au client',
-            sousTitre: 'Photo obligatoire avant de remettre le colis',
+            titre: Tr.s.remiseClient,
+            sousTitre: Tr.s.photoObligatoireAvantRemettreColis,
             terminee: _etape2OK,
             desactivee: !_etape1OK,
             child: Column(children: [
@@ -222,19 +223,18 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
                   color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.blue.shade200),
                 ),
-                child: const Row(children: [
+                child: Row(children: [
                   Icon(Icons.info_outline, color: Colors.blue, size: 18),
                   SizedBox(width: 8),
                   Expanded(child: Text(
-                    'Photographiez le COLIS avec le repère du lieu en fond\n'
-                    '(portail, devanture…) — la preuve du OÙ, pas du QUI.',
+                    Tr.s.photographiezColisAvecRepereLieu,
                     style: TextStyle(color: Colors.blue, fontSize: 12, height: 1.4),
                   )),
                 ]),
               ),
               const SizedBox(height: 12),
               _BoutonPhoto(
-                label: 'Photo de remise au client',
+                label: Tr.s.photoRemiseClient,
                 obligatoire: true,
                 photo: _photoRemise,
                 icone: Icons.person_outline,
@@ -245,7 +245,7 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
               ElevatedButton.icon(
                 onPressed: _photoRemise != null ? _confirmerRemise : null,
                 icon: const Icon(Icons.check_circle_outline, size: 18),
-                label: const Text('Confirmer la livraison'),
+                label: Text(Tr.s.confirmerLivraison),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kSuccess, foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 48),
@@ -261,12 +261,12 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: _kSuccess, borderRadius: BorderRadius.circular(14)),
-              child: const Row(children: [
+              child: Row(children: [
                 Icon(Icons.check_circle, color: Colors.white, size: 32),
                 SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Livraison confirmée !', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text('Votre gain sera versé sous 24h', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  Text(Tr.s.livraisonConfirmee, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(Tr.s.votreGainSeraVerseSous, style: TextStyle(color: Colors.white70, fontSize: 12)),
                 ])),
               ]),
             ),
@@ -274,7 +274,7 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
             OutlinedButton.icon(
               onPressed: _faireSignerClient,
               icon: const Icon(Icons.draw_outlined, size: 18),
-              label: const Text('Ajouter la signature du client (optionnel)'),
+              label: Text(Tr.s.ajouterSignatureClientOptionnel),
               style: OutlinedButton.styleFrom(
                   foregroundColor: _kSuccess,
                   side: const BorderSide(color: _kSuccess),
@@ -320,7 +320,7 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
             left: 16, right: 16, top: 16,
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 16),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Signature du client',
+          Text(Tr.s.signatureClient,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 10),
           Container(
@@ -335,11 +335,11 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
           Row(children: [
             TextButton(
                 onPressed: () => ctrl.clear(),
-                child: const Text('Effacer')),
+                child: Text(Tr.s.effacer)),
             const Spacer(),
             ElevatedButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Enregistrer')),
+                child: Text(Tr.s.enregistrer)),
           ]),
         ]),
       ),
@@ -357,8 +357,8 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
         signatureBase64: b64,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Signature enregistrée ✅'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(Tr.s.signatureEnregistree),
             backgroundColor: Colors.green));
       }
     } catch (_) {}
@@ -374,9 +374,9 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
     }
     if (la == null || ln == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content:
-                Text("Coordonnees indisponibles - suivez l'adresse texte.")));
+                Text(Tr.s.coordonneesIndisponiblesSuivezAdresseTexte)));
       }
       return;
     }
@@ -387,7 +387,7 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Destination : $la, $ln')));
+            .showSnackBar(SnackBar(content: Text(Tr.s.destination(la, ln))));
       }
     }
   }
@@ -395,9 +395,9 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
   Future<void> _confirmerPriseEnCharge() async {
     if (_photoColisRecu == null || _photoColisScelle == null) return;
     if (_livraisonIdReelle == null || _livraisonIdReelle!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
-              "Livraison introuvable pour cette commande — l'agent ne l'a pas encore créée. Réessayez dans un instant."),
+              Tr.s.livraisonIntrouvablePourCetteCommande),
           backgroundColor: Colors.orange));
       return;
     }
@@ -438,7 +438,7 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
       if (mounted && scanOk) setState(() => _etape1OK = true);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur upload : $e'), backgroundColor: Colors.red));
+        SnackBar(content: Text(Tr.s.erreurUpload(e)), backgroundColor: Colors.red));
     }
   }
 
@@ -471,7 +471,7 @@ class _PageLivraisonSecuriseeState extends State<PageLivraisonSecurisee> {
       if (mounted && scanOk) setState(() => _etape2OK = true);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e'), backgroundColor: Colors.red));
+        SnackBar(content: Text(Tr.s.erreur2(e)), backgroundColor: Colors.red));
     }
   }
 }
@@ -491,7 +491,7 @@ class CardProfilLivreur extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Votre livreur', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
+        Text(Tr.s.votreLivreur, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
         const SizedBox(height: 12),
         Row(children: [
           // Photo livreur
@@ -513,7 +513,7 @@ class CardProfilLivreur extends StatelessWidget {
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.verified, color: Colors.green.shade700, size: 12),
                   const SizedBox(width: 2),
-                  Text('CNI vérifiée', style: TextStyle(fontSize: 9, color: Colors.green.shade700, fontWeight: FontWeight.bold)),
+                  Text(Tr.s.cniVerifiee, style: TextStyle(fontSize: 9, color: Colors.green.shade700, fontWeight: FontWeight.bold)),
                 ]),
               ),
             ]),
@@ -524,9 +524,9 @@ class CardProfilLivreur extends StatelessWidget {
 
         // Stats
         Row(children: [
-          _Stat(icone: Icons.star, valeur: profil.noteMoyenne.toStringAsFixed(1), label: 'Note', couleur: Colors.amber),
-          _Stat(icone: Icons.check_circle_outline, valeur: '${profil.nombreLivraisons}', label: 'Livraisons', couleur: _kPrimary),
-          _Stat(icone: Icons.percent, valeur: '${profil.tauxReussite.round()}%', label: 'Réussite', couleur: _kSuccess),
+          _Stat(icone: Icons.star, valeur: profil.noteMoyenne.toStringAsFixed(1), label: Tr.s.note, couleur: Colors.amber),
+          _Stat(icone: Icons.check_circle_outline, valeur: '${profil.nombreLivraisons}', label: Tr.s.livraisons, couleur: _kPrimary),
+          _Stat(icone: Icons.percent, valeur: '${profil.tauxReussite.round()}%', label: Tr.s.reussite, couleur: _kSuccess),
         ]),
 
         const SizedBox(height: 12),
@@ -534,13 +534,13 @@ class CardProfilLivreur extends StatelessWidget {
         const SizedBox(height: 12),
 
         // Garanties de sécurité
-        const Text('Garanties de sécurité SAMI', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(Tr.s.garantiesSecuriteSami, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
         const SizedBox(height: 8),
-        _Garantie(Icons.badge_outlined, 'Identité vérifiée par notre équipe', profil.cniVerifiee),
-        _Garantie(Icons.camera_alt_outlined, 'Photo du colis à chaque étape', true),
-        _Garantie(Icons.location_on_outlined, 'Trajet GPS enregistré', true),
+        _Garantie(Icons.badge_outlined, Tr.s.identiteVerifieeParNotreEquipe, profil.cniVerifiee),
+        _Garantie(Icons.camera_alt_outlined, Tr.s.photoColisChaqueEtape, true),
+        _Garantie(Icons.location_on_outlined, Tr.s.trajetGpsEnregistre, true),
         _Garantie(Icons.account_balance_wallet_outlined,
-            'Caution déposée : ${profil.montantCautionFmt}', true),
+            Tr.s.cautionDeposee(profil.montantCautionFmt), true),
 
         const SizedBox(height: 10),
         Container(
@@ -550,8 +550,7 @@ class CardProfilLivreur extends StatelessWidget {
             const Icon(Icons.warning_amber_outlined, color: Colors.orange, size: 16),
             const SizedBox(width: 8),
             Expanded(child: Text(
-              'En cas de problème, signalez immédiatement via l\'app. '
-              'La caution du livreur couvre les pertes prouvées.',
+              Tr.s.casProblemeSignalezImmediatementVia,
               style: TextStyle(fontSize: 11, color: Colors.orange.shade800, height: 1.4),
             )),
           ]),
@@ -573,7 +572,7 @@ class _CardResume extends StatelessWidget {
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200)),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Commande de la boutique ${sc.boutiqueNom}',
+      Text(Tr.s.commandeBoutique(sc.boutiqueNom),
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
       const SizedBox(height: 8),
       ...sc.articles.map((a) => Padding(
@@ -599,7 +598,7 @@ class _CardResume extends StatelessWidget {
             ]),
           )),
       const SizedBox(height: 6),
-      Text('Destination : $destination',
+      Text(Tr.s.destination2(destination),
           style: const TextStyle(fontSize: 12, color: Colors.grey)),
     ]),
   );
@@ -699,7 +698,7 @@ class _BoutonPhoto extends StatelessWidget {
             if (obligatoire) Text(' *', style: TextStyle(color: Colors.red.shade400, fontWeight: FontWeight.bold)),
           ]),
           if (conseil != null) Text(conseil!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-          if (photo != null) const Text('✓ Photo prise', style: TextStyle(fontSize: 11, color: _kSuccess, fontWeight: FontWeight.w500)),
+          if (photo != null) Text(Tr.s.photoPrise, style: TextStyle(fontSize: 11, color: _kSuccess, fontWeight: FontWeight.w500)),
         ])),
         Icon(
           photo != null ? Icons.check_circle : Icons.camera_alt_outlined,

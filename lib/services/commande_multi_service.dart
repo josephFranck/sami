@@ -15,6 +15,7 @@ import 'package:sami/services/config_marketing_service.dart';
 import 'package:sami/agents/agent_livraison.dart';
 import 'package:sami/models/panier.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SERVICE DE COMMANDES MULTI-BOUTIQUES
@@ -305,7 +306,7 @@ class CommandeMultiService {
         final destLng =
             estRetrait ? boutiqueLng : (gpsClientLng ?? clientLng);
         final destAdresse = estRetrait
-            ? 'Retrait à la boutique ${sc.boutiqueNom}'
+            ? Tr.s.retraitBoutique2(sc.boutiqueNom)
             : adresseLivraison;
 
         final livraison = await LivraisonService.creerLivraison(
@@ -348,8 +349,8 @@ class CommandeMultiService {
           for (final g in gs) {
             await NotificationService.envoyer(
               destinataireId: g,
-              titre: 'Nouvelle commande à préparer 🛍️',
-              message: '${sc.articles.length} article(s) — préparez le colis puis marquez « Prête » pour appeler un livreur.',
+              titre: (t) => t.nouvelleCommandePreparer,
+              message: (t) => t.articleSPreparezColisPuis(sc.articles.length),
               route: '/dashboard_boutiquier',
               refId: sc.id,
             );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:sami/widgets/image_universelle.dart';
 import 'package:flutter/services.dart';
 import 'package:sami/services/message_service.dart';
+import 'package:sami/l10n/tr.dart';
 
 const _kPrimary = Color(0xFF6A1B9A);
 
@@ -61,7 +62,7 @@ class _ConversationPageState extends State<ConversationPage> {
                 child: Text(
                   msg.contains('index')
                       ? 'Index Firestore en cours de création — réessayez dans quelques minutes.\n(firebase deploy --only firestore:indexes)'
-                      : 'Impossible de charger les messages :\n$msg',
+                      : Tr.s.impossibleChargerMessages(msg),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.red, fontSize: 12),
                 ),
@@ -172,7 +173,7 @@ class _ConversationPageState extends State<ConversationPage> {
           }
         },
         itemBuilder: (_) => [
-          const PopupMenuItem(value: 'archiver', child: Text('Archiver la conversation')),
+          PopupMenuItem(value: 'archiver', child: Text(Tr.s.archiverConversation)),
         ],
       ),
     ],
@@ -185,7 +186,7 @@ class _ConversationPageState extends State<ConversationPage> {
         Icon(Icons.waving_hand, size: 48, color: Colors.grey.shade300),
         const SizedBox(height: 12),
         Text(
-          'Dites bonjour à ${_conv.autreNom} !',
+          Tr.s.ditesBonjour(_conv.autreNom),
           style: const TextStyle(color: Colors.grey, fontSize: 14),
         ),
       ],
@@ -207,7 +208,7 @@ class _ConversationPageState extends State<ConversationPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(Tr.s.erreur2(e)), backgroundColor: Colors.red),
         );
         _textCtrl.text = texte; // restaurer le texte
       }
@@ -286,7 +287,7 @@ class _BullMessage extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Text(
-          'Message supprimé',
+          Tr.s.messageSupprime,
           style: TextStyle(
               color: Colors.grey.shade500, fontSize: 13, fontStyle: FontStyle.italic),
         ),
@@ -334,7 +335,7 @@ class _BullMessage extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.copy),
-              title: const Text('Copier'),
+              title: Text(Tr.s.copier),
               onTap: () {
                 Clipboard.setData(ClipboardData(text: message.texte));
                 Navigator.pop(context);
@@ -343,7 +344,7 @@ class _BullMessage extends StatelessWidget {
             if (message.estMoi && !message.supprime)
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+                title: Text(Tr.s.supprimer, style: TextStyle(color: Colors.red)),
                 onTap: () {
                   // messageService.supprimerMessage appelé depuis le parent
                   Navigator.pop(context);
@@ -471,7 +472,7 @@ class _BoutonChargerPlus extends StatelessWidget {
   @override
   Widget build(BuildContext context) => TextButton(
     onPressed: onTap,
-    child: const Text('Charger les messages précédents',
+    child: Text(Tr.s.chargerMessagesPrecedents,
         style: TextStyle(color: _kPrimary, fontSize: 12)),
   );
 }
@@ -513,8 +514,8 @@ class _ZoneSaisie extends StatelessWidget {
                 controller: controller,
                 maxLines: null,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'Écrire un message...',
+                decoration: InputDecoration(
+                  hintText: Tr.s.ecrireMessage,
                   hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),

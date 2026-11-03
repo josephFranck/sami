@@ -3,6 +3,7 @@ import 'package:sami/models/retour.dart';
 import 'package:sami/services/stock_service.dart';
 import 'package:sami/models/configuration_taxes.dart';
 import 'package:sami/utils/prix_fcfa.dart';
+import 'package:sami/l10n/tr.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SERVICE RETOURS — Logique complète
@@ -115,9 +116,7 @@ class RetoursService {
     // Escalade immédiate au superviseur
     await _escaladerSuperviseur(
       dossierRetourId: dossier.id,
-      message: '🚨 Retard détecté automatiquement — '
-          'livraison #$livraisonId en retard de ${retardHeures}h. '
-          'Client non livré. Action requise.',
+      message: Tr.s.retardDetecteAutomatiquementLivraisonRetard(livraisonId, retardHeures),
     );
 
     return dossier;
@@ -166,11 +165,7 @@ class RetoursService {
       });
       await _escaladerSuperviseur(
         dossierRetourId: dossierId,
-        message: '⏳ Validation requise — Retour #$dossierId\n'
-            'Motif : ${dossier.motif.name}\n'
-            'Proposition : ${decision.typeRemboursement.name} '
-            '(${PrixFCFA.formater(montantRembourse)})\n'
-            'Confiance agent : ${(scoreConfiance * 100).round()}%',
+        message: Tr.s.validationRequiseRetourMotifProposition(dossierId, dossier.motif.name, decision.typeRemboursement.name, PrixFCFA.formater(montantRembourse), (scoreConfiance * 100).round()),
       );
     }
   }
@@ -211,7 +206,7 @@ class RetoursService {
       // Notifier le client du refus
       await _notifierClient(
         clientId: dossier.clientId,
-        titre: 'Retour refusé',
+        titre: Tr.s.retourRefuse,
         message: justification,
         type: 'retour_refuse',
       );
@@ -297,11 +292,8 @@ class RetoursService {
       // Notifier le client des instructions de retour
       await _notifierClient(
         clientId: dossier.clientId,
-        titre: 'Retour accepté — à renvoyer',
-        message: 'Votre retour a été accepté. '
-            'Veuillez renvoyer l\'article avec le QR code fourni. '
-            'Remboursement : ${PrixFCFA.formater(decision.montantRembourse)} '
-            'après réception.',
+        titre: Tr.s.retourAccepteRenvoyer,
+        message: Tr.s.votreRetourEteAccepteVeuillez(PrixFCFA.formater(decision.montantRembourse)),
         type: 'retour_accepte_renvoi',
       );
     }
@@ -349,9 +341,8 @@ class RetoursService {
 
     await _notifierClient(
       clientId: dossier.clientId,
-      titre: 'Remboursement effectué ✅',
-      message: '${PrixFCFA.formater(decision.montantRembourse)} '
-          'remboursés via ${decision.typeRemboursement.name}.',
+      titre: Tr.s.remboursementEffectue,
+      message: Tr.s.remboursesVia(PrixFCFA.formater(decision.montantRembourse), decision.typeRemboursement.name),
       type: 'remboursement_effectue',
     );
   }
@@ -446,17 +437,13 @@ class RetoursService {
   static String _genererJustification(DossierRetour d, RegleRetour regle) {
     return switch (d.motif) {
       MotifRetour.changementAvis =>
-        'Client a changé d\'avis dans le délai de ${regle.delaiMaxHeures}h. '
-        'Remboursement de ${regle.pctRembourseClient}% (hors frais livraison).',
+        Tr.s.clientChangeAvisDansDelai(regle.delaiMaxHeures, regle.pctRembourseClient),
       MotifRetour.mauvaiseTaille =>
-        'Erreur de taille constatée — responsabilité boutique. '
-        'Remboursement total + échange proposé.',
+        Tr.s.erreurTailleConstateeResponsabiliteBoutique,
       MotifRetour.pagneDefectueux =>
-        'Pagne non conforme — responsabilité boutique. '
-        'Remboursement total + pénalité ${regle.pctRetenuBoutique}%.',
+        Tr.s.pagneNonConformeResponsabiliteBoutique(regle.pctRetenuBoutique),
       MotifRetour.retardLivraison =>
-        'Retard de livraison dépassant le délai convenu. '
-        'Remboursement total + pénalité livreur ${regle.pctRetenuLivreur}%.',
+        Tr.s.retardLivraisonDepassantDelaiConvenu(regle.pctRetenuLivreur),
     };
   }
 

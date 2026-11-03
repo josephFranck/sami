@@ -48,6 +48,8 @@ import 'package:sami/models/pagne.dart';
 import 'package:sami/models/boutique.dart';
 import 'package:sami/services/stockage_service.dart';
 import 'package:sami/services/resilience_service.dart';
+import 'package:sami/services/langue_service.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:sami/widgets/widgets_resilients.dart';
 import 'package:sami/pages/livreur/livreur_list_page.dart';
 import 'package:sami/pages/livreur/dashboard_livreur_page.dart';
@@ -57,6 +59,7 @@ import 'package:sami/pages/abonnements/abonnements_page.dart';
 import 'package:sami/pages/commandes/mes_commandes_page.dart';
 import 'package:sami/pages/commandes/dashboard_boutiquier.dart';
 import 'package:sami/pages/couturier/dashboard_couturier.dart';
+import 'package:sami/l10n/tr.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,6 +72,8 @@ Future<void> main() async {
   } catch (_) {}
   await StockageService.init();
   await initResilienceServices();
+  // Langue (fr | en) : préférence enregistrée, sinon celle du téléphone
+  await LangueService.instance.charger();
   runApp(const SamiApp());
 }
 
@@ -77,9 +82,25 @@ class SamiApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Se reconstruit au changement de langue (LangueService notifie) :
+    // tous les écrans relisent Tr.s dans la nouvelle langue.
+    return AnimatedBuilder(
+      animation: LangueService.instance,
+      builder: (context, _) => _construireApp(),
+    );
+  }
+
+  Widget _construireApp() {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'PagneShop — Garoua',
+      title: Tr.s.pagneshopGaroua,
+      locale: LangueService.instance.locale,
+      supportedLocales: const [Locale('fr'), Locale('en')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -427,7 +448,7 @@ class _DashboardBoutiquierGateState extends State<_DashboardBoutiquierGate> {
     // AUCUNE : expliquer ET donner la sortie (pas un cul-de-sac).
     if (_boutiques.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Commandes reçues'),
+        appBar: AppBar(title: Text(Tr.s.commandesRecues),
             backgroundColor: kP, foregroundColor: Colors.white),
         body: Center(
           child: Padding(
@@ -437,16 +458,15 @@ class _DashboardBoutiquierGateState extends State<_DashboardBoutiquierGate> {
                   const Icon(Icons.storefront_outlined,
                       size: 48, color: Colors.grey),
                   const SizedBox(height: 12),
-                  const Text(
-                      "Aucune boutique n'est rattachée à votre compte.\n"
-                      "Votre compte doit figurer parmi les GÉRANTS de la boutique.",
+                  Text(
+                      Tr.s.aucuneBoutiqueNEstRattachee,
                       textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: () =>
                         Navigator.pushReplacementNamed(context, '/mes-boutiques'),
                     icon: const Icon(Icons.storefront, size: 16),
-                    label: const Text('Gérer mes boutiques'),
+                    label: Text(Tr.s.gererMesBoutiques),
                   ),
                 ]),
           ),
@@ -459,7 +479,7 @@ class _DashboardBoutiquierGateState extends State<_DashboardBoutiquierGate> {
     }
     // PLUSIEURS : choisir laquelle.
     return Scaffold(
-      appBar: AppBar(title: const Text('Choisir la boutique'),
+      appBar: AppBar(title: Text(Tr.s.choisirBoutique),
           backgroundColor: kP, foregroundColor: Colors.white),
       body: ListView(
         padding: const EdgeInsets.all(14),
@@ -535,7 +555,7 @@ class _HistoriqueGateState extends State<_HistoriqueGate> {
   void initState() { super.initState(); _uid = FirebaseAuth.instance.currentUser?.uid; }
   @override
   Widget build(BuildContext context) {
-    if (_uid == null) return const Scaffold(body: Center(child: Text('Non connecté')));
+    if (_uid == null) return Scaffold(body: Center(child: Text(Tr.s.nonConnecte)));
     return PageHistoriqueCredits(utilisateurId: _uid!);
   }
 }
@@ -545,18 +565,18 @@ class _RouteInconnue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Page introuvable')),
+    appBar: AppBar(title: Text(Tr.s.pageIntrouvable)),
     body: Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.error_outline, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 16),
-          const Text('Cette page n\'existe pas', style: TextStyle(color: Colors.grey)),
+          Text(Tr.s.cettePageNExistePas, style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/accueil', (_) => false),
-            child: const Text('Retour à l\'accueil'),
+            child: Text(Tr.s.retourAccueil),
           ),
         ],
       ),
@@ -601,7 +621,7 @@ class _ChargeurPagne extends StatelessWidget {
         if (data == null) {
           return Scaffold(
               appBar: AppBar(title: const Text('SAMI')),
-              body: const Center(child: Text('Ce pagne n\'existe plus')));
+              body: Center(child: Text(Tr.s.cePagneNExistePlus)));
         }
         return PagneDetailPage(
             pagne: Pagne.fromMap({'id': s.data!.id, ...data}));
@@ -628,7 +648,7 @@ class _ChargeurBoutique extends StatelessWidget {
         if (s.data!.data() == null) {
           return Scaffold(
               appBar: AppBar(title: const Text('SAMI')),
-              body: const Center(child: Text('Boutique introuvable')));
+              body: Center(child: Text(Tr.s.boutiqueIntrouvable)));
         }
         return BoutiqueDetailPage(
             boutique: Boutique.fromFirebaseDocument(s.data!));

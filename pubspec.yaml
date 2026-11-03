@@ -1,0 +1,89 @@
+name: sami
+description: "PagneShop — Marketplace de pagnes et couturiers, Garoua, Cameroun."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.2 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+
+  # ── Firebase ──────────────────────────────────────────────────────────────
+  firebase_core: ^2.25.4
+  firebase_auth: ^4.17.4
+  cloud_firestore: ^4.15.4
+  firebase_storage: ^11.6.5      # conservé — switch via StockageService
+
+  # ── UI & images ───────────────────────────────────────────────────────────
+  cached_network_image: ^3.3.1
+  image_picker: ^1.0.7
+  flutter_image_compress: ^2.3.0   # compression images avant upload
+  flutter_rating_bar: ^4.0.1
+  carousel_slider: ^5.0.0
+  introduction_screen: ^3.1.16
+
+  # ── Carte OSM (remplace google_maps_flutter) ──────────────────────────────
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+
+  # ── Localisation ──────────────────────────────────────────────────────────
+  location: ^5.0.3
+  url_launcher: ^6.2.4
+  permission_handler: ^11.4.0
+
+  # ── Stockage local & préférences ──────────────────────────────────────────
+  shared_preferences: ^2.2.3
+
+  # ── Réseau (pour Cloudflare R2 Worker) ───────────────────────────────────
+  http: ^1.2.0
+
+  # ── Résilience offline ────────────────────────────────────────────────────
+  connectivity_plus: ^6.0.5     # détection connexion réseau (API List)
+  uuid: ^4.3.3                  # IDs idempotents pour actions offline
+  crypto: ^3.0.3               # HMAC-SHA256 pour validation QR offline
+  mobile_scanner: ^3.5.7       # scanner QR code caméra
+  qr_flutter: ^4.1.0           # afficher/imprimer QR (boutique, client)
+  signature: ^5.4.0            # capture de signature physique (téléphone éteint)
+  share_plus: ^7.2.2           # partage WhatsApp
+  path_provider: ^2.1.2        # fichiers temporaires (partage d'images)
+
+  # ── Animations ───────────────────────────────────────────────────────────
+  animated_text_kit: ^4.2.2
+
+  # ── À ajouter quand disponibles ──────────────────────────────────────────
+  # flutter_colorpicker: ^1.1.0    # sélecteur couleur options couturier
+  # qr_flutter: ^4.1.0             # QR code livraison
+  # mobile_scanner: ^3.5.6         # scan QR livraison
+
+dev_dependencies:
+  flutter_launcher_icons: ^0.13.1
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+# ── Supprimés (causes de problèmes ou remplacés) ─────────────────────────────
+# google_maps_flutter     → remplacé par flutter_map (OSM, gratuit)
+# ussd_advanced           → supprimé, paiement via CinetPay/Monetbil
+# ussd_service            → supprimé
+# sim_data                → supprimé
+# flutter_search_bar      → supprimé (non maintenu, implémenté nativement)
+# flutter_chat_bubble     → supprimé (bulles implémentées nativement)
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/logo.png
+    - lib/assets/images/
+
+# ═══ Icône de lancement (générée par: dart run flutter_launcher_icons) ═══
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon_foreground.png"
+  remove_alpha_ios: true

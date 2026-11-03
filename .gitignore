@@ -1,0 +1,46 @@
+# ═══ Secrets — NE JAMAIS versionner (même en dépôt privé) ═══
+google-services.json
+GoogleService-Info.plist
+key.properties
+*.keystore
+*.jks
+.env
+.env.*
+firebase_options.dart
+# Token du worker Cloudflare : garder en variable d'environnement
+# (worker_r2.js lit env.AUTH_TOKEN — ne commite jamais sa valeur)
+
+# ═══ Flutter / Dart ═══
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# ═══ IDE ═══
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# ═══ Android ═══
+android/.gradle/
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/local.properties
+android/key.properties
+
+# ═══ iOS ═══
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# ═══ OS ═══
+.DS_Store
+Thumbs.db

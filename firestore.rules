@@ -1,0 +1,316 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ═══════════ HELPERS ═══════════
+    function connecte() { return request.auth != null; }
+    function moi() { return request.auth.uid; }
+    function monDoc() {
+      return get(/databases/$(database)/documents/utilisateurs/$(moi())).data;
+    }
+    function estAdmin() {
+      return connecte() &&
+        monDoc().role in ['admin', 'superadmin'];
+    }
+    function estSuper() {
+      return connecte() && monDoc().role == 'superadmin';
+    }
+    // STAFF = admin/superadmin, OU un compte doté de LA permission
+    // précise (le map `permissions` posé par Gestion utilisateurs).
+    function estStaff(p) {
+      return connecte() && (
+        monDoc().role in ['admin', 'superadmin'] ||
+        (('permissions' in monDoc()) && monDoc().permissions.hasAny([p]))
+      );
+    }
+
+    // ═══════════ UTILISATEURS ═══════════
+    match /utilisateurs/{uid} {
+      allow read: if connecte() && (moi() == uid || estStaff('utilisateurs'));
+      allow create: if connecte() && moi() == uid
+                    && request.resource.data.role == 'client';
+      // On peut éditer SON profil, mais JAMAIS s'auto-promouvoir
+      allow update: if connecte() && (
+        // HIÉRARCHIE : seul le SUPERADMIN peut modifier un admin ou
+        // promouvoir quelqu'un admin/superadmin — un admin ordinaire
+        // gère les agents et en-dessous, jamais ses pairs.
+        (estAdmin()
+          && !(resource.data.get('role','') in ['admin','superadmin']
+               && !estSuper())
+          && !(request.resource.data.get('role','') in ['admin','superadmin']
+               && !estSuper()))
+        ||
+        estStaff('utilisateurs') ||
+        (moi() == uid
+         && request.resource.data.role == resource.data.role
+         // ANTI AUTO-CRÉDIT : on ne peut pas AUGMENTER son propre solde
+         // (le débit — payer en crédits — reste permis ; les gains
+         //  passent par les reversements, écrits par le staff)
+         && request.resource.data.get('creditBalance', 0)
+              <= resource.data.get('creditBalance', 0)
+         && request.resource.data.get('permissions', [])
+            == resource.data.get('permissions', []))
+      );
+    
+      // PROFILS DE MESURES : sous-collection PERSONNELLE — le chemin
+      // porte l'identité, la règle la vérifie (pas de cascade en
+      // Firestore : sans ce match imbriqué, deny par défaut).
+      match /mesures/{mesureId} {
+        allow read, write: if connecte() && uid == moi();
+      }
+    }
+
+
+    // ═══════════ CATALOGUE PUBLIC (lecture libre, écriture contrôlée) ═══════════
+    match /pagnes/{id} {
+      allow read: if true;
+      // GÉRANT PRÉCIS : un boutiquier n'écrit que les pagnes de SES
+      // boutiques (gerants contient son uid) ; staff/admin : tout.
+      // Coût : 1 à 2 get() par écriture — les écritures de pagnes sont
+      // rares, la sécurité des PRIX vaut largement ce prix.
+      allow create, update: if connecte() && (
+          estStaff('pagnes')
+          || (
+            get(/databases/$(database)/documents/utilisateurs/$(moi()))
+                .data.role in ['boutiquier', 'couturier']
+            && request.resource.data.get('boutiqueId', '') != ''
+            && get(/databases/$(database)/documents/boutiques/$(request.resource.data.boutiqueId))
+                .data.get('gerants', []).hasAny([moi()])
+          )
+      );
+      allow delete: if estStaff('boutiques');
+    }
+    match /boutiques/{id} {
+      allow read: if true;
+      allow update: if estStaff('boutiques')
+                    || (connecte() && moi() in resource.data.gerants);
+      allow create, delete: if estStaff('boutiques');
+    }
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if estStaff('boutiques');
+    }
+    match /evenements/{id} {
+      allow read: if true;
+      allow write: if estStaff('evenements');
+    }
+    match /config_credits/{id} {
+      allow read: if true;
+      allow write: if estAdmin();
+    }
+
+    // ═══════════ COMMANDES & LIVRAISONS ═══════════
+    match /sessions_commande/{id} {
+      allow read, create: if connecte();
+      allow update: if connecte();
+      // Vérification des transferts déclarés (agent 'paiements')
+      allow update: if estStaff('paiements');
+    }
+    match /sous_commandes/{id} {
+      allow read: if connecte();
+      allow create: if connecte() && request.resource.data.clientId == moi();
+      // UPDATE réservé aux PARTIES PRENANTES de cette commande :
+      // staff, le client, le livreur assigné, ou un gérant de la
+      // boutique — un inconnu décompilé ne marque plus rien « livré ».
+      allow update: if connecte() && (
+        estStaff('utilisateurs') ||
+        resource.data.clientId == moi() ||
+        resource.data.livreurId == moi() ||
+        get(/databases/$(database)/documents/boutiques/$(resource.data.boutiqueId))
+            .data.gerants.hasAny([moi()])
+      );
+
+      // SOUS-COLLECTION livraisons : étapes de la course. Lecture pour
+      // tout connecté (client suit, livreur agit, boutiquier informe) ;
+      // écriture idem (le flux la met à jour à chaque scan).
+      match /livraisons/{livId} {
+        allow read, write: if connecte();
+      }
+    }
+    match /commandes_couturier/{id} {
+      allow read, update: if connecte();
+      allow create: if connecte() && request.resource.data.clientId == moi();
+    }
+    match /livraisons/{id} {
+      allow read, update: if connecte();
+      allow create: if connecte();
+      allow delete: if estAdmin();
+    }
+    match /qr_secrets/{id} {
+      // ═══ ANTI-DÉCOMPILATION ═══ la clé HMAC d'une livraison n'est
+      // lisible que par SES participants — un compte quelconque (même
+      // avec l'app décompilée et l'algo en main) ne peut pas forger
+      // les QR des livraisons d'autrui.
+      allow read: if connecte() && (
+        estStaff('livraisons') ||
+        get(/databases/$(database)/documents/livraisons/$(id))
+            .data.clientId == moi() ||
+        get(/databases/$(database)/documents/livraisons/$(id))
+            .data.livreurId == moi()
+      );
+      allow write: if connecte();
+      allow delete: if estAdmin();
+    }
+    match /retours/{id} {
+      allow read, write: if connecte();
+    }
+
+    // ═══════════ PARTENAIRES ═══════════
+    match /livreurs/{id} {
+      allow read: if connecte();
+      allow update: if connecte(); // encours/gains mis à jour par l'app — TODO Cloud Function
+      allow create, delete: if estStaff('candidatures');
+    }
+    match /couturiers/{id} {
+      allow read: if true; // vitrine publique des ateliers
+      allow update: if connecte();
+      allow create, delete: if estStaff('candidatures');
+    }
+    match /profils_couturier/{id} {
+      allow read: if connecte();
+      allow write: if connecte() && (moi() == id || estAdmin());
+    }
+    match /candidatures/{id} {
+      allow create: if connecte() && request.resource.data.utilisateurId == moi();
+      allow read: if connecte()
+                  && (resource.data.utilisateurId == moi() || estStaff('candidatures'));
+      allow update: if estStaff('candidatures');
+    }
+
+    // ═══════════ FINANCES (sensible) ═══════════
+    match /transactions/{id} {
+      allow read: if estAdmin() || (connecte() && resource.data.get('clientId','') == moi());
+      allow create, update: if connecte(); // écrites par l'app — TODO Cloud Function
+    }
+    match /transactions_paiement/{id} {
+      // Le client CRÉE sa transaction (en attente) et ÉCOUTE la sienne ;
+      // la CONFIRMATION n'arrive QUE par le webhook (compte de service,
+      // qui contourne ces règles). Avant : update libre = n'importe qui
+      // pouvait s'auto-confirmer un paiement sans payer !
+      allow read: if estAdmin()
+                  || (connecte() && resource.data.get('clientId','') == moi());
+      allow create: if connecte()
+                    && request.resource.data.get('clientId','') == moi()
+                    && request.resource.data.get('statut','') != 'confirme';
+      allow update: if estAdmin(); // + webhook (bypass)
+    }
+
+    // MESURES du client (privées) + MODÈLES des couturiers + divers actifs
+    match /modeles_couture/{id} {
+      allow read: if true; // catalogue public
+      allow create, update, delete: if connecte() && (
+          estStaff('pagnes')
+          || request.resource.data.get('couturierId', resource.data.get('couturierId','')) == moi());
+    }
+    match /signalements_avis/{id} {
+      allow create: if connecte();
+      allow read, update: if estStaff('avis');
+    }
+    match /preuves_photo/{id} {
+      allow read, create: if connecte();
+      allow update, delete: if estStaff('livraisons');
+    }
+    match /anomalies_livraison/{id} {
+      allow read, create: if connecte();
+      allow update: if estStaff('livraisons');
+    }
+    match /mouvements_credits/{id} {
+      allow read: if connecte() && resource.data.get('clientId','') == moi()
+                  || estStaff('reversements');
+      allow create: if connecte();
+      allow update, delete: if estStaff('reversements');
+    }
+
+    // JOURNAL APPLICATIF : chacun écrit, seul le staff lit
+    match /app_logs/{id} {
+      allow create: if connecte();
+      allow read: if estStaff('parametres');
+    }
+
+    // PARRAINAGES : le filleul crée SON lien (en attente) ; staff valide
+    match /parrainages/{id} {
+      allow read: if connecte() && (
+          resource.data.get('parrainId','') == moi()
+          || resource.data.get('filleulId','') == moi()
+          || estStaff('reversements'));
+      allow create: if connecte()
+                    && request.resource.data.get('filleulId','') == moi()
+                    && request.resource.data.get('statut','') == 'enAttente';
+      allow update: if estStaff('reversements');
+    }
+
+    // REMBOURSEMENTS : créés par le client à l'annulation, traités par staff
+    match /remboursements_a_faire/{id} {
+      allow read: if estStaff('reversements')
+                  || (connecte() && resource.data.get('clientId','') == moi());
+      allow create: if connecte()
+                    && request.resource.data.get('clientId','') == moi()
+                    && request.resource.data.get('statut','') == 'a_traiter';
+      allow update: if estStaff('reversements');
+    }
+    match /reversements/{id} {
+      allow read: if estStaff('reversements')
+                  || (connecte() && resource.data.get('beneficiaireId','') == moi());
+      allow write: if estStaff('reversements');
+    }
+    match /recus/{id} {
+      allow read: if connecte()
+                  && (resource.data.beneficiaireId == moi() || estAdmin());
+      allow create: if connecte();
+      allow update, delete: if false; // un reçu émis est IMMUABLE
+    }
+    match /counters/{id} { allow read, write: if connecte(); }
+
+    // ═══════════ COMMUNICATION ═══════════
+    match /conversations/{id} {
+      allow read, update: if connecte() && moi() in resource.data.participants;
+      allow create: if connecte() && moi() in request.resource.data.participants;
+      match /messages/{mid} {
+        allow read, create: if connecte() && moi() in
+          get(/databases/$(database)/documents/conversations/$(id)).data.participants;
+      }
+    }
+    match /notifications/{id} {
+      allow read, update: if connecte() && resource.data.destinataireId == moi();
+      allow create: if connecte();
+    }
+    match /avis/{id} {
+      allow read: if true;
+      allow create: if connecte() && request.resource.data.get('auteurId','') == moi();
+      allow update, delete: if estStaff('litiges');
+    }
+
+    // ═══════════ CONFIGURATION (le cœur de ta question) ═══════════
+    match /app_config/parametres { allow read: if connecte(); allow write: if estStaff('parametres'); }
+    match /app_config/version    { allow read: if connecte(); allow write: if estAdmin(); }
+    // Clés marchandes : lisibles par l'app (initiation du paiement côté client),
+    // MODIFIABLES PAR PERSONNE d'autre que l'admin.
+    match /app_config/paiement   { allow read: if connecte(); allow write: if estAdmin(); }
+    // Clé de signature des reçus : idem. TODO à l'échelle : vérification via
+    // Cloud Function pour ne plus exposer la clé en lecture.
+    match /app_config/recus      { allow read: if connecte(); allow write: if estAdmin(); }
+    match /app_config/taxes     { allow read: if connecte(); allow write: if estAdmin(); }
+    match /config_marketing/{id} { allow read: if connecte(); allow write: if estAdmin(); }
+
+    // ═══════════ AGENT / LOGS (admin) ═══════════
+    // PROMOTIONS : le boutiquier propose la SIENNE, le staff tranche
+    match /promotions/{id} {
+      allow read: if connecte();
+      allow create: if connecte()
+                    && request.resource.data.proposePar == moi()
+                    && request.resource.data.statut == 'proposee';
+      allow update, delete: if estStaff('pagnes');
+    }
+
+    match /alertes_agent/{id} { allow read: if estStaff('litiges'); allow write: if connecte(); }
+    match /logs_agent/{id}    { allow read: if estAdmin(); allow write: if connecte(); }
+    match /demandes_numerisation/{id} {
+      allow create: if connecte();
+      allow read, update: if estStaff('boutiques') ||
+        (connecte() && resource.data.get('demandeurId','') == moi());
+    }
+
+    // ═══════════ TOUT LE RESTE : REFUSÉ ═══════════
+    match /{document=**} { allow read, write: if false; }
+  }
+}

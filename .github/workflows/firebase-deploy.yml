@@ -34,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PROJET: sami-c564c
+      SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -44,15 +45,20 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm test
+      - name: Secret absent → rien à déployer
+        if: ${{ env.SA == '' }}
+        run: echo "::warning::Secret FIREBASE_SERVICE_ACCOUNT absent — tests OK, déploiement ignoré (voir DEPLOIEMENT_FUNCTIONS.md)"
       - name: Identifiants du compte de service
+        if: ${{ env.SA != '' }}
         run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$RUNNER_TEMP/sa.json"
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
       - name: Firebase CLI
+        if: ${{ env.SA != '' }}
         run: npm install -g firebase-tools@13
       - name: Déployer les règles et index Firestore
-        if: ${{ github.event_name == 'push' || inputs.cible == 'tout' || inputs.cible == 'regles' }}
+        if: ${{ env.SA != '' && (github.event_name == 'push' || inputs.cible == 'tout' || inputs.cible == 'regles') }}
         run: firebase deploy --only firestore:rules,firestore:indexes --project "$PROJET" --non-interactive --force
       - name: Déployer les Cloud Functions
-        if: ${{ github.event_name == 'push' || inputs.cible == 'tout' || inputs.cible == 'fonctions' }}
+        if: ${{ env.SA != '' && (github.event_name == 'push' || inputs.cible == 'tout' || inputs.cible == 'fonctions') }}
         run: firebase deploy --only functions --project "$PROJET" --non-interactive --force

@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sami/models/panier.dart';
+import 'package:sami/models/commande_multi.dart';
 import 'package:sami/models/couture.dart';
 import 'package:sami/models/couture_options.dart';
 import 'package:sami/utils/prix_fcfa.dart';
@@ -304,8 +306,61 @@ class CoutureService {
       }
     } catch (_) {}
 
+    // ═══ LE BOUTIQUIER VOIT LA COMMANDE (décision du 03/11/2026) ═══
+    // Une SOUS-COMMANDE boutique est créée pour le pagne : elle apparaît
+    // dans « Commandes reçues » avec la mention « à livrer chez le
+    // couturier », suit le flux Confirmer → Prête → scan, et passe
+    // « livree » quand le tissu arrive à l'atelier. Avant : une simple
+    // notification sans aucun écran pour agir.
+    String scId = commandeId; // repli : l'ancien lien direct
+    try {
+      final ccDoc = await CommandeCouturier.collection.doc(commandeId).get();
+      final ccd = ccDoc.data() ?? {};
+      final pDoc2 = await _db.collection('pagnes').doc(pagneId).get();
+      final pd2 = pDoc2.data() ?? {};
+      final nb = (ccd['nombrePagnes'] as num?)?.toInt() ?? 1;
+      final prixPagneTotal = (ccd['prixPagne'] as num?)?.toDouble() ?? 0;
+      final netB = (ccd['netBoutique'] as num?)?.toDouble() ?? prixPagneTotal;
+      final images = (pd2['images'] as List?)?.cast<String>() ?? const [];
+      final scRef = SousCommande.collection.doc();
+      final sc = SousCommande(
+        id: scRef.id,
+        sessionId: '', // pas de session panier : commande de couture
+        clientId: _uid ?? '',
+        boutiqueId: boutiqueId,
+        boutiqueNom: origAdresse,
+        articles: [
+          PanierItem(
+            pagneId: pagneId,
+            pagneNom: pd2['nom'] as String? ?? 'Pagne',
+            pagneImage: images.isNotEmpty ? images.first : null,
+            quantite: nb,
+            prixUnitaire: nb > 0 ? prixPagneTotal / nb : prixPagneTotal,
+            boutiqueId: boutiqueId,
+            couturierId: couturierId,
+            avecCouture: true,
+          ),
+        ],
+        couturierId: couturierId,
+        commandeCoutureId: commandeId,
+        statut: StatutSousCommande.enAttente,
+        dateCreation: DateTime.now(),
+        sousTotal: prixPagneTotal,
+        fraisLivraison: 0, // la livraison est facturée sur la commande couture
+        totalClient: prixPagneTotal,
+        commissionPlateforme: PrixFCFA.arrondirAu50(prixPagneTotal - netB),
+        netBoutique: netB,
+        notesClient: '✂️ COUTURE — à livrer chez le couturier ($destAdresse). '
+            'Le client règle à la réception du vêtement.',
+      );
+      await scRef.set(sc.toMap());
+      scId = scRef.id;
+    } catch (e) {
+      if (kDebugMode) print('[Couture] sous-commande boutique non créée: $e');
+    }
+
     final livraison = await LivraisonService.creerLivraison(
-      commandeId: commandeId,
+      commandeId: scId,
       clientId: _uid ?? '',
       boutiqueId: boutiqueId,
       boutiqueNom: origAdresse,
@@ -322,9 +377,15 @@ class CoutureService {
       typeLivraison: TypeLivraison.confection,
     );
 
-    // Lier le trajet 1 à la commande
+    // Lier le trajet 1 à la commande couture — dans les DEUX sens : la
+    // livraison porte commandeCouturierId (la synchro continue la chaîne
+    // couture après « livree »), la commande porte livraisonPagneId.
+    await _db.collection('livraisons').doc(livraison.id).set({
+      'commandeCouturierId': commandeId,
+    }, SetOptions(merge: true));
     await CommandeCouturier.collection.doc(commandeId).update({
       'livraisonPagneId': livraison.id,
+      'sousCommandeBoutiqueId': scId,
     });
 
     // Assigner un livreur

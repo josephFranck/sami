@@ -427,17 +427,34 @@ class LivraisonService {
       // ── VERROU IDEMPOTENT ── une livraison ne crédite la fidélité
       // (et ne déclenche le parrainage) qu'UNE fois, même si
       // l'événement 'livree' est rejoué (réseau, double tap).
+      String? commandeCouturierId;
       final dejaFait = await db.runTransaction<bool>((tx) async {
         final ref = db.collection('livraisons').doc(l.id);
         final doc = await tx.get(ref);
         if (doc.data()?['fideliteCreditee'] == true) return true;
+        // trajet 1 d'une couture (tissu → atelier) : porte la référence
+        commandeCouturierId = doc.data()?['commandeCouturierId'] as String?;
         tx.update(ref, {'fideliteCreditee': true});
         return false;
       });
       if (dejaFait) return;
-      // Vente classique : la sous-commande passe 'livree'
+      // La sous-commande (vente classique OU pagne d'une couture) passe 'livree'
       final sc = await db.collection('sous_commandes').doc(l.commandeId).get();
-      if (sc.exists) {
+      if (sc.exists && commandeCouturierId != null) {
+        // COUTURE, trajet 1 : le pagne est arrivé à l'atelier. Pour le
+        // boutiquier c'est une vente livrée ; pour le client ce n'est PAS
+        // « votre commande est livrée » (on ne notifie pas ici) — la chaîne
+        // couture continue plus bas (enConfection).
+        await sc.reference.update({
+          'statut': 'livree',
+          'dateTerminaison': FieldValue.serverTimestamp(),
+        });
+        if (l.livreurId != null && l.livreurId!.isNotEmpty) {
+          await db.collection('livreurs').doc(l.livreurId).set({
+            'statut': StatutLivreur.disponible.name,
+          }, SetOptions(merge: true));
+        }
+      } else if (sc.exists) {
         await sc.reference.update({'statut': 'livree'});
         // fidélité : la livraison réussie crédite points + niveau
         await _crediterFidelite(
@@ -465,8 +482,10 @@ class LivraisonService {
         return;
       }
       // Couture : trajet 1 (tissu reçu) ou trajet 2 (vêtement livré) ?
-      final cc =
-          await db.collection('commandes_couturier').doc(l.commandeId).get();
+      final cc = await db
+          .collection('commandes_couturier')
+          .doc(commandeCouturierId ?? l.commandeId)
+          .get();
       if (!cc.exists) return;
       final d = cc.data()!;
       if (d['livraisonRetourId'] == l.id) {

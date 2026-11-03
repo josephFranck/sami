@@ -208,6 +208,26 @@ class _CarteSCBoutique extends StatelessWidget {
             ),
           ]),
           const SizedBox(height: 8),
+          // COUTURE : le pagne part chez le couturier, pas chez le client
+          if (sc.commandeCoutureId != null)
+            Container(
+              margin: const EdgeInsets.only(top: 6, bottom: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.teal.shade200)),
+              child: Row(children: [
+                const Icon(Icons.content_cut, size: 15, color: Colors.teal),
+                const SizedBox(width: 6),
+                Expanded(
+                    child: Text(
+                        sc.notesClient ??
+                            '✂️ COUTURE — à livrer chez le couturier',
+                        style: TextStyle(
+                            fontSize: 11.5, color: Colors.teal.shade900))),
+              ]),
+            ),
           Text(quandFr(sc.dateCreation, prefixe: 'Commandée le '),
               style: TextStyle(
                   fontSize: 10.5, color: Colors.grey.shade600)),

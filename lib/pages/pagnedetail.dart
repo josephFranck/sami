@@ -39,6 +39,9 @@ class _PagneDetailPageState extends State<PagneDetailPage> {
       final d = PrixFCFA.decomposer(
         coutAchat: pagne.coutAchat!,
         beneficeSouhaite: pagne.beneficeSouhaite ?? 0,
+        tauxCommission: ParametresService.commissionDefautPctSync,
+        fraisLivraison: ParametresService.fraisLivraisonBaseSync,
+        tauxGainLivreur: ParametresService.gainLivreurPctSync / 100,
       );
       return d.prixFinalClient;
     }

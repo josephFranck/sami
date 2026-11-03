@@ -579,6 +579,8 @@ class _ParametresAdminPageState extends State<ParametresAdminPage>
                 _champNum('Commission plateforme par défaut', 'commissionDefautPct', '%', 8),
                 _champNum('Commission confection (couturiers sans abonnement)', 'commissionCouturePct', '%', 10),
                 _champNum('Frais d\'une course de livraison', 'fraisLivraisonBase', 'F', 600),
+                _champNum('Rayon de la zone de livraison (depuis la boutique)', 'rayonZoneKm', 'km', 5),
+                _champNum('Supplément hors zone (par course)', 'supplementHorsZone', 'FCFA', 300),
                 _champNum('Part du livreur par course', 'gainLivreurPct', '%', 70),
                 _champNum('Palier fidélité 1 — seuil', 'livreurPalier1Seuil', 'courses', 20),
                 _champNum('Palier fidélité 1 — bonus', 'livreurPalier1Bonus', '%', 2),

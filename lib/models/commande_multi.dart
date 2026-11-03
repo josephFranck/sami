@@ -9,12 +9,12 @@ import 'package:sami/utils/prix_fcfa.dart';
 //
 //   SessionCommande (1)          ← vue client : "ma commande"
 //     ├── SousCommande Boutique A (articles A1, A2)
-//     │     └── EtapeLivraison A → domicile client
+//     │     └── Livraison (collection /livraisons, commandeId = id) → domicile client
 //     ├── SousCommande Boutique B (article B1 avec couture)
-//     │     ├── EtapeLivraison B1 → chez couturier
-//     │     └── EtapeLivraison B2 → domicile client (après couture)
+//     │     ├── Livraison B1 → chez couturier
+//     │     └── Livraison B2 → domicile client (après couture)
 //     └── SousCommande Boutique C (article C1)
-//           └── EtapeLivraison C → retrait boutique
+//           └── Livraison C → retrait boutique
 //
 // Avantages :
 //   - Chaque boutiquier ne voit QUE ses sous-commandes
@@ -59,143 +59,6 @@ enum TypeDestination {
 // Une SousCommande peut avoir 1 ou 2 étapes de livraison
 // (ex: pagne → couturier puis vêtement → client)
 
-class EtapeLivraison {
-  final String id;
-  final String sousCommandeId;
-  final int ordre;                    // 1 = première livraison, 2 = deuxième...
-  final TypeDestination typeDestination;
-
-  // Adresses
-  final String adresseDepart;         // ex: adresse boutique
-  final String adresseArrivee;        // ex: adresse client ou couturier
-  final double? latDepart;
-  final double? lngDepart;
-  final double? latArrivee;
-  final double? lngArrivee;
-
-  // Livreur
-  final String? livreurId;
-  final DateTime? dateAssignation;
-
-  // QR codes (sécurité)
-  final String qrDepart;              // scanné en boutique par le livreur
-  final String qrArrivee;             // scanné à destination par le destinataire
-
-  // Statut et timing
-  final String statut;
-  final DateTime? datePrisEnCharge;
-  final DateTime? dateLivraison;
-  final DateTime? dateLivraisonPrevue;
-
-  // Financier
-  final double fraisLivraison;
-  final double gainLivreur;
-
-  // Preuve
-  final String? photoLivraison;
-  final String? signatureNom;
-  final double? noteClient;
-
-  const EtapeLivraison({
-    required this.id,
-    required this.sousCommandeId,
-    required this.ordre,
-    required this.typeDestination,
-    required this.adresseDepart,
-    required this.adresseArrivee,
-    this.latDepart,
-    this.lngDepart,
-    this.latArrivee,
-    this.lngArrivee,
-    this.livreurId,
-    this.dateAssignation,
-    required this.qrDepart,
-    required this.qrArrivee,
-    this.statut = 'enAttente',
-    this.datePrisEnCharge,
-    this.dateLivraison,
-    this.dateLivraisonPrevue,
-    this.fraisLivraison = 600,
-    this.gainLivreur = 350,
-    this.photoLivraison,
-    this.signatureNom,
-    this.noteClient,
-  });
-
-  bool get estLivree => statut == 'livree' || dateLivraison != null;
-  bool get estEnCours => statut == 'enCours';
-  bool get estDomicile => typeDestination == TypeDestination.domicileClient;
-  bool get estRetrait => typeDestination == TypeDestination.retraitBoutique;
-  bool get estCouturier => typeDestination == TypeDestination.chezCouturier;
-
-  String get labelDestination => switch (typeDestination) {
-    TypeDestination.domicileClient  => 'Livraison domicile',
-    TypeDestination.retraitBoutique => 'Retrait boutique',
-    TypeDestination.chezCouturier   => 'Livraison couturier',
-    TypeDestination.retourBoutique  => 'Retour boutique',
-  };
-
-  static CollectionReference<Map<String, dynamic>> collection(String sousCommandeId) =>
-      FirebaseFirestore.instance
-          .collection('sous_commandes')
-          .doc(sousCommandeId)
-          .collection('livraisons');
-
-  Map<String, dynamic> toMap() => {
-    'id': id,
-    'sousCommandeId': sousCommandeId,
-    'ordre': ordre,
-    'typeDestination': typeDestination.name,
-    'adresseDepart': adresseDepart,
-    'adresseArrivee': adresseArrivee,
-    'latDepart': latDepart,
-    'lngDepart': lngDepart,
-    'latArrivee': latArrivee,
-    'lngArrivee': lngArrivee,
-    'livreurId': livreurId,
-    'dateAssignation': dateAssignation,
-    'qrDepart': qrDepart,
-    'qrArrivee': qrArrivee,
-    'statut': statut,
-    'datePrisEnCharge': datePrisEnCharge,
-    'dateLivraison': dateLivraison,
-    'dateLivraisonPrevue': dateLivraisonPrevue,
-    'fraisLivraison': fraisLivraison,
-    'gainLivreur': gainLivreur,
-    'photoLivraison': photoLivraison,
-    'signatureNom': signatureNom,
-    'noteClient': noteClient,
-  };
-
-  factory EtapeLivraison.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final d = doc.data()!;
-    return EtapeLivraison(
-      id: doc.id,
-      sousCommandeId: d['sousCommandeId'] as String? ?? '',
-      ordre: d['ordre'] as int? ?? 1,
-      typeDestination: TypeDestination.values.firstWhere((e) => e.name == (d['typeDestination'] as String? ?? 'domicileClient'), orElse: () => TypeDestination.values.first),
-      adresseDepart: d['adresseDepart'] as String? ?? '',
-      adresseArrivee: d['adresseArrivee'] as String? ?? '',
-      latDepart: (d['latDepart'] as num?)?.toDouble(),
-      lngDepart: (d['lngDepart'] as num?)?.toDouble(),
-      latArrivee: (d['latArrivee'] as num?)?.toDouble(),
-      lngArrivee: (d['lngArrivee'] as num?)?.toDouble(),
-      livreurId: d['livreurId'] as String?,
-      dateAssignation: (d['dateAssignation'] as Timestamp?)?.toDate(),
-      qrDepart: d['qrDepart'] as String? ?? '',
-      qrArrivee: d['qrArrivee'] as String? ?? '',
-      statut: d['statut'] as String? ?? 'enAttente',
-      datePrisEnCharge: (d['datePrisEnCharge'] as Timestamp?)?.toDate(),
-      dateLivraison: (d['dateLivraison'] as Timestamp?)?.toDate(),
-      dateLivraisonPrevue: (d['dateLivraisonPrevue'] as Timestamp?)?.toDate(),
-      fraisLivraison: (d['fraisLivraison'] as num?)?.toDouble() ?? 500,
-      gainLivreur: (d['gainLivreur'] as num?)?.toDouble() ?? 350,
-      photoLivraison: d['photoLivraison'] as String?,
-      signatureNom: d['signatureNom'] as String?,
-      noteClient: (d['noteClient'] as num?)?.toDouble(),
-    );
-  }
-}
 
 // ─── Sous-commande (par boutique) ─────────────────────────────────────────────
 
@@ -216,7 +79,6 @@ class SousCommande {
 
   // Livraisons (1 ou 2 selon si couture ou non)
   // Stockées en sous-collection : sous_commandes/{id}/livraisons
-  List<EtapeLivraison> livraisons; // chargées séparément
 
   // Statut
   StatutSousCommande statut;
@@ -247,7 +109,6 @@ class SousCommande {
     required this.articles,
     this.couturierId,
     this.commandeCoutureId,
-    this.livraisons = const [],
     required this.statut,
     this.livraisonId,
     required this.dateCreation,
@@ -273,14 +134,6 @@ class SousCommande {
     StatutSousCommande.terminee,
     StatutSousCommande.annulee,
   ].contains(statut);
-
-  // Livraison principale (vers client ou couturier)
-  EtapeLivraison? get livraisonPrincipale =>
-      livraisons.isEmpty ? null : livraisons.first;
-
-  // Livraison finale (après couture, vers client)
-  EtapeLivraison? get livraisonFinale =>
-      livraisons.length > 1 ? livraisons.last : null;
 
   static CollectionReference<Map<String, dynamic>> get collection =>
       FirebaseFirestore.instance.collection('sous_commandes');
@@ -482,4 +335,29 @@ class SessionCommande {
     'statut': statut.name,
     'dateCreation': FieldValue.serverTimestamp(),
   };
+}
+
+// ─── Config livraison par boutique (choisie par le client) ───────────────────
+
+class ConfigLivraisonBoutique {
+  final String boutiqueId;
+  final TypeDestination typeDestination;
+  final String adresseBoutique;
+  final String? adresseCouturier;   // si pagne avec couture
+  final int delaiCoutureJours;      // délai avant livraison finale si couture
+
+  const ConfigLivraisonBoutique({
+    required this.boutiqueId,
+    required this.typeDestination,
+    required this.adresseBoutique,
+    this.adresseCouturier,
+    this.delaiCoutureJours = 3,
+  });
+
+  factory ConfigLivraisonBoutique.defaut(String adresseClient) =>
+      ConfigLivraisonBoutique(
+        boutiqueId: '',
+        typeDestination: TypeDestination.domicileClient,
+        adresseBoutique: '',
+      );
 }

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:sami/services/parametres_service.dart';
 import 'package:sami/models/panier.dart';
 import 'package:sami/widgets/image_universelle.dart';
 import 'package:sami/models/couture.dart';
@@ -442,7 +443,7 @@ class _CommanderCouturePageState extends State<CommanderCouturePage> {
     // livraison (tissu → atelier, vêtement → client). Sur devis, la
     // confection affichée est indicative jusqu'à l'accord.
     // Montant VIVANT : même source que la facturation (paramètre admin).
-    final fraisLivraison2Trajets = 2 * Panier.fraisBase;
+    final fraisLivraison2Trajets = 2 * ParametresService.fraisLivraisonBaseSync;
     final prixTissu = widget.pagne.prixParBoutique * _nbPagnes;
     final prixTotal =
         prixTissu + _modele!.prixBase + fraisLivraison2Trajets;

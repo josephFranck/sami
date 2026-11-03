@@ -1,3 +1,5 @@
+import 'package:sami/models/panier.dart';
+import 'package:sami/services/parametres_service.dart';
 import 'package:sami/utils/droits.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -60,6 +62,12 @@ import 'package:sami/pages/couturier/dashboard_couturier.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Paramètres admin en cache dès le boot : la fiche pagne, l'ajout de
+  // pagne et le récap couture lisent la même source que la facturation.
+  try {
+    await ParametresService.precharger();
+    Panier.fraisBase = ParametresService.fraisLivraisonBaseSync;
+  } catch (_) {}
   await StockageService.init();
   await initResilienceServices();
   runApp(const SamiApp());

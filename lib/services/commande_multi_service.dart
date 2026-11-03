@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sami/pages/legal/mentions_legales_page.dart';
+import 'package:sami/services/devis_commande_service.dart';
 import 'package:sami/services/log_service.dart';
 import 'package:sami/services/notification_service.dart';
 import 'package:sami/services/paiement_service.dart';
@@ -23,10 +24,6 @@ import 'package:sami/utils/prix_fcfa.dart';
 // en sessions + sous-commandes + livraisons + transactions
 // ═══════════════════════════════════════════════════════════════════════════
 
-const _kCommissionDefault  = 6.0;    // %
-const _kFraisLivraison     = 500.0;  // FCFA par livraison
-const _kGainLivreur        = 350.0;  // FCFA par livraison
-const _kFraisMMoney        = 2.5;    // % frais passerelle paiement
 
 class CommandeMultiService {
 
@@ -66,7 +63,7 @@ class CommandeMultiService {
     // ═══ GROUPES FIGÉS ═══ chaque sous-liste devient une COPIE
     // indépendante : plus aucune structure partagée/lazy dans le flux.
     final groupesFiges = <String, List<PanierItem>>{
-      for (final e in groupesFiges.entries) e.key: List<PanierItem>.of(e.value)
+      for (final e in groupes.entries) e.key: List<PanierItem>.of(e.value)
     };
     if (kDebugMode) print('[CommandeMulti] ${groupesFiges.length} boutiques détectées');
 
@@ -79,54 +76,23 @@ class CommandeMultiService {
       throw Exception(resultatStock.erreurs.join('\n'));
     }
 
-    // 2. Déterminer le mode de facturation + franchise gratuite de chaque boutique
-    final Map<String, bool> prepayeParBoutique = {};
-    final Map<String, bool> gratuitParBoutique = {};
-    for (final boutiqueId in groupesFiges.keys) {
-      gratuitParBoutique[boutiqueId] =
-          await CommissionBoutiqueService.enFranchiseGratuite(boutiqueId);
-      // En franchise gratuite, on traite comme commission-sur-vente à 0%.
-      prepayeParBoutique[boutiqueId] = gratuitParBoutique[boutiqueId]!
-          ? false
-          : await CommissionBoutiqueService.estPrepaye(boutiqueId);
-    }
-
-    // 3. Calculer les totaux (le net boutiquier dépend du mode)
-    final decompositions = groupesFiges.map((boutiqueId, items) => MapEntry(
-      boutiqueId,
-      _calculerSousCommande(
-        items: items,
-        config: configParBoutique[boutiqueId] ?? ConfigLivraisonBoutique.defaut(adresseLivraison),
-        methodePaiement: methodePaiement,
-        prepaye: prepayeParBoutique[boutiqueId] ?? false,
-        gratuit: gratuitParBoutique[boutiqueId] ?? false,
-      ),
-    ));
-
-    final totalArticles = decompositions.values.fold<double>(0, (s, d) => s + d.sousTotal);
-    final totalLivraisonsBrut = decompositions.values.fold<double>(0, (s, d) => s + d.fraisLivraison);
-    final totalCommissions = decompositions.values.fold<double>(0, (s, d) => s + d.commission);
-
-    // RÉDUCTION DE LIVRAISON SELON LE PALIER DE FIDÉLITÉ DU CLIENT
-    // Le palier (configuré par l'admin) peut réduire les frais de livraison (0-100%).
-    double reductionLivraisonPct = 0;
-    try {
-      final clientDoc = await _db.collection('utilisateurs').doc(clientId).get();
-      final pointsClient = (clientDoc.data()?['pointsFidelite'] as num?)?.toInt() ?? 0;
-      final config = await ConfigMarketingService.charger();
-      PalierConfig palier = config.paliers.first;
-      for (final p in config.paliers) {
-        if (pointsClient >= p.pointsRequis) palier = p;
-      }
-      reductionLivraisonPct = palier.reductionLivraison.clamp(0, 100);
-    } catch (_) {}
-
-    final totalLivraisons = PrixFCFA.arrondirAu50(
-        totalLivraisonsBrut * (1 - reductionLivraisonPct / 100));
-    final totalFraisPaiement = methodePaiement == 'cash' ? 0.0
-        : PrixFCFA.arrondirAu50((totalArticles + totalLivraisons) * _kFraisMMoney / 100);
-    final totalPaye = PrixFCFA.arrondirSuperieur50(
-        totalArticles + totalLivraisons + totalFraisPaiement);
+    // 2. DEVIS UNIQUE — la même fonction que le panier affiche :
+    //    paramètres admin, hors zone, fidélité, MoMo, commission, parts.
+    final devis = await DevisCommandeService.calculer(
+      items: itemsSnapshot,
+      clientId: clientId,
+      methodePaiement: methodePaiement,
+      configParBoutique: configParBoutique,
+      adresseLivraison: adresseLivraison,
+      gpsClientLat: gpsClientLat,
+      gpsClientLng: gpsClientLng,
+    );
+    final totalArticles = devis.totalArticles;
+    final totalLivraisons = devis.totalLivraisons;
+    final totalFraisPaiement = devis.totalFraisPaiement;
+    final totalPaye = devis.totalPaye;
+    final totalCommissions =
+        devis.parBoutique.values.fold<double>(0, (t, d) => t + d.commission);
 
     // 3. Écriture atomique Firestore (batch)
     final batch = _db.batch();
@@ -140,29 +106,15 @@ class CommandeMultiService {
     for (final entry in groupesFiges.entries) {
       final boutiqueId = entry.key;
       final items = entry.value;
-      final decomp = decompositions[boutiqueId]!;
+      final decomp = devis.parBoutique[boutiqueId]!;
       final config = configParBoutique[boutiqueId] ?? ConfigLivraisonBoutique.defaut(adresseLivraison);
 
       final scRef = SousCommande.collection.doc();
       sousCommandeIds.add(scRef.id);
 
-      // Générer les QR codes
-      final qrDepart = _genererQR('DEP', scRef.id);
-      final qrArrivee = _genererQR('ARR', scRef.id);
-
       // Récupérer nom de la boutique (depuis le 1er item)
       final boutiqueNom = items.first.boutiqueId ?? boutiqueId;
 
-      // Créer les étapes de livraison selon la config
-      final livraisons = _creerEtapesLivraison(
-        sousCommandeId: scRef.id,
-        config: config,
-        adresseLivraison: adresseLivraison,
-        avecCouture: items.any((i) => i.avecCouture),
-        qrDepart: qrDepart,
-        qrArrivee: qrArrivee,
-        fraisLivraison: decomp.fraisLivraison,
-      );
 
       final sc = SousCommande(
         id: scRef.id,
@@ -187,22 +139,6 @@ class CommandeMultiService {
       batch.set(scRef, sc.toMap());
       sousCommandes.add(sc);
 
-      // Écrire les livraisons en sous-collection
-      for (final livraison in livraisons) {
-        final livRef = EtapeLivraison.collection(scRef.id).doc(livraison.id);
-        batch.set(livRef, {
-          ...livraison.toMap(),
-          // RÉSUMÉ ARTICLES : le livreur voit CE qu'il transporte
-          // (miniature + nom) sans requête supplémentaire.
-          'articles': items
-              .map((it) => {
-                    'nom': it.pagneNom,
-                    'image': it.pagneImage,
-                    'qte': it.quantite,
-                  })
-              .toList(),
-        });
-      }
 
       // Enregistrer la transaction financière
       final txRef = _db.collection('transactions').doc();
@@ -216,17 +152,8 @@ class CommandeMultiService {
         'montantNet': decomp.netBoutique,
         'commission': decomp.commission,
         'fraisLivraison': decomp.fraisLivraison,
-        'gainLivreur': livraisons.fold<double>(0, (s, l) => s + l.gainLivreur),
+        'gainLivreur': decomp.gainLivreur,
         'methodePaiement': methodePaiement,
-      if (numeroPaiement != null) 'numeroPaiement': numeroPaiement,
-      if (refPaiement != null) 'refPaiement': refPaiement,
-      // Transfert déclaré : la préparation ATTEND la vérification humaine
-      if (methodePaiement == 'momo_declare') 'paiementVerifie': false,
-      // PREUVE (art. 26 loi 2010/021) : la version des CGU en vigueur
-      // au moment de la commande est figée sur la session.
-      'cguVersion': kCguVersion,
-      if (gpsClientLat != null) 'destLat': gpsClientLat,
-      if (gpsClientLng != null) 'destLng': gpsClientLng,
         'statut': 'enAttente',
         'dateCreation': FieldValue.serverTimestamp(),
       });
@@ -246,7 +173,28 @@ class CommandeMultiService {
       sousCommandes: sousCommandes,
     );
 
-    batch.set(sessionRef, session.toMap());
+    // Champs de SESSION (avant : écrits par erreur sur le doc transaction →
+    // l'écran « Vérification des paiements » ne trouvait jamais rien).
+    batch.set(sessionRef, {
+      ...session.toMap(),
+      if (numeroPaiement != null) 'numeroPaiement': numeroPaiement,
+      if (refPaiement != null) 'refPaiement': refPaiement,
+      // Transfert déclaré : la préparation ATTEND la vérification humaine
+      if (methodePaiement == 'momo_declare') 'paiementVerifie': false,
+      // PREUVE (art. 26 loi 2010/021) : version des CGU figée sur la commande
+      'cguVersion': kCguVersion,
+      if (gpsClientLat != null) 'destLat': gpsClientLat,
+      if (gpsClientLng != null) 'destLng': gpsClientLng,
+      // le devis utilisé (traçabilité : paramètres au moment de l'achat)
+      'devis': {
+        'fraisBase': devis.fraisBase,
+        'rayonZoneKm': devis.rayonZoneKm,
+        'supplementsHorsZone': devis.totalSupplementsHorsZone,
+        'reductionLivraisonPct': devis.reductionLivraisonPct,
+        'commissionPct': devis.commissionPct,
+        'fraisMoMoPct': devis.fraisMoMoPct,
+      },
+    });
 
     // Tout valider
     await batch.commit();
@@ -473,94 +421,7 @@ class CommandeMultiService {
     }
   }
 
-  /// Livreur scanne le QR de départ (confirmation prise en charge)
-  static Future<bool> validerQRDepart({
-    required String sousCommandeId,
-    required String livraisonId,
-    required String qrScanne,
-    required String livreurId,
-  }) async {
-    final livraisonDoc = await EtapeLivraison.collection(sousCommandeId).doc(livraisonId).get();
-    if (!livraisonDoc.exists) return false;
-    final livraison = EtapeLivraison.fromDoc(livraisonDoc);
-    if (livraison.qrDepart != qrScanne) return false;
 
-    final batch = _db.batch();
-    batch.update(EtapeLivraison.collection(sousCommandeId).doc(livraisonId), {
-      'statut': 'enCours',
-      'livreurId': livreurId,
-      'datePrisEnCharge': FieldValue.serverTimestamp(),
-    });
-    batch.update(SousCommande.collection.doc(sousCommandeId), {
-      'statut': StatutSousCommande.enCoursLivraison.name,
-    });
-    await batch.commit();
-    return true;
-  }
-
-  /// Destinataire scanne le QR d'arrivée (confirmation réception)
-  static Future<bool> validerQRArrivee({
-    required String sousCommandeId,
-    required String livraisonId,
-    required String qrScanne,
-  }) async {
-    final livraisonDoc = await EtapeLivraison.collection(sousCommandeId).doc(livraisonId).get();
-    if (!livraisonDoc.exists) return false;
-    final livraison = EtapeLivraison.fromDoc(livraisonDoc);
-    if (livraison.qrArrivee != qrScanne) return false;
-
-    // Vérifier si c'est la dernière livraison ou une livraison intermédiaire
-    final toutesLivraisons = await EtapeLivraison.collection(sousCommandeId)
-        .orderBy('ordre').get();
-
-    final estDernier = livraison.ordre == toutesLivraisons.docs.length;
-
-    final batch = _db.batch();
-    batch.update(EtapeLivraison.collection(sousCommandeId).doc(livraisonId), {
-      'statut': 'livree',
-      'dateLivraison': FieldValue.serverTimestamp(),
-    });
-
-    if (estDernier) {
-      // Dernière livraison → sous-commande terminée
-      batch.update(SousCommande.collection.doc(sousCommandeId), {
-        'statut': StatutSousCommande.terminee.name,
-        'dateTerminaison': FieldValue.serverTimestamp(),
-      });
-      // Déclencher le reversement au boutiquier
-      await _declencherReversement(sousCommandeId);
-
-      // Créditer points + cashback au client MAINTENANT (livraison confirmée)
-      try {
-        final scDoc = await SousCommande.collection.doc(sousCommandeId).get();
-        final scData = scDoc.data();
-        if (scData != null) {
-          final clientId = scData['clientId'] as String?;
-          final totalClient = (scData['totalClient'] as num?)?.toDouble() ?? 0;
-          if (clientId != null && totalClient > 0) {
-            await StrategiesMarketingService.crediterPointsFidelite(
-              utilisateurId: clientId,
-              montantAchat: totalClient,
-            );
-          }
-        }
-      } catch (e) {
-        if (kDebugMode) print('[CommandeMulti] Crédit fidélité échoué: $e');
-      }
-    } else {
-      // Livraison intermédiaire (pagne chez couturier)
-      batch.update(SousCommande.collection.doc(sousCommandeId), {
-        'statut': StatutSousCommande.avecCouturier.name,
-      });
-    }
-
-    await batch.commit();
-
-    // Mettre à jour le statut de la session parente
-    await _mettreAJourStatutSession(sousCommandeId);
-
-    return true;
-  }
 
   /// Couturier marque la couture terminée (déclenche la livraison finale)
   static Future<void> coutureTerminee(String sousCommandeId) async {
@@ -683,14 +544,6 @@ class CommandeMultiService {
     session.sousCommandes =
         sousSnap.docs.map(SousCommande.fromDoc).toList();
 
-    // Charger les livraisons de chaque sous-commande
-    for (final sc in session.sousCommandes) {
-      final livSnap = await EtapeLivraison.collection(sc.id)
-          .orderBy('ordre').get();
-      sc.livraisons =
-          livSnap.docs.map(EtapeLivraison.fromDoc).toList();
-    }
-
     return session;
   }
 
@@ -710,138 +563,7 @@ class CommandeMultiService {
 
   /// Calculer les montants d'une sous-commande
   /// Règle : 1 seul trajet par boutique → frais fixes quelle que soit la quantité d'articles
-  static _DecompSC _calculerSousCommande({
-    required List<PanierItem> items,
-    required ConfigLivraisonBoutique config,
-    required String methodePaiement,
-    bool prepaye = false,
-    bool gratuit = false,
-  }) {
-    // Sous-total de tous les articles de cette boutique
-    final sousTotal = items.fold<double>(0, (s, i) => s + i.sousTotal);
 
-    // ─── RÈGLE CLÉS ─────────────────────────────────────────────────────────
-    // 1. Retrait boutique → 0 FCFA (client vient chercher)
-    // 2. Livraison directe → 500 FCFA fixe (1 seul trajet, peu importe le nb d'articles)
-    // 3. Avec couture → 1 000 FCFA (2 trajets : boutique→couturier + couturier→client)
-    // La quantité d'articles n'influe PAS sur les frais de livraison
-    final estRetrait = config.typeDestination == TypeDestination.retraitBoutique;
-    final avecCouture = items.any((i) => i.avecCouture);
-
-    final fraisLivraison = estRetrait
-        ? 0.0
-        : avecCouture
-            ? _kFraisLivraison * 2   // 2 trajets si couture
-            : _kFraisLivraison;      // 1 trajet fixe même pour 10 pagnes
-
-    // Franchise gratuite → commission nulle (le boutiquier reçoit tout, tu ne prélèves rien)
-    final commission = gratuit ? 0.0 : PrixFCFA.arrondirAu50(sousTotal * _kCommissionDefault / 100);
-
-    // Frais passerelle paiement (0% si cash, 2.5% si MoMo)
-    final fraisPaiement = methodePaiement == 'cash' ? 0.0
-        : PrixFCFA.arrondirAu50((sousTotal + fraisLivraison) * _kFraisMMoney / 100);
-
-    final totalClient = PrixFCFA.arrondirSuperieur50(
-        sousTotal + fraisLivraison + fraisPaiement);
-
-    // Gain livreur fixe par trajet (350 FCFA × nb trajets)
-    final nbTrajets = estRetrait ? 0 : (avecCouture ? 2 : 1);
-    final gainLivreur = _kGainLivreur * nbTrajets;
-
-    // NET BOUTIQUIER selon le modèle de facturation :
-    //  • PRÉPAYÉ      → reçoit TOUT le prix article ; la commission sera
-    //                   débitée de son crédit (à la vente ou à la livraison).
-    //  • COMMISSION   → reçoit le prix article MOINS la commission (prélevée
-    //    SUR VENTE      directement sur la vente, rien à payer d'avance).
-    // Dans les deux cas, les frais de livraison ne sont pas pris sur sa part.
-    final netBoutique = prepaye
-        ? PrixFCFA.arrondirInferieur50(sousTotal)
-        : PrixFCFA.arrondirInferieur50(sousTotal - commission);
-
-    return _DecompSC(
-      sousTotal: sousTotal,
-      fraisLivraison: fraisLivraison,
-      commission: commission,   // tracée, débitée du crédit boutiquier
-      totalClient: totalClient,
-      netBoutique: netBoutique,
-    );
-  }
-
-  /// Créer les étapes de livraison selon la config choisie
-  static List<EtapeLivraison> _creerEtapesLivraison({
-    required String sousCommandeId,
-    required ConfigLivraisonBoutique config,
-    required String adresseLivraison,
-    required bool avecCouture,
-    required String qrDepart,
-    required String qrArrivee,
-    required double fraisLivraison,
-  }) {
-    final livraisons = <EtapeLivraison>[];
-
-    if (config.typeDestination == TypeDestination.retraitBoutique) {
-      // Pas de livraison — client vient chercher
-      livraisons.add(EtapeLivraison(
-        id: _genererQR('LIV', sousCommandeId),
-        sousCommandeId: sousCommandeId,
-        ordre: 1,
-        typeDestination: TypeDestination.retraitBoutique,
-        adresseDepart: config.adresseBoutique,
-        adresseArrivee: config.adresseBoutique,
-        qrDepart: qrDepart,
-        qrArrivee: qrArrivee,
-        fraisLivraison: 0,
-        gainLivreur: 0,
-        dateLivraisonPrevue: DateTime.now().add(const Duration(hours: 4)),
-      ));
-    } else if (avecCouture) {
-      // 2 livraisons : boutique → couturier → client
-      livraisons.add(EtapeLivraison(
-        id: _genererQR('LIV1', sousCommandeId),
-        sousCommandeId: sousCommandeId,
-        ordre: 1,
-        typeDestination: TypeDestination.chezCouturier,
-        adresseDepart: config.adresseBoutique,
-        adresseArrivee: config.adresseCouturier ?? 'Couturier à définir',
-        qrDepart: qrDepart,
-        qrArrivee: _genererQR('ARR1', sousCommandeId),
-        fraisLivraison: fraisLivraison / 2,
-        gainLivreur: _kGainLivreur,
-        dateLivraisonPrevue: DateTime.now().add(const Duration(hours: 2)),
-      ));
-      // Livraison finale après couture
-      livraisons.add(EtapeLivraison(
-        id: _genererQR('LIV2', sousCommandeId),
-        sousCommandeId: sousCommandeId,
-        ordre: 2,
-        typeDestination: TypeDestination.domicileClient,
-        adresseDepart: config.adresseCouturier ?? 'Couturier',
-        adresseArrivee: adresseLivraison,
-        qrDepart: _genererQR('DEP2', sousCommandeId),
-        qrArrivee: qrArrivee,
-        fraisLivraison: fraisLivraison / 2,
-        gainLivreur: _kGainLivreur,
-        dateLivraisonPrevue: DateTime.now().add(Duration(days: config.delaiCoutureJours)),
-      ));
-    } else {
-      // Livraison directe : boutique → client
-      livraisons.add(EtapeLivraison(
-        id: _genererQR('LIV', sousCommandeId),
-        sousCommandeId: sousCommandeId,
-        ordre: 1,
-        typeDestination: TypeDestination.domicileClient,
-        adresseDepart: config.adresseBoutique,
-        adresseArrivee: adresseLivraison,
-        qrDepart: qrDepart,
-        qrArrivee: qrArrivee,
-        fraisLivraison: fraisLivraison,
-        gainLivreur: _kGainLivreur,
-        dateLivraisonPrevue: DateTime.now().add(const Duration(hours: 2)),
-      ));
-    }
-
-    return livraisons;
-  }
 
   /// Déclencher le reversement financier après livraison confirmée
   static Future<void> _declencherReversement(String sousCommandeId) async {
@@ -913,51 +635,5 @@ class CommandeMultiService {
     });
   }
 
-  static String _genererQR(String prefix, String id) {
-    final random = Random().nextInt(9999).toString().padLeft(4, '0');
-    return '$prefix-${id.substring(0, 6).toUpperCase()}-$random';
-  }
 }
 
-// ─── Config livraison par boutique (choisie par le client) ───────────────────
-
-class ConfigLivraisonBoutique {
-  final String boutiqueId;
-  final TypeDestination typeDestination;
-  final String adresseBoutique;
-  final String? adresseCouturier;   // si pagne avec couture
-  final int delaiCoutureJours;      // délai avant livraison finale si couture
-
-  const ConfigLivraisonBoutique({
-    required this.boutiqueId,
-    required this.typeDestination,
-    required this.adresseBoutique,
-    this.adresseCouturier,
-    this.delaiCoutureJours = 3,
-  });
-
-  factory ConfigLivraisonBoutique.defaut(String adresseClient) =>
-      ConfigLivraisonBoutique(
-        boutiqueId: '',
-        typeDestination: TypeDestination.domicileClient,
-        adresseBoutique: '',
-      );
-}
-
-// ─── Décomposition financière interne ────────────────────────────────────────
-
-class _DecompSC {
-  final double sousTotal;
-  final double fraisLivraison;
-  final double commission;
-  final double totalClient;
-  final double netBoutique;
-
-  const _DecompSC({
-    required this.sousTotal,
-    required this.fraisLivraison,
-    required this.commission,
-    required this.totalClient,
-    required this.netBoutique,
-  });
-}

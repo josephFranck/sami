@@ -95,6 +95,8 @@ class PrixFCFA {
     double tauxFraisMobileMoney = 2.5,
     bool paiementCash = false,
     bool appliquerCharm = true,
+    // Part livreur (fraction) — passer ParametresService.gainLivreurPctSync/100
+    double tauxGainLivreur = 0.70,
   }) {
     // 1. Prix HT brut (avant arrondi) — SANS transport : le client paie
     //    la livraison au panier, pas cachée dans le prix du tissu.
@@ -126,7 +128,7 @@ class PrixFCFA {
         : arrondirAu50(prixFinalArrondi * tauxFraisMobileMoney / 100);
 
     // 7. Gain livreur (70% des frais livraison, arrondi au 50)
-    final gainLivreur = arrondirInferieur50(fraisLivraison * 0.70);
+    final gainLivreur = arrondirInferieur50(fraisLivraison * tauxGainLivreur);
 
     // 8. Net boutiquier = ce qu'il reçoit réellement
     //    (frais MoMo et commission NE sont PAS à sa charge)

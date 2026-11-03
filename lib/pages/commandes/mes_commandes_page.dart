@@ -413,7 +413,7 @@ class _CarteSousCommande extends StatelessWidget {
           const Divider(height: 16, indent: 14, endIndent: 14),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Column(children: sc.livraisons.map((l) => _CarteEtapeLivraison(etape: l)).toList()),
+            child: _EtapesDepuisRacine(sousCommandeId: sc.id),
           ),
           // Bouton suivi GPS temps réel
           Padding(
@@ -590,54 +590,76 @@ class _CarteSousCommande extends StatelessWidget {
 
 // ─── Carte étape de livraison ─────────────────────────────────────────────────
 
-class _CarteEtapeLivraison extends StatelessWidget {
-  final EtapeLivraison etape;
-  const _CarteEtapeLivraison({required this.etape});
+/// Étapes de livraison lues depuis LA source : /livraisons (commandeId).
+class _EtapesDepuisRacine extends StatelessWidget {
+  final String sousCommandeId;
+  const _EtapesDepuisRacine({required this.sousCommandeId});
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Row(children: [
-      Container(
-        width: 28, height: 28,
-        decoration: BoxDecoration(
-          color: etape.estLivree ? Colors.green.shade50 : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Icon(
-          etape.estLivree ? Icons.check : _iconeDestination(etape.typeDestination),
-          size: 14,
-          color: etape.estLivree ? Colors.green : Colors.grey,
-        ),
-      ),
-      const SizedBox(width: 10),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(
-          etape.ordre == 1 ? etape.labelDestination : 'Livraison finale → client',
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-        ),
-        Text(
-          etape.adresseArrivee,
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
-          maxLines: 1, overflow: TextOverflow.ellipsis,
-        ),
-      ])),
-      if (etape.dateLivraisonPrevue != null && !etape.estLivree)
-        Text(
-          '~${etape.dateLivraisonPrevue!.hour}h${etape.dateLivraisonPrevue!.minute.toString().padLeft(2,'0')}',
-          style: const TextStyle(fontSize: 11, color: _kAccent),
-        ),
-      if (etape.estLivree)
-        const Text('✓', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-    ]),
-  );
+  Widget build(BuildContext context) =>
+      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
+            .collection('livraisons')
+            .where('commandeId', isEqualTo: sousCommandeId)
+            .snapshots(),
+        builder: (context, snap) {
+          final docs = snap.data?.docs ?? [];
+          if (docs.isEmpty) return const SizedBox(height: 4);
+          final livs = docs.map((d) => d.data()).toList()
+            ..sort((a, b) {
+              final ta = (a['dateCreation'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+              final tb = (b['dateCreation'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+              return ta.compareTo(tb);
+            });
+          return Column(
+            children: livs.asMap().entries.map((e) {
+              final d = e.value;
+              final st = d['statut'] as String? ?? '';
+              final livree = st == 'livre' || st == 'livree';
+              final type = d['typeLivraison'] as String? ?? '';
+              final label = livs.length > 1
+                  ? (e.key == 0 ? 'Tissu → atelier' : 'Livraison finale → client')
+                  : (type == 'confection' ? 'Livraison du vêtement' : 'Livraison → client');
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(children: [
+                  Container(
+                    width: 28, height: 28,
+                    decoration: BoxDecoration(
+                      color: livree ? Colors.green.shade50 : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(livree ? Icons.check : Icons.local_shipping_outlined,
+                        size: 14, color: livree ? Colors.green : Colors.grey),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                    Text(d['destinationAdresse'] as String? ?? d['adresseArrivee'] as String? ?? '',
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ])),
+                  if (livree)
+                    const Text('✓', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))
+                  else
+                    Text(_libelleStatutLivraison(st),
+                        style: const TextStyle(fontSize: 11, color: _kAccent)),
+                ]),
+              );
+            }).toList(),
+          );
+        },
+      );
 
-  IconData _iconeDestination(TypeDestination t) => switch (t) {
-    TypeDestination.domicileClient  => Icons.home_outlined,
-    TypeDestination.retraitBoutique => Icons.store_outlined,
-    TypeDestination.chezCouturier   => Icons.content_cut,
-    TypeDestination.retourBoutique  => Icons.assignment_return_outlined,
-  };
+  static String _libelleStatutLivraison(String st) => switch (st) {
+        'enAttente' || 'rechercheLibreur' => 'Recherche livreur',
+        'livreurAssigne' || 'enRouteOrigine' => 'Livreur en route',
+        'articleRecupere' || 'enLivraison' => 'En livraison',
+        'pretRetrait' => 'Prêt au retrait',
+        'echec' => 'Échec',
+        'annule' || 'annulee' => 'Annulée',
+        _ => 'En cours',
+      };
 }
 
 // Charge la Livraison liée à une sous-commande et ouvre la carte de suivi

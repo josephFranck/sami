@@ -1,3 +1,4 @@
+import 'package:sami/services/log_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sami/utils/prix_fcfa.dart';
 
@@ -373,16 +374,14 @@ class TaxesService {
         .doc(config.id)
         .set(config.toMap());
 
-    // Log de l'action admin
-    await FirebaseFirestore.instance.collection('logs_admin').add({
-      'action': 'modification_taxes',
+    // Journal UNIQUE (app_logs via LogService) — avant : 'logs_admin'
+    await LogService.log('modification_taxes', details: {
       'adminId': adminId,
       'regime': config.regime.name,
       'taxesActives': config.taxes
           .where((t) => t.estActive)
           .map((t) => '${t.nom} (${t.taux}%)')
           .toList(),
-      'date': DateTime.now(),
     });
   }
 

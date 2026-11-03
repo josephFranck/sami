@@ -186,6 +186,26 @@ class ParametresService {
   static Future<double> fraisLivraisonBase() async =>
       ((await _charger())['fraisLivraisonBase'] as num?)?.toDouble() ?? 600;
 
+  /// ZONE DE LIVRAISON : au-delà de ce rayon (km, à vol d'oiseau depuis la
+  /// boutique), un supplément s'ajoute au forfait. Décision du 03/11/2026 :
+  /// forfait + supplément hors zone.
+  static Future<double> rayonZoneKm() async =>
+      ((await _charger())['rayonZoneKm'] as num?)?.toDouble() ?? 5;
+  static Future<double> supplementHorsZone() async =>
+      ((await _charger())['supplementHorsZone'] as num?)?.toDouble() ?? 300;
+
+  // ── ACCÈS SYNCHRONES (valeur en cache, sinon défaut) ──
+  // Pour les calculs d'affichage qui ne peuvent pas attendre (getters,
+  // setState) : la fiche pagne et l'ajout de pagne lisent LE MÊME
+  // paramètre que la facturation, au lieu de constantes codées en dur.
+  static Future<void> precharger() => _charger();
+  static double get commissionDefautPctSync =>
+      (_cache['commissionDefautPct'] as num?)?.toDouble() ?? 8.0;
+  static double get gainLivreurPctSync =>
+      (_cache['gainLivreurPct'] as num?)?.toDouble() ?? 70;
+  static double get fraisLivraisonBaseSync =>
+      (_cache['fraisLivraisonBase'] as num?)?.toDouble() ?? 600;
+
   static Future<double> fraisMoMoPct() async =>
       ((await _charger())['fraisMoMoPct'] as num?)?.toDouble() ?? 2.5;
 

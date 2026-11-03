@@ -1,6 +1,7 @@
 // ignore_for_file: unused_field
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sami/services/parametres_service.dart';
 import 'package:sami/widgets/image_xfile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -205,6 +206,10 @@ class _AddPagnePageState extends State<AddPagnePage> {
         coutAchat: cout,
         beneficeSouhaite: benef,
         appliquerCharm: true, // prix psychologique (ex: 9 950 au lieu de 10 000)
+        // MÊMES paramètres que la facturation (plus de 8 % / 70 % en dur)
+        tauxCommission: ParametresService.commissionDefautPctSync,
+        fraisLivraison: ParametresService.fraisLivraisonBaseSync,
+        tauxGainLivreur: ParametresService.gainLivreurPctSync / 100,
       );
     });
   }

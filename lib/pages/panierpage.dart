@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:sami/services/devis_commande_service.dart';
 import 'package:sami/services/log_service.dart';
 import 'package:sami/utils/config_paiement.dart';
 import 'package:sami/services/taxes_service.dart';
@@ -35,6 +36,51 @@ class _PanierPageState extends State<PanierPage> {
   bool _chargement = true;
   bool _commande = false;
   String _methodePaiement = 'mobile_money';
+  // DEVIS UNIQUE : ce que le client voit = ce qu'il paiera (même fonction
+  // que passerCommande). Recalculé à chaque changement de méthode,
+  // de mode de retrait ou de position.
+  DevisCommande? _devis;
+  bool _devisEnCours = false;
+
+  Future<void> _recalculerDevis() async {
+    if (_panier == null || _panier!.items.isEmpty) {
+      if (mounted) setState(() => _devis = null);
+      return;
+    }
+    if (mounted) setState(() => _devisEnCours = true);
+    try {
+      final boutiquesIds = List.of(_panier!.items)
+          .map((i) => i.boutiqueId ?? 'boutique_inconnue')
+          .toSet();
+      final config = Map.fromEntries(boutiquesIds.map((bid) => MapEntry(
+            bid,
+            ConfigLivraisonBoutique(
+              boutiqueId: bid,
+              typeDestination: _modeRecuperation == 'retraitClient'
+                  ? TypeDestination.retraitBoutique
+                  : TypeDestination.domicileClient,
+              adresseBoutique: '',
+            ),
+          )));
+      final d = await DevisCommandeService.calculer(
+        items: List.of(_panier!.items),
+        clientId: widget.utilisateur.id,
+        methodePaiement: _methodePaiement,
+        configParBoutique: config,
+        adresseLivraison: _adresseLivraison,
+        gpsClientLat: _positionLivraison?.latitude,
+        gpsClientLng: _positionLivraison?.longitude,
+      );
+      if (mounted) setState(() => _devis = d);
+    } catch (_) {
+      if (mounted) setState(() => _devis = null);
+    } finally {
+      if (mounted) setState(() => _devisEnCours = false);
+    }
+  }
+
+  /// Le montant à payer : le devis s'il est prêt, sinon le total local.
+  double get _totalAPayer => _devis?.totalPaye ?? _panier!.total;
   String _adresseLivraison = '';
   final _adresseCtrl = TextEditingController();
   final _numeroPaiementCtrl = TextEditingController();
@@ -69,6 +115,7 @@ class _PanierPageState extends State<PanierPage> {
       if (doc.exists) pagnesMap[item.pagneId] = Pagne.fromFirebaseDocument(doc);
     }
     if (mounted) setState(() { _panier = panier; _pagnes = pagnesMap; _chargement = false; });
+    _recalculerDevis();
   }
 
   Future<void> _chargerReglesPaiement() async {
@@ -248,6 +295,7 @@ class _PanierPageState extends State<PanierPage> {
             ],
             onChanged: (v) => setState(() {
               _modeRecuperation = v!;
+              _recalculerDevis();
               // le total (récap + facturation) suit le mode
               Panier.modeRetrait = v == 'retraitClient';
             }),
@@ -276,6 +324,7 @@ class _PanierPageState extends State<PanierPage> {
                   if (pos != null) {
                     setState(() {
                       _positionLivraison = pos;
+                      _recalculerDevis();
                       if (_adresseCtrl.text.trim().isEmpty) {
                         _adresseCtrl.text = 'Position GPS posée sur la carte';
                         _adresseLivraison = _adresseCtrl.text;
@@ -304,7 +353,7 @@ class _PanierPageState extends State<PanierPage> {
             groupValue: _methodePaiement,
             title: const Text('📱 Mobile Money (Orange / MTN)',
                 style: TextStyle(fontSize: 13.5)),
-            onChanged: (v) => setState(() => _methodePaiement = v!),
+            onChanged: (v) => { setState(() => _methodePaiement = v!); _recalculerDevis(); },
           ),
           if (_methodePaiement == 'mobile_money')
             Padding(
@@ -339,7 +388,7 @@ class _PanierPageState extends State<PanierPage> {
                       "🔒 Réservé aux abonnés — souscrivez à un abonnement pour payer à la livraison. Sans abonnement, le paiement se fait à la validation.",
                       style: const TextStyle(fontSize: 11, color: Colors.orange)),
               onChanged: _cashAutorise
-                  ? (v) => setState(() => _methodePaiement = v!)
+                  ? (v) => { setState(() => _methodePaiement = v!); _recalculerDevis(); }
                   : null, // désactivée → grisée par Flutter,
             ),
           if (_momoDeclareOk) ...[
@@ -352,7 +401,7 @@ class _PanierPageState extends State<PanierPage> {
               subtitle: const Text(
                   '0 % de frais — vérifié par notre équipe avant préparation',
                   style: TextStyle(fontSize: 11)),
-              onChanged: (v) => setState(() => _methodePaiement = v!),
+              onChanged: (v) => { setState(() => _methodePaiement = v!); _recalculerDevis(); },
             ),
             if (_methodePaiement == 'momo_declare')
               Container(
@@ -407,7 +456,7 @@ class _PanierPageState extends State<PanierPage> {
                           : Colors.red.shade400)),
               // insuffisant → non sélectionnable (jamais un mode mort)
               onChanged: suffisant
-                  ? (v) => setState(() => _methodePaiement = v!)
+                  ? (v) => { setState(() => _methodePaiement = v!); _recalculerDevis(); }
                   : null,
             );
           }),
@@ -426,25 +475,39 @@ class _PanierPageState extends State<PanierPage> {
       padding: const EdgeInsets.all(14),
       child: Column(
         children: [
-          _LigneRecap('Sous-total', PrixFCFA.formater(_panier!.sousTotal)),
-          _LigneRecap('Livraison', PrixFCFA.formater(_panier!.fraisLivraison)),
+          _LigneRecap('Sous-total', PrixFCFA.formater(_devis?.totalArticles ?? _panier!.sousTotal)),
+          if (_devis != null) ...[
+            _LigneRecap(
+                'Livraison (${_devis!.nombreBoutiques} boutique${_devis!.nombreBoutiques > 1 ? "s" : ""})',
+                PrixFCFA.formater(_devis!.totalLivraisonsBrut - _devis!.totalSupplementsHorsZone)),
+            if (_devis!.aSupplementHorsZone)
+              _LigneRecap('Supplément hors zone (> ${_devis!.rayonZoneKm.toStringAsFixed(0)} km)',
+                  PrixFCFA.formater(_devis!.totalSupplementsHorsZone)),
+            if (_devis!.totalReductionF > 0)
+              _LigneRecap('Réduction fidélité (-${_devis!.reductionLivraisonPct.toStringAsFixed(0)} %)',
+                  '- ${PrixFCFA.formater(_devis!.totalReductionF)}'),
+            if (_devis!.totalFraisPaiement > 0)
+              _LigneRecap('Frais Mobile Money (${_devis!.fraisMoMoPct.toStringAsFixed(1)} %)',
+                  PrixFCFA.formater(_devis!.totalFraisPaiement)),
+          ] else
+            _LigneRecap('Livraison', _devisEnCours ? 'calcul…' : PrixFCFA.formater(_panier!.fraisLivraison)),
           const Divider(height: 16),
           // TAXES CLIENT (si l'admin en a activé pour la cible 'client')
           FutureBuilder<(double, List<Map<String, dynamic>>)>(
             future: TaxesService.calculer(
-                base: _panier!.total, cible: 'client'),
+                base: _totalAPayer, cible: 'client'),
             builder: (c2, s2) {
               final t = s2.data?.$1 ?? 0;
               if (t <= 0) return const SizedBox.shrink();
               return Column(children: [
                 _LigneRecap('Taxes', PrixFCFA.formater(t)),
                 _LigneRecap('Total TTC',
-                    PrixFCFA.formater(_panier!.total + t),
+                    PrixFCFA.formater(_totalAPayer + t),
                     bold: true),
               ]);
             },
           ),
-          _LigneRecap('Total', PrixFCFA.formater(_panier!.total), bold: true),
+          _LigneRecap('Total', PrixFCFA.formater(_totalAPayer), bold: true),
           // FIDÉLITÉ : ce que cet achat rapporte (marketing léger)
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -452,7 +515,7 @@ class _PanierPageState extends State<PanierPage> {
               Icon(Icons.stars, size: 13, color: Colors.amber.shade700),
               const SizedBox(width: 4),
               Text(
-                  '≈ ${(_panier!.total / 1000).floor()} points fidélité à gagner',
+                  '≈ ${(_totalAPayer / 1000).floor()} points fidélité à gagner',
                   style: TextStyle(
                       fontSize: 11, color: Colors.grey.shade600)),
             ]),
@@ -476,7 +539,7 @@ class _PanierPageState extends State<PanierPage> {
       child: _commande
           ? const SizedBox(width: 20, height: 20,
               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-          : Text('Commander · ${PrixFCFA.formater(_panier!.total)} — ${List.of(_panier!.items).map((i) => i.boutiqueId).toSet().length} boutique(s)',
+          : Text('Commander · ${PrixFCFA.formater(_totalAPayer)} — ${List.of(_panier!.items).map((i) => i.boutiqueId).toSet().length} boutique(s)',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
     ),
   );
@@ -535,7 +598,7 @@ class _PanierPageState extends State<PanierPage> {
       // débités, payer « en crédits » était gratuit !
       if (_methodePaiement == 'credits') {
         final uid = FirebaseAuth.instance.currentUser?.uid;
-        final total = _panier!.total;
+        final total = _totalAPayer;
         try {
           await FirebaseFirestore.instance.runTransaction((tx) async {
             final ref = FirebaseFirestore.instance
@@ -567,7 +630,7 @@ class _PanierPageState extends State<PanierPage> {
           context,
           MaterialPageRoute(
             builder: (_) => PagePaiementMoMo(
-              montant: _panier!.total,
+              montant: _totalAPayer,
               description: 'Commande PagneShop',
               clientId: widget.utilisateur.id,
               onSucces: (txId) {

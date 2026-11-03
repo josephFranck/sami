@@ -264,10 +264,14 @@ class ComptabiliteService {
       'creditBalance': FieldValue.increment(-montant),
     });
     // Enregistrer le mouvement
-    await FirebaseFirestore.instance.collection('credit_mouvements').add({
-      'boutiqueId': boutiqueId,
+    // UNE seule collection de mouvements (schéma de credit_service) —
+    // avant : 'credit_mouvements', doublon jamais lu par l'historique.
+    await FirebaseFirestore.instance.collection('mouvements_credits').add({
+      'utilisateurId': '',
+      'entiteId': boutiqueId,
+      'type': 'commissionDebit',
       'montant': -montant,
-      'motif': motif,
+      'description': motif,
       'date': DateTime.now(),
     });
   }

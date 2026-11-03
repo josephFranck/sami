@@ -747,12 +747,16 @@ class SecuriteLivraisonService {
     required String message,
     required String niveau,
   }) async {
-    await _db.collection('alertes_admin').add({
+    // UNE seule boîte : la Supervision (alertes_agent). Niveau 'haute' /
+    // 'critique' → URGENT ; sinon info. Avant : 'alertes_admin', jamais lue.
+    await _db.collection('alertes_agent').add({
+      'type': 'securite_livreur',
+      'livraisonId': '',
       'livreurId': livreurId,
-      'message': message,
-      'niveau': niveau,
-      'timestamp': FieldValue.serverTimestamp(),
-      'traitee': false,
+      'niveau': (niveau == 'haute' || niveau == 'critique') ? 'urgent' : 'info',
+      'statut': 'en_attente',
+      'message': '🛡️ Sécurité livreur : $message',
+      'dateCreation': DateTime.now(),
     });
   }
 }
